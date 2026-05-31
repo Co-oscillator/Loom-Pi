@@ -154,6 +154,7 @@ public:
     v.isNoteHeld = true;
     v.note = note;
     v.amplitude = velocity / 127.0f;
+    v.controlCounter = 0;
     float baseFreq = mIgnoreNoteFrequency
                          ? mFrequency
                          : 440.0f * powf(2.0f, (note - 69) / 12.0f);

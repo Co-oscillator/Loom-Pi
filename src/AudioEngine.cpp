@@ -4624,6 +4624,8 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
       outR = -monoSum;
     }
 
+
+
     outBuffer[outIdx * 2] = softLimit(outL);
     outBuffer[outIdx * 2 + 1] = softLimit(outR);
   }
