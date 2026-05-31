@@ -80,15 +80,18 @@ float UIManager::mapNonLinearToLinear(float val, float minVal, float maxVal, con
 
 float UIManager::scaleParamFromNormalized(int paramId, float normValue) {
     // Attack parameters across all engines (0.001f to 4.0f)
-    if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471) {
+    if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471 ||
+        paramId == 161 || paramId == 167 || paramId == 173 || paramId == 179 || paramId == 185 || paramId == 191) {
         return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "A");
     }
-    // Decay parameters across all engines (0.001f to 4.0f)
-    if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472) {
-        return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "D");
+    // Decay parameters across all engines (0.0f to 4.0f)
+    if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472 ||
+        paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
+        return mapLinearToNonLinear(normValue, 0.0f, 4.0f, "D");
     }
     // Release parameters across all engines (0.001f to 8.0f)
-    if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474) {
+    if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
+        paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
         return mapLinearToNonLinear(normValue, 0.001f, 8.0f, "R");
     }
     return normValue;
@@ -96,15 +99,18 @@ float UIManager::scaleParamFromNormalized(int paramId, float normValue) {
 
 float UIManager::normalizeParamValue(int paramId, float scaledValue) {
     // Attack parameters across all engines (0.001f to 4.0f)
-    if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471) {
+    if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471 ||
+        paramId == 161 || paramId == 167 || paramId == 173 || paramId == 179 || paramId == 185 || paramId == 191) {
         return mapNonLinearToLinear(scaledValue, 0.001f, 4.0f, "A");
     }
-    // Decay parameters across all engines (0.001f to 4.0f)
-    if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472) {
-        return mapNonLinearToLinear(scaledValue, 0.001f, 4.0f, "D");
+    // Decay parameters across all engines (0.0f to 4.0f)
+    if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472 ||
+        paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
+        return mapNonLinearToLinear(scaledValue, 0.0f, 4.0f, "D");
     }
     // Release parameters across all engines (0.001f to 8.0f)
-    if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474) {
+    if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
+        paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
         return mapNonLinearToLinear(scaledValue, 0.001f, 8.0f, "R");
     }
     return scaledValue;
@@ -10495,7 +10501,7 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(faderRow1, "A", 100, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "D", 101, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow1, "D", 101, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "S", 102, 0.0f, 1.0f, 2, true);
     addSynthSlider(faderRow1, "R", 103, 0.001f, 8.0f, 2, false);
 
@@ -10514,7 +10520,7 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(faderRow2, "A", 114, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "D", 115, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow2, "D", 115, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "S", 116, 0.0f, 1.0f, 2, true);
     addSynthSlider(faderRow2, "R", 117, 0.001f, 8.0f, 2, false);
 }
@@ -11041,7 +11047,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
 
     int base = 160 + mSelectedOpIdx * 6;
     addSynthSlider(midCol, "A", base + 1, 0.001f, 4.0f, 2, false);
-    addSynthSlider(midCol, "D", base + 2, 0.001f, 4.0f, 2, false);
+    addSynthSlider(midCol, "D", base + 2, 0.0f, 4.0f, 2, false);
     addSynthSlider(midCol, "S", base + 3, 0.0f, 1.0f, 2, true);
     addSynthSlider(midCol, "R", base + 4, 0.001f, 8.0f, 2, false);
 
@@ -11237,7 +11243,7 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(faderRow1, "A", 114, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "D", 115, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow1, "D", 115, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "S", 116, 0.0f, 1.0f, 2, true);
     addSynthSlider(faderRow1, "R", 117, 0.001f, 8.0f, 2, false);
 
@@ -11267,7 +11273,7 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(faderRow2, "A", 100, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "D", 101, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow2, "D", 101, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "S", 102, 0.0f, 1.0f, 2, true);
     addSynthSlider(faderRow2, "R", 103, 0.001f, 8.0f, 2, false);
 
@@ -11597,7 +11603,7 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(ampRow, "A", 454, 0.001f, 4.0f, 2, false);
-    addSynthSlider(ampRow, "D", 455, 0.001f, 4.0f, 2, false);
+    addSynthSlider(ampRow, "D", 455, 0.0f, 4.0f, 2, false);
     addSynthSlider(ampRow, "S", 456, 0.0f, 1.0f, 2, true);
     addSynthSlider(ampRow, "R", 457, 0.001f, 8.0f, 2, false);
 
@@ -11615,7 +11621,7 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(filterEnvRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(filterEnvRow, "A", 471, 0.001f, 4.0f, 2, false);
-    addSynthSlider(filterEnvRow, "D", 472, 0.001f, 4.0f, 2, false);
+    addSynthSlider(filterEnvRow, "D", 472, 0.0f, 4.0f, 2, false);
     addSynthSlider(filterEnvRow, "S", 473, 0.0f, 1.0f, 2, true);
     addSynthSlider(filterEnvRow, "R", 474, 0.001f, 8.0f, 2, false);
 }
@@ -12020,7 +12026,7 @@ void UIManager::populateParamSamplerSynthesisTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(adsrRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(adsrRow, "A", 310, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(adsrRow, "D", 311, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(adsrRow, "D", 311, 0.0f, 4.0f, 2, false, 230);
     addSynthSlider(adsrRow, "S", 312, 0.0f, 1.0f, 2, true, 230);
     addSynthSlider(adsrRow, "R", 313, 0.001f, 8.0f, 2, false, 230);
 
@@ -12818,7 +12824,7 @@ void UIManager::populateParamGranularSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthSlider(ampRow, "A", 425, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(ampRow, "D", 426, 0.001f, 4.0f, 2, false, 140);
+    addSynthSlider(ampRow, "D", 426, 0.0f, 4.0f, 2, false, 140);
     addSynthSlider(ampRow, "S", 427, 0.0f, 1.0f, 2, true, 140);
     addSynthSlider(ampRow, "R", 428, 0.001f, 8.0f, 2, false, 140);
 
@@ -13290,7 +13296,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_align(faderRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(faderRow, "DECAY", 101, 0.001f, 4.0f, 2, false, 140);
+    addSynthSlider(faderRow, "DECAY", 101, 0.0f, 4.0f, 2, false, 140);
     addSynthSlider(faderRow, "SUSTAIN", 102, 0.0f, 1.0f, 2, true, 140);
     addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 8.0f, 2, false, 140);
 }
@@ -13869,7 +13875,7 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_align(ampRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     addSynthSlider(ampRow, "A", 100, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(ampRow, "D", 101, 0.001f, 4.0f, 2, false, 140);
+    addSynthSlider(ampRow, "D", 101, 0.0f, 4.0f, 2, false, 140);
     addSynthSlider(ampRow, "S", 102, 0.0f, 1.0f, 2, true, 140);
     addSynthSlider(ampRow, "R", 103, 0.001f, 8.0f, 2, false, 140);
 
