@@ -391,6 +391,10 @@ void UIManager::trackBtnEventCb(lv_event_t* e) {
     if (clickedTrack == -1) return;
 
     if (code == LV_EVENT_CLICKED) {
+        if (ui->mLongPressedTrack) {
+            ui->mLongPressedTrack = false;
+            return;
+        }
         ui->mActiveTrack = clickedTrack;
         ui->updateHighlighting();
         // Refresh the active screen so step colors + themed elements match the new track
@@ -399,6 +403,7 @@ void UIManager::trackBtnEventCb(lv_event_t* e) {
             ui->createCenterContentArea();
         }
     } else if (code == LV_EVENT_LONG_PRESSED) {
+        ui->mLongPressedTrack = true;
         ui->openMixerPopup(clickedTrack);
     }
 }

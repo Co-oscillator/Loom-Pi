@@ -120,6 +120,7 @@ private:
     
     lv_obj_t* mTrackButtons[8];
     bool mTrackEnabled[8];
+    bool mLongPressedTrack = false;
     lv_obj_t* mNavButtons[7];
     
     int mActiveTrack = 0;
