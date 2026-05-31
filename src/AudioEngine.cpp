@@ -251,6 +251,9 @@ void AudioEngine::initTrack(int i) {
   mTracks[i].parameters[2] = 0.0f;     // Resonance
   mTracks[i].parameters[112] = 1.0f;   // Cutoff ID 112 (Open)
   mTracks[i].parameters[113] = 0.0f;   // Resonance ID 113
+  mTracks[i].parameters[151] = 1.0f;   // FM Cutoff (Open)
+  mTracks[i].parameters[303] = 1.0f;   // Sampler/Granular Cutoff (Open)
+  mTracks[i].parameters[458] = 1.0f;   // Wavetable Cutoff (Open)
   mTracks[i].parameters[9] = 0.5f;     // Pan (Center) - Fix "Left at Launch"
   mTracks[i].parameters[100] = 0.01f;  // Attack
   mTracks[i].parameters[101] = 0.5f;   // Decay
@@ -286,6 +289,9 @@ void AudioEngine::initTrack(int i) {
   setParameter(i, 2, 0.0f);     // Resonance (Compat)
   setParameter(i, 112, 1.0f);   // Cutoff ID 112 (Open)
   setParameter(i, 113, 0.0f);   // Resonance ID 113
+  setParameter(i, 151, 1.0f);   // FM Cutoff (Open)
+  setParameter(i, 303, 1.0f);   // Sampler/Granular Cutoff (Open)
+  setParameter(i, 458, 1.0f);   // Wavetable Cutoff (Open)
   setParameter(i, 100, 0.01f);  // Attack
   setParameter(i, 101, 0.5f);   // Decay
   setParameter(i, 102, 1.0f);   // Sustain
@@ -1153,6 +1159,8 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
     case 122: // Wavefold
       track.subtractiveEngine.setParameter(parameterId, value);
       track.samplerEngine.setParameter(parameterId, value);
+      track.fmEngine.setParameter(parameterId, value);
+      track.wavetableEngine.setParameter(parameterId, value);
       track.audioInEngine.setParameter(parameterId, value);
       track.soundFontEngine.setParameter(parameterId, value);
       break;
@@ -3693,6 +3701,9 @@ void AudioEngine::restorePresets() {
     // Common Filter Defaults
     track.parameters[112] = 0.85f; // Cutoff (Reasonably Open)
     track.parameters[113] = 0.0f;  // Resonance
+    track.parameters[151] = 0.85f; // FM Cutoff (Open)
+    track.parameters[303] = 0.85f; // Sampler/Granular Cutoff (Open)
+    track.parameters[458] = 0.85f; // Wavetable Cutoff (Open)
 
     // FM Specific Defaults
     track.parameters[150] = 0.0f;  // Algorithm 0
