@@ -249,6 +249,8 @@ void AudioEngine::initTrack(int i) {
   mTracks[i].parameters[0] = 0.7f;     // Volume
   mTracks[i].parameters[1] = 1.0f;     // Cutoff (Open)
   mTracks[i].parameters[2] = 0.0f;     // Resonance
+  mTracks[i].parameters[112] = 1.0f;   // Cutoff ID 112 (Open)
+  mTracks[i].parameters[113] = 0.0f;   // Resonance ID 113
   mTracks[i].parameters[9] = 0.5f;     // Pan (Center) - Fix "Left at Launch"
   mTracks[i].parameters[100] = 0.01f;  // Attack
   mTracks[i].parameters[101] = 0.5f;   // Decay
@@ -280,8 +282,10 @@ void AudioEngine::initTrack(int i) {
   // 'setParameter' calls.
   // Common Defaults
   setParameter(i, 0, 0.7f);     // Volume
-  setParameter(i, 1, 1.0f);     // Cutoff
-  setParameter(i, 2, 0.0f);     // Resonance
+  setParameter(i, 1, 1.0f);     // Cutoff (Compat)
+  setParameter(i, 2, 0.0f);     // Resonance (Compat)
+  setParameter(i, 112, 1.0f);   // Cutoff ID 112 (Open)
+  setParameter(i, 113, 0.0f);   // Resonance ID 113
   setParameter(i, 100, 0.01f);  // Attack
   setParameter(i, 101, 0.5f);   // Decay
   setParameter(i, 102, 1.0f);   // Sustain
@@ -3687,8 +3691,8 @@ void AudioEngine::restorePresets() {
     track.parameters[103] = 0.5f;  // Release
 
     // Common Filter Defaults
-    track.parameters[112] = 0.5f; // Cutoff
-    track.parameters[113] = 0.0f; // Resonance
+    track.parameters[112] = 0.85f; // Cutoff (Reasonably Open)
+    track.parameters[113] = 0.0f;  // Resonance
 
     // FM Specific Defaults
     track.parameters[150] = 0.0f;  // Algorithm 0
@@ -4623,6 +4627,8 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
       outL = monoSum;
       outR = -monoSum;
     }
+
+
 
 
 
