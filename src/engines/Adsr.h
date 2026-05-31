@@ -28,7 +28,10 @@ public:
     mAttackRate = 1.0f / (aCurve * mSampleRate * 2.0f + 1.0f);
   }
 
-  void trigger() { mStage = AdsrStage::Attack; }
+  void trigger() {
+    mStage = AdsrStage::Attack;
+    mValue = 0.0f;
+  }
 
   void release() {
     if (mStage != AdsrStage::Idle) {

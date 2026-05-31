@@ -82,6 +82,7 @@ public:
       mMode = mode;
       mStep = 0;
       mNoteIndex = 0;
+      updateSequence();
     }
   }
   ArpMode getMode() const { return mMode; }
@@ -102,6 +103,7 @@ public:
   const std::vector<std::vector<bool>>& getRhythm() const { return mRhythms; }
   void setRandomSequence(const std::vector<int> &sequence) {
     mRandomSequence = sequence;
+    updateSequence();
   }
   void setGateLengths(const std::vector<float> &gateLengths) {
     mGateLengths = gateLengths;
@@ -249,8 +251,8 @@ public:
         }
     };
 
-    // Lane 0: Root/Main Note
-    if (mRhythms.size() > 0 && mRhythms[0][stepIndex]) {
+    // Lane 2: Root/Main Note (UI Row 2)
+    if (mRhythms.size() > 2 && mRhythms[2][stepIndex]) {
       if (stepAllowed) {
           int idx = mNoteIndex % seqSize;
           int noteIdx = mSequence[idx];
@@ -262,19 +264,19 @@ public:
       playedAnyInStep = true; 
     }
 
-    // Lane 1: +1 Walk
+    // Lane 1: +1 Walk (UI Row 1)
     if (mRhythms.size() > 1 && mRhythms[1][stepIndex]) {
       addNoteIfVisible((mNoteIndex + 1) % seqSize);
     }
 
-    // Lane 2: +2 Walk
-    if (mRhythms.size() > 2 && mRhythms[2][stepIndex]) {
+    // Lane 0: +2 Walk (UI Row 0)
+    if (mRhythms.size() > 0 && mRhythms[0][stepIndex]) {
       addNoteIfVisible((mNoteIndex + 2) % seqSize);
     }
 
-    // Lane 3: +3 Walk
+    // Lane 3: -1 Walk (UI Row 3)
     if (mRhythms.size() > 3 && mRhythms[3][stepIndex]) {
-      addNoteIfVisible((mNoteIndex + 3) % seqSize);
+      addNoteIfVisible((mNoteIndex - 1 + seqSize) % seqSize);
     }
 
     if (playedAnyInStep) {
