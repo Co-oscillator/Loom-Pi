@@ -798,6 +798,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
     if (messageType == 0x90) { // Note On
         uint8_t note = d1;
         uint8_t velocity = d2;
+        data->ui->addMidiLog(velocity > 0 ? "Note On" : "Note Off", channel + 1, note, velocity);
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
         
@@ -938,6 +939,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         }
     } else if (messageType == 0x80) { // Note Off
         uint8_t note = d1;
+        data->ui->addMidiLog("Note Off", channel + 1, note, d2);
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
         
@@ -1023,6 +1025,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
     } else if (messageType == 0xB0) { // CC (Control Change)
         uint8_t cc = d1;
         uint8_t val = d2;
+        data->ui->addMidiLog("CC", channel + 1, cc, val);
         
         // Hardware transport & navigation CC buttons
         if (cc == 59) {

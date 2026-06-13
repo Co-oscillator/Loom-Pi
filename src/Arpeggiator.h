@@ -117,6 +117,9 @@ public:
   void setIsMutated(bool mutated) { mIsMutated = mutated; }
 
   bool isLatched() const { return mIsLatched; }
+  bool isChordProgEnabled() const { return mIsChordProgEnabled; }
+  int getChordProgMood() const { return mChordProgMood; }
+  int getChordProgComplexity() const { return mChordProgComplexity; }
 
   void setLatched(bool latched) {
     mIsLatched = latched;

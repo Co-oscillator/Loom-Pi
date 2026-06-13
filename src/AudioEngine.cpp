@@ -3725,74 +3725,8 @@ void AudioEngine::enqueueMidiEvent(int type, int channel, int data1,
 
 void AudioEngine::restorePresets() {
   std::lock_guard<std::recursive_mutex> lock(mLock);
-  for (auto &track : mTracks) {
-    track.volume = 0.25f;
-    track.smoothedVolume = 0.25f;
-    track.subtractiveEngine.resetToDefaults();
-    track.fmEngine.resetToDefaults();
-    track.fmDrumEngine.resetToDefaults();
-    track.analogDrumEngine.resetToDefaults();
-    track.samplerEngine.resetToDefaults();
-    track.granularEngine.resetToDefaults();
-    track.wavetableEngine.resetToDefaults();
-
-    // CRITICAL: Also clear the parameter buffers so UI and Engine stay in
-    // sync We set meaningful defaults so the UI knobs show the correct
-    // initial values
-    std::fill(std::begin(track.parameters), std::end(track.parameters), 0.0f);
-    std::fill(std::begin(track.appliedParameters),
-              std::end(track.appliedParameters), 0.0f);
-
-    // Common EG Defaults
-    track.parameters[100] = 0.01f; // Attack
-    track.parameters[101] = 0.1f;  // Decay
-    track.parameters[102] = 0.8f;  // Sustain
-    track.parameters[103] = 0.5f;  // Release
-
-    // Common Filter Defaults
-    track.parameters[112] = 0.85f; // Cutoff (Reasonably Open)
-    track.parameters[113] = 0.0f;  // Resonance
-    track.parameters[151] = 0.85f; // FM Cutoff (Open)
-    track.parameters[303] = 0.85f; // Sampler/Granular Cutoff (Open)
-    track.parameters[458] = 0.85f; // Wavetable Cutoff (Open)
-
-    // FM Specific Defaults
-    track.parameters[150] = 0.0f;  // Algorithm 0
-    track.parameters[153] = 1.0f;  // Carrier Mask (Op 1)
-    track.parameters[155] = 63.0f; // Active Mask (All 6 Ops)
-    track.parameters[157] = 0.5f;  // Brightness (1.0 in engine)
-
-    // Sampler Defaults
-    track.parameters[302] = 0.4627f; // Speed 1.0x (non-linear)
-    track.parameters[305] = 0.0f;    // Filter Type: LowPass
-    track.parameters[320] = 0.0f; // OneShot mode
-    track.parameters[340] = 0.0f; // 2 slices
-
-    // Granular Defaults
-    track.parameters[400] = 0.5f;  // Position
-    track.parameters[401] = 1.0f;  // Speed
-    track.parameters[406] = 0.2f;  // Grain Size
-    track.parameters[407] = 0.5f;  // Density
-    track.parameters[415] = 0.0f;  // Spray
-    track.parameters[416] = 0.0f;  // Detune
-    track.parameters[417] = 0.0f;  // Random Timing / Jitter
-    track.parameters[418] = 0.2f;  // Max Grains
-    track.parameters[419] = 0.5f;  // Width
-    track.parameters[420] = 0.0f;  // Reverse Prob
-    track.parameters[425] = 0.01f; // Attack
-    track.parameters[426] = 0.1f;  // Decay
-    track.parameters[427] = 1.0f;  // Sustain
-    track.parameters[428] = 0.2f;  // Release
-    track.parameters[429] = 0.4f;  // Master Gain
-    track.parameters[430] = 1.0f;  // Spawn Probability
-    track.parameters[355] = 0.0f;  // Glide
-    track.parameters[408] = 0.5f;  // Grain Env A
-    track.parameters[409] = 0.5f;  // Grain Env D
-    track.parameters[410] = 1.0f;  // Pitch
-
-    // Wavetable Defaults
-    track.parameters[450] = 0.0f; // Position
-    track.parameters[451] = 0.0f; // Morph
+  for (int i = 0; i < (int)mTracks.size(); ++i) {
+    initTrack(i);
   }
 }
 

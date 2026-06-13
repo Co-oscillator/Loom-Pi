@@ -1,10 +1,14 @@
 #include "UIManager.h"
+#include <SDL.h>
 #include <iostream>
 #include <dirent.h>
 #include <string>
 #include <sys/stat.h>
 #include <fstream>
 #include <cmath>
+
+extern std::string gCurrentAudioDevice;
+extern bool switchAudioDevice(const std::string& deviceName);
 
 static int s_activeFmPreset[18] = {0};
 
@@ -233,12 +237,13 @@ void UIManager::init() {
     const char* browseDir = getenv("HOME");
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     std::string initLoomPath = homeStr + "/projects/Init.loom";
+    mSettingsFilePath = initLoomPath + ".settings";
     std::ifstream f(initLoomPath);
     if (f.good()) {
         f.close();
         std::cout << "Auto-loading Init project: " << initLoomPath << std::endl;
         mEngine.loadProject(initLoomPath);
-        loadSettings(initLoomPath + ".settings");
+        loadSettings(mSettingsFilePath);
     }
     
     // Force 16 pads default at startup
@@ -576,6 +581,10 @@ void UIManager::populateArpScreen() {
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
     lv_tabview_set_tab_bar_size(tabview, 40);
     
+    // Set active track theme color for the tab indicator line
+    lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
+    lv_obj_set_style_bg_color(tab_bar, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    
     // Set modern dark look for the tabview
     lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
     lv_obj_set_style_border_width(tabview, 0, 0);
@@ -594,12 +603,13 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_align(tab1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(tab1, 20, 0);
 
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
     // Card background & border style helper
-    auto applyCardStyle = [](lv_obj_t* card) {
+    auto applyCardStyle = [trackColor](lv_obj_t* card) {
         lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_color(card, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(card, 1, 0);
+        lv_obj_set_style_border_color(card, trackColor, 0);
+        lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
         lv_obj_set_style_pad_all(card, 15, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
@@ -616,7 +626,7 @@ void UIManager::populateArpScreen() {
     lv_obj_t* title1 = lv_label_create(col1);
     lv_label_set_text(title1, "NOTE ARPEGGIATOR");
     lv_obj_set_style_text_font(title1, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title1, lv_color_hex(0x8A2BE2), 0); // Cyan/Purple accents
+    lv_obj_set_style_text_color(title1, getTrackColor(mActiveTrack), 0); // Active track theme color
 
     const auto& arp = mEngine.getTracks()[mActiveTrack].arpeggiator;
     bool isArpOn = arp.getMode() != ArpMode::OFF;
@@ -630,7 +640,7 @@ void UIManager::populateArpScreen() {
     if (isArpOn) {
         lv_obj_add_state(mArpToggleBtn, LV_STATE_CHECKED);
         lv_label_set_text(toggleLbl, "Arpeggiator: ON");
-        lv_obj_set_style_bg_color(mArpToggleBtn, lv_color_hex(0x8A2BE2), 0);
+        lv_obj_set_style_bg_color(mArpToggleBtn, getTrackColor(mActiveTrack), 0);
     } else {
         lv_obj_set_style_bg_color(mArpToggleBtn, lv_color_hex(0x444444), 0);
         lv_label_set_text(toggleLbl, "Arpeggiator: OFF");
@@ -709,6 +719,8 @@ void UIManager::populateArpScreen() {
     lv_obj_set_size(mArpOctavesSlider, 185, 12);
     lv_slider_set_range(mArpOctavesSlider, -3, 3);
     lv_slider_set_value(mArpOctavesSlider, activeOctaves, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mArpOctavesSlider, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mArpOctavesSlider, getTrackColor(mActiveTrack), LV_PART_KNOB);
     lv_obj_set_style_pad_hor(mArpOctavesSlider, 10, 0); // Prevent handle cutout at extremes
     lv_obj_set_user_data(mArpOctavesSlider, octLbl);
     lv_obj_add_event_cb(mArpOctavesSlider, octavesSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
@@ -722,7 +734,7 @@ void UIManager::populateArpScreen() {
     lv_obj_t* title2 = lv_label_create(col2);
     lv_label_set_text(title2, "PLAYBACK");
     lv_obj_set_style_text_font(title2, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title2, lv_color_hex(0x32CD32), 0); // Green accent
+    lv_obj_set_style_text_color(title2, getTrackColor(mActiveTrack), 0); // Active track theme color
 
     // Latch Button
     mArpLatchBtn = lv_button_create(col2);
@@ -733,7 +745,7 @@ void UIManager::populateArpScreen() {
     if (arp.isLatched()) {
         lv_obj_add_state(mArpLatchBtn, LV_STATE_CHECKED);
         lv_label_set_text(latchLbl, "Latch: ON");
-        lv_obj_set_style_bg_color(mArpLatchBtn, lv_color_hex(0x32CD32), 0);
+        lv_obj_set_style_bg_color(mArpLatchBtn, getTrackColor(mActiveTrack), 0);
     } else {
         lv_obj_set_style_bg_color(mArpLatchBtn, lv_color_hex(0x444444), 0);
         lv_label_set_text(latchLbl, "Latch: OFF");
@@ -759,6 +771,10 @@ void UIManager::populateArpScreen() {
     mArpStrumArc = lv_arc_create(strumGrp);
     lv_obj_set_size(mArpStrumArc, 90, 90);
     lv_arc_set_range(mArpStrumArc, 0, 100);
+    lv_obj_set_style_arc_color(mArpStrumArc, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(mArpStrumArc, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_border_width(mArpStrumArc, 0, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(mArpStrumArc, 0, LV_PART_KNOB);
     int activeStrum = static_cast<int>(arp.getStrum() * 100.0f);
     lv_arc_set_value(mArpStrumArc, activeStrum);
     
@@ -787,6 +803,10 @@ void UIManager::populateArpScreen() {
     mArpProbArc = lv_arc_create(probGrp);
     lv_obj_set_size(mArpProbArc, 90, 90);
     lv_arc_set_range(mArpProbArc, 0, 100);
+    lv_obj_set_style_arc_color(mArpProbArc, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(mArpProbArc, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_border_width(mArpProbArc, 0, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(mArpProbArc, 0, LV_PART_KNOB);
     int activeProb = static_cast<int>(arp.getProbability() * 100.0f);
     lv_arc_set_value(mArpProbArc, activeProb);
 
@@ -806,16 +826,22 @@ void UIManager::populateArpScreen() {
     lv_obj_t* title3 = lv_label_create(col3);
     lv_label_set_text(title3, "CHORD GENERATOR");
     lv_obj_set_style_text_font(title3, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title3, lv_color_hex(0x1E90FF), 0); // Blue accent
+    lv_obj_set_style_text_color(title3, getTrackColor(mActiveTrack), 0); // Active track theme color
 
     // Chord Gen Button
     mArpChordGenBtn = lv_button_create(col3);
     lv_obj_set_size(mArpChordGenBtn, 200, 45);
     lv_obj_add_flag(mArpChordGenBtn, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_bg_color(mArpChordGenBtn, lv_color_hex(0x444444), 0);
     lv_obj_set_style_radius(mArpChordGenBtn, 8, 0);
     lv_obj_t* chEnLbl = lv_label_create(mArpChordGenBtn);
-    lv_label_set_text(chEnLbl, "Chord Gen: OFF");
+    if (arp.isChordProgEnabled()) {
+        lv_obj_add_state(mArpChordGenBtn, LV_STATE_CHECKED);
+        lv_label_set_text(chEnLbl, "Chord Gen: ON");
+        lv_obj_set_style_bg_color(mArpChordGenBtn, getTrackColor(mActiveTrack), 0);
+    } else {
+        lv_obj_set_style_bg_color(mArpChordGenBtn, lv_color_hex(0x444444), 0);
+        lv_label_set_text(chEnLbl, "Chord Gen: OFF");
+    }
     lv_obj_center(chEnLbl);
     lv_obj_add_event_cb(mArpChordGenBtn, chEnBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
 
@@ -837,6 +863,7 @@ void UIManager::populateArpScreen() {
     mArpChordMoodDd = lv_dropdown_create(moodGrp);
     lv_dropdown_set_options(mArpChordMoodDd, "Calm\nHappy\nSad\nSpooky\nAngry\nExcited\nGrandiose\nTense\nEthereal\nRomantic\nMysterious\nUplifting\nMelancholy\nDark\nDreamy\nMajestic");
     lv_obj_set_width(mArpChordMoodDd, 200);
+    lv_dropdown_set_selected(mArpChordMoodDd, arp.getChordProgMood());
     lv_obj_t* chMoodList = lv_dropdown_get_list(mArpChordMoodDd);
     lv_obj_set_style_max_height(chMoodList, 200, 0);
     lv_obj_add_event_cb(mArpChordMoodDd, arpChordMoodDdEventCb, LV_EVENT_VALUE_CHANGED, this);
@@ -859,6 +886,7 @@ void UIManager::populateArpScreen() {
     mArpChordComplexityDd = lv_dropdown_create(compGrp);
     lv_dropdown_set_options(mArpChordComplexityDd, "Simple\nComplex\nColtrane");
     lv_obj_set_width(mArpChordComplexityDd, 200);
+    lv_dropdown_set_selected(mArpChordComplexityDd, arp.getChordProgComplexity());
     lv_obj_t* chCompList = lv_dropdown_get_list(mArpChordComplexityDd);
     lv_obj_set_style_max_height(chCompList, 200, 0);
     lv_obj_add_event_cb(mArpChordComplexityDd, arpChordComplexityDdEventCb, LV_EVENT_VALUE_CHANGED, this);
@@ -883,6 +911,8 @@ void UIManager::populateArpScreen() {
     lv_obj_set_size(mArpInversionsSlider, 185, 12);
     lv_slider_set_range(mArpInversionsSlider, -3, 3);
     lv_slider_set_value(mArpInversionsSlider, activeInversion, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mArpInversionsSlider, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mArpInversionsSlider, getTrackColor(mActiveTrack), LV_PART_KNOB);
     lv_obj_set_style_pad_hor(mArpInversionsSlider, 10, 0); // Prevent handle cutout at extremes
     lv_obj_set_user_data(mArpInversionsSlider, invLbl);
     lv_obj_add_event_cb(mArpInversionsSlider, inversionsSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
@@ -1095,7 +1125,7 @@ void UIManager::latchBtnEventCb(lv_event_t* e) {
     bool isChecked = lv_obj_has_state(btn, LV_STATE_CHECKED);
     if (isChecked) {
         lv_label_set_text(label, "Latch: ON");
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x32CD32), 0);
+        lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mActiveTrack), 0);
     } else {
         lv_label_set_text(label, "Latch: OFF");
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
@@ -1128,7 +1158,7 @@ void UIManager::chEnBtnEventCb(lv_event_t* e) {
     bool isChecked = lv_obj_has_state(btn, LV_STATE_CHECKED);
     if (isChecked) {
         lv_label_set_text(label, "Chord Gen: ON");
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1E90FF), 0);
+        lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mActiveTrack), 0);
     } else {
         lv_label_set_text(label, "Chord Gen: OFF");
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
@@ -1260,7 +1290,7 @@ void UIManager::arpToggleBtnEventCb(lv_event_t* e) {
     bool isChecked = lv_obj_has_state(btn, LV_STATE_CHECKED);
     if (isChecked) {
         lv_label_set_text(label, "Arpeggiator: ON");
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x8A2BE2), 0);
+        lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mActiveTrack), 0);
     } else {
         lv_label_set_text(label, "Arpeggiator: OFF");
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
@@ -1343,6 +1373,7 @@ void UIManager::populateSettingsScreen() {
     lv_obj_t* tab1 = lv_tabview_add_tab(mSettingsTabview, "General");
     lv_obj_t* tab2 = lv_tabview_add_tab(mSettingsTabview, "MIDI Pads");
     lv_obj_t* tab3 = lv_tabview_add_tab(mSettingsTabview, "Knobs/Faders");
+    lv_obj_t* tab4 = lv_tabview_add_tab(mSettingsTabview, "System");
 
     // Style the individual tab buttons in the tab bar
     for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
@@ -1355,15 +1386,18 @@ void UIManager::populateSettingsScreen() {
     lv_obj_set_style_pad_all(tab1, 8, 0);
     lv_obj_set_style_pad_all(tab2, 8, 0);
     lv_obj_set_style_pad_all(tab3, 8, 0);
+    lv_obj_set_style_pad_all(tab4, 8, 0);
     lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab3, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(tab4, LV_OBJ_FLAG_SCROLLABLE);
 
     populateSettingsGeneralTab(tab1);
     populateSettingsMidiPadsTab(tab2);
     populateSettingsKnobsFadersTab(tab3);
+    populateSettingsSystemTab(tab4);
 
-    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 3) {
+    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 4) {
         lv_tabview_set_active(mSettingsTabview, mSettingsActiveTabIdx, LV_ANIM_OFF);
     }
 }
@@ -2248,6 +2282,218 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
     }
 }
 
+void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    auto applyCardStyle = [trackColor](lv_obj_t* card) {
+        lv_obj_set_size(card, 240, 460);
+        lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
+        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
+        lv_obj_set_style_border_color(card, trackColor, 0);
+        lv_obj_set_style_border_width(card, 2, 0);
+        lv_obj_set_style_radius(card, 12, 0);
+        lv_obj_set_style_pad_all(card, 12, 0);
+        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_row(card, 10, 0);
+    };
+
+    // --- Column 1: Audio Configuration ---
+    lv_obj_t* audioCard = lv_obj_create(tab);
+    applyCardStyle(audioCard);
+
+    lv_obj_t* audioTitle = lv_label_create(audioCard);
+    lv_label_set_text(audioTitle, "AUDIO DEVICE CONFIG");
+    lv_obj_set_style_text_font(audioTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(audioTitle, trackColor, 0);
+
+    // Audio Output Mode selector
+    lv_obj_t* outputModeLbl = lv_label_create(audioCard);
+    lv_label_set_text(outputModeLbl, "Output Channel Mode:");
+    lv_obj_set_style_text_font(outputModeLbl, &lv_font_montserrat_10, 0);
+
+    lv_obj_t* outputModeDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(outputModeDd, 180, 36);
+    lv_dropdown_set_options(outputModeDd, "Stereo\nMono (L Only)\nPseudo-Stereo (Delay)\nPhase-Inverted");
+    lv_obj_set_style_bg_color(outputModeDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(outputModeDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(outputModeDd, mEngine.getAudioOutputMode());
+    
+    auto outModeCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        ui->mEngine.setAudioOutputMode(selected);
+        std::cout << "System: Audio Output Mode set to " << selected << std::endl;
+    };
+    lv_obj_add_event_cb(outputModeDd, outModeCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Audio Device Dropdown
+    lv_obj_t* deviceLbl = lv_label_create(audioCard);
+    lv_label_set_text(deviceLbl, "Active SDL Audio Device:");
+    lv_obj_set_style_text_font(deviceLbl, &lv_font_montserrat_10, 0);
+
+    std::string deviceOptions = "Default\n";
+    int numDevs = SDL_GetNumAudioDevices(0);
+    std::vector<std::string> devNames;
+    devNames.push_back("Default");
+    int activeIdx = 0;
+    
+    for (int i = 0; i < numDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        if (name) {
+            deviceOptions += std::string(name) + "\n";
+            devNames.push_back(name);
+            if (gCurrentAudioDevice == name) {
+                activeIdx = devNames.size() - 1;
+            }
+        }
+    }
+    if (!deviceOptions.empty() && deviceOptions.back() == '\n') {
+        deviceOptions.pop_back();
+    }
+
+    lv_obj_t* deviceDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(deviceDd, 200, 36);
+    lv_dropdown_set_options(deviceDd, deviceOptions.c_str());
+    lv_obj_set_style_bg_color(deviceDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(deviceDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(deviceDd, activeIdx);
+
+    struct DeviceChangeData {
+        UIManager* ui;
+        std::vector<std::string> names;
+    };
+    DeviceChangeData* devData = new DeviceChangeData{this, devNames};
+
+    auto devCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            bool success = switchAudioDevice(selectedName);
+            if (success) {
+                d->ui->mSettingsAudioDevice = selectedName;
+                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            }
+        }
+    };
+    lv_obj_add_event_cb(deviceDd, devCb, LV_EVENT_VALUE_CHANGED, devData);
+
+    auto devFreeCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        delete d;
+    };
+    lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
+
+    // Panic Button and Reset MIDI
+    lv_obj_t* actionLbl = lv_label_create(audioCard);
+    lv_label_set_text(actionLbl, "System Actions:");
+    lv_obj_set_style_text_font(actionLbl, &lv_font_montserrat_10, 0);
+
+    lv_obj_t* panicBtn = lv_button_create(audioCard);
+    lv_obj_set_size(panicBtn, 200, 36);
+    lv_obj_set_style_bg_color(panicBtn, lv_color_hex(0xE06C75), 0);
+    lv_obj_t* panicLbl = lv_label_create(panicBtn);
+    lv_label_set_text(panicLbl, "AUDIO PANIC (ALL NOTES OFF)");
+    lv_obj_set_style_text_font(panicLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(panicLbl);
+    lv_obj_add_event_cb(panicBtn, settingsPanicBtnEventCb, LV_EVENT_CLICKED, this);
+
+
+    // --- Column 2: System Performance & Updater ---
+    lv_obj_t* perfCard = lv_obj_create(tab);
+    applyCardStyle(perfCard);
+
+    lv_obj_t* perfTitle = lv_label_create(perfCard);
+    lv_label_set_text(perfTitle, "PERFORMANCE STATS");
+    lv_obj_set_style_text_font(perfTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(perfTitle, trackColor, 0);
+
+    mCpuLoadLabel = lv_label_create(perfCard);
+    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+    lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0xCCCCCC), 0);
+
+    lv_obj_t* sampleRateLbl = lv_label_create(perfCard);
+    lv_label_set_text_fmt(sampleRateLbl, "Sample Rate: %d Hz", (int)mEngine.getSampleRate());
+    lv_obj_set_style_text_font(sampleRateLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(sampleRateLbl, lv_color_hex(0xAAAAAA), 0);
+
+    lv_obj_t* bufferSizeLbl = lv_label_create(perfCard);
+    lv_label_set_text(bufferSizeLbl, "Buffer Size: 256 samples");
+    lv_obj_set_style_text_font(bufferSizeLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(bufferSizeLbl, lv_color_hex(0xAAAAAA), 0);
+
+    // Separator line
+    lv_obj_t* sepLine = lv_obj_create(perfCard);
+    lv_obj_set_size(sepLine, 210, 1);
+    lv_obj_set_style_bg_color(sepLine, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(sepLine, 0, 0);
+
+    // System Updater Sub-section
+    lv_obj_t* updateTitle = lv_label_create(perfCard);
+    lv_label_set_text(updateTitle, "SYSTEM UPDATER");
+    lv_obj_set_style_text_font(updateTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(updateTitle, trackColor, 0);
+
+    mSettingsUpdateStatus = lv_label_create(perfCard);
+    lv_label_set_text(mSettingsUpdateStatus, "Status: Idle");
+    lv_obj_set_style_text_font(mSettingsUpdateStatus, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mSettingsUpdateStatus, lv_color_hex(0xAAAAAA), 0);
+    lv_label_set_long_mode(mSettingsUpdateStatus, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(mSettingsUpdateStatus, 210);
+
+    lv_obj_t* updateBtn = lv_button_create(perfCard);
+    lv_obj_set_size(updateBtn, 180, 34);
+    lv_obj_set_style_bg_color(updateBtn, trackColor, 0);
+    lv_obj_t* updateBtnLbl = lv_label_create(updateBtn);
+    lv_label_set_text(updateBtnLbl, "CHECK & UPDATE");
+    lv_obj_set_style_text_font(updateBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(updateBtnLbl);
+    lv_obj_add_event_cb(updateBtn, settingsUpdateBtnEventCb, LV_EVENT_CLICKED, this);
+
+
+    // --- Column 3: USB/MIDI Diagnostic Monitor ---
+    lv_obj_t* diagCard = lv_obj_create(tab);
+    applyCardStyle(diagCard);
+
+    lv_obj_t* diagTitle = lv_label_create(diagCard);
+    lv_label_set_text(diagTitle, "USB/MIDI DIAGNOSTICS");
+    lv_obj_set_style_text_font(diagTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(diagTitle, trackColor, 0);
+
+    lv_obj_t* listTitle = lv_label_create(diagCard);
+    lv_label_set_text(listTitle, "Detected USB & MIDI:");
+    lv_obj_set_style_text_font(listTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(listTitle, lv_color_hex(0x888888), 0);
+
+    mMidiDeviceListLabel = lv_label_create(diagCard);
+    lv_label_set_text(mMidiDeviceListLabel, "Scanning...");
+    lv_obj_set_style_text_font(mMidiDeviceListLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mMidiDeviceListLabel, lv_color_hex(0xCCCCCC), 0);
+    lv_label_set_long_mode(mMidiDeviceListLabel, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(mMidiDeviceListLabel, 210);
+
+    lv_obj_t* monitorTitle = lv_label_create(diagCard);
+    lv_label_set_text(monitorTitle, "Real-time MIDI Log:");
+    lv_obj_set_style_text_font(monitorTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(monitorTitle, lv_color_hex(0x888888), 0);
+
+    mMidiMonitorConsoleLabel = lv_label_create(diagCard);
+    lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
+    lv_obj_set_style_text_font(mMidiMonitorConsoleLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mMidiMonitorConsoleLabel, lv_color_hex(0x00FF88), 0); // Retro green console text
+    lv_label_set_long_mode(mMidiMonitorConsoleLabel, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(mMidiMonitorConsoleLabel, 210);
+}
+
 // ==========================================================================
 // ==========================================================================
 // Settings Callbacks
@@ -2967,6 +3213,9 @@ void UIManager::settingsScreenDeleteEventCb(lv_event_t* e) {
     ui->mSettingsMidiTrackDd = nullptr;
     ui->mSettingsMidiInDd = nullptr;
     ui->mSettingsMidiOutDd = nullptr;
+    ui->mMidiDeviceListLabel = nullptr;
+    ui->mMidiMonitorConsoleLabel = nullptr;
+    ui->mSettingsUpdateStatus = nullptr;
 }
 
 void UIManager::update() {
@@ -3178,6 +3427,68 @@ void UIManager::update() {
     } else if (mActiveNav == 5) {
         if (mCpuLoadLabel != nullptr) {
             lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+        }
+
+        // Rate-limit USB/MIDI device scanning to once per second
+        static uint32_t lastScanMs = 0;
+        uint32_t now = SDL_GetTicks();
+        if (now - lastScanMs > 1000 || lastScanMs == 0) {
+            lastScanMs = now;
+            if (mMidiDeviceListLabel != nullptr) {
+                std::vector<std::string> midiDevs = getSystemConnectedMidiInputs();
+                std::vector<std::string> joyDevs = getSystemConnectedJoysticks();
+                
+                std::string listStr = "MIDI IN:\n";
+                for (const auto& dev : midiDevs) {
+                    listStr += "- " + dev + "\n";
+                }
+                listStr += "\nUSB CONTROLLERS:\n";
+                for (const auto& dev : joyDevs) {
+                    listStr += "- " + dev + "\n";
+                }
+                if (!listStr.empty() && listStr.back() == '\n') {
+                    listStr.pop_back();
+                }
+                lv_label_set_text(mMidiDeviceListLabel, listStr.c_str());
+            }
+        }
+
+        // Update Updater status
+        if (mSettingsUpdateStatus != nullptr) {
+            if (mUpdateInstallActive) {
+                lv_label_set_text_fmt(mSettingsUpdateStatus, "Status: %s\nProgress: %d%%", 
+                                      mUpdateInstallStatusStr.c_str(), mUpdateInstallProgressPercent);
+            } else if (mUpdateInstallFinished) {
+                lv_label_set_text_fmt(mSettingsUpdateStatus, "Status: Finished\n%s", mUpdateInstallStatusStr.c_str());
+            } else {
+                lv_label_set_text(mSettingsUpdateStatus, "Status: Idle\nReady to update.");
+            }
+        }
+
+        // Update MIDI console monitor
+        if (mMidiMonitorConsoleLabel != nullptr) {
+            std::lock_guard<std::mutex> lock(mMidiLogMutex);
+            if (mMidiLog.empty()) {
+                lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
+            } else {
+                std::string consoleText = "";
+                // Display latest events at the bottom, or reverse to show newest at top (newest at top is better for scrolling)
+                for (auto it = mMidiLog.rbegin(); it != mMidiLog.rend(); ++it) {
+                    if (it->typeStr == "CC") {
+                        consoleText += "Ch " + std::to_string(it->channel) + ": CC " + std::to_string(it->data1) + 
+                                       " (Val " + std::to_string(it->data2) + ")\n";
+                    } else if (it->typeStr == "Note On") {
+                        consoleText += "Ch " + std::to_string(it->channel) + ": Note On " + std::to_string(it->data1) + 
+                                       " (Vel " + std::to_string(it->data2) + ")\n";
+                    } else if (it->typeStr == "Note Off") {
+                        consoleText += "Ch " + std::to_string(it->channel) + ": Note Off " + std::to_string(it->data1) + "\n";
+                    }
+                }
+                if (!consoleText.empty() && consoleText.back() == '\n') {
+                    consoleText.pop_back();
+                }
+                lv_label_set_text(mMidiMonitorConsoleLabel, consoleText.c_str());
+            }
         }
     } else if (mActiveNav == 2) {
         // Sync sequencer UI step buttons state with engine state (crucial for live recording!)
@@ -5167,11 +5478,13 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
         } else {
             if (ui->mFileBrowserIsSave) {
                 ui->mEngine.saveProject(fullPath);
-                ui->saveSettings(fullPath + ".settings");
+                ui->mSettingsFilePath = fullPath + ".settings";
+                ui->saveSettings(ui->mSettingsFilePath);
                 std::cout << "Project saved: " << fullPath << std::endl;
             } else {
                 ui->mEngine.loadProject(fullPath);
-                ui->loadSettings(fullPath + ".settings");
+                ui->mSettingsFilePath = fullPath + ".settings";
+                ui->loadSettings(ui->mSettingsFilePath);
                 std::cout << "Project loaded: " << fullPath << std::endl;
             }
         }
@@ -14736,6 +15049,7 @@ void UIManager::saveSettings(const std::string& path) {
     file << "VELOCITY_SENSITIVITY:" << (mEngine.getVelocitySensitivityEnabled() ? 1 : 0) << "\n";
     file << "FAST_GRANULAR:" << (mEngine.getFastGranularEnabled() ? 1 : 0) << "\n";
     file << "AUDIO_OUTPUT_MODE:" << mEngine.getAudioOutputMode() << "\n";
+    file << "AUDIO_DEVICE:" << mSettingsAudioDevice << "\n";
 
     file << "PAD_FX_ASSIGN:";
     for (int i = 0; i < 16; ++i) file << mSettingsPadFxAssign[i] << (i < 15 ? " " : "");
@@ -14809,6 +15123,7 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "VELOCITY_SENSITIVITY") mEngine.setVelocitySensitivityEnabled(std::stoi(val) != 0);
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
+            else if (key == "AUDIO_DEVICE") mSettingsAudioDevice = val;
             else if (key == "PAD_FX_ASSIGN") {
                 std::stringstream ss(val);
                 for (int i = 0; i < 16; ++i) ss >> mSettingsPadFxAssign[i];
@@ -14910,3 +15225,68 @@ void UIManager::loadSettings(const std::string& path) {
         } catch (...) {}
     }
 }
+
+void UIManager::addMidiLog(const std::string& type, int channel, int d1, int d2) {
+    std::lock_guard<std::mutex> lock(mMidiLogMutex);
+    MidiLogMessage msg;
+    msg.typeStr = type;
+    msg.channel = channel;
+    msg.data1 = d1;
+    msg.data2 = d2;
+    mMidiLog.push_back(msg);
+    if (mMidiLog.size() > 12) {
+        mMidiLog.erase(mMidiLog.begin());
+    }
+}
+
+void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    if (ui->mUpdateInstallActive) return;
+
+    ui->mUpdateInstallActive = true;
+    ui->mUpdateInstallFinished = false;
+    ui->mUpdateInstallStatusStr = "Checking for updates...";
+    ui->mUpdateInstallProgressPercent = 10;
+
+    std::thread updateThread([ui]() {
+        int ret = std::system("git fetch origin main");
+        ui->mUpdateInstallProgressPercent = 25;
+        ui->mUpdateInstallStatusStr = "Pulling updates...";
+        
+        ret = std::system("git pull origin main");
+        if (ret != 0) {
+            ui->mUpdateInstallStatusStr = "Git pull failed.";
+            ui->mUpdateInstallFinished = true;
+            ui->mUpdateInstallActive = false;
+            return;
+        }
+
+        ui->mUpdateInstallProgressPercent = 50;
+        ui->mUpdateInstallStatusStr = "Generating build configuration...";
+        ret = std::system("cmake -Bbuild -DCMAKE_BUILD_TYPE=Release");
+        if (ret != 0) {
+            ui->mUpdateInstallStatusStr = "CMake build generation failed.";
+            ui->mUpdateInstallFinished = true;
+            ui->mUpdateInstallActive = false;
+            return;
+        }
+
+        ui->mUpdateInstallProgressPercent = 70;
+        ui->mUpdateInstallStatusStr = "Compiling system (takes ~1 min)...";
+        ret = std::system("cmake --build build --config Release -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)");
+        if (ret != 0) {
+            ui->mUpdateInstallStatusStr = "Compilation failed.";
+            ui->mUpdateInstallFinished = true;
+            ui->mUpdateInstallActive = false;
+            return;
+        }
+
+        ui->mUpdateInstallProgressPercent = 100;
+        ui->mUpdateInstallStatusStr = "Success! Restart Loom to apply.";
+        ui->mUpdateInstallFinished = true;
+        ui->mUpdateInstallActive = false;
+    });
+    updateThread.detach();
+}
+

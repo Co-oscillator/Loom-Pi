@@ -25,6 +25,42 @@ void audioCaptureCallback(void* userdata, Uint8* stream, int len) {
     gEngine.renderInput(in, numFrames, 2);
 }
 
+SDL_AudioDeviceID gAudioDeviceID = 0;
+std::string gCurrentAudioDevice = "Default";
+
+bool switchAudioDevice(const std::string& deviceName) {
+    if (gAudioDeviceID != 0) {
+        SDL_CloseAudioDevice(gAudioDeviceID);
+        gAudioDeviceID = 0;
+    }
+    
+    SDL_AudioSpec want, have;
+    SDL_zero(want);
+    want.freq = 48000;
+    want.format = AUDIO_F32SYS;
+    want.channels = 2;
+    want.samples = 256;
+    want.callback = audioCallback;
+    
+    const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
+    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, 0);
+    if (gAudioDeviceID == 0) {
+        std::cerr << "switchAudioDevice failed: " << SDL_GetError() << std::endl;
+        // Fallback to default
+        gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+        gCurrentAudioDevice = "Default";
+    } else {
+        gCurrentAudioDevice = deviceName;
+    }
+    
+    if (gAudioDeviceID != 0) {
+        SDL_PauseAudioDevice(gAudioDeviceID, 0);
+        std::cout << "SDL Audio Device switched to: " << gCurrentAudioDevice << std::endl;
+        return true;
+    }
+    return false;
+}
+
 int main() {
     std::cout << "Starting Loom Pi Audio Engine + UI..." << std::endl;
     
@@ -37,21 +73,10 @@ int main() {
         return 1;
     }
     
-    SDL_AudioSpec want, have;
-    SDL_zero(want);
-    want.freq = 48000;
-    want.format = AUDIO_F32SYS;
-    want.channels = 2;
-    want.samples = 256;
-    want.callback = audioCallback;
-    
-    SDL_AudioDeviceID dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
-    if (dev == 0) {
-        std::cerr << "SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
+    if (!switchAudioDevice(gCurrentAudioDevice)) {
+        std::cerr << "Failed to open default SDL Audio Device." << std::endl;
         return 1;
     }
-    
-    SDL_PauseAudioDevice(dev, 0); // Start audio
     
     // Open SDL Audio Capture (recording) device
     SDL_AudioSpec wantCapture, haveCapture;
@@ -144,7 +169,7 @@ int main() {
             if (capDev != 0) {
                 SDL_CloseAudioDevice(capDev);
             }
-            SDL_CloseAudioDevice(dev);
+            SDL_CloseAudioDevice(gAudioDeviceID);
             SDL_Quit();
             return 0;
         }
@@ -212,7 +237,81 @@ int main() {
     if (capDev != 0) {
         SDL_CloseAudioDevice(capDev);
     }
-    SDL_CloseAudioDevice(dev);
+    SDL_CloseAudioDevice(gAudioDeviceID);
     SDL_Quit();
     return 0;
 }
+
+std::vector<std::string> getSystemConnectedMidiInputs() {
+    std::vector<std::string> devices;
+#ifdef __APPLE__
+    ItemCount numSources = MIDIGetNumberOfSources();
+    for (ItemCount i = 0; i < numSources; ++i) {
+        MIDIEndpointRef source = MIDIGetSource(i);
+        if (source != 0) {
+            CFStringRef nameRef = NULL;
+            MIDIObjectGetStringProperty(source, kMIDIPropertyName, &nameRef);
+            if (nameRef) {
+                char name[256];
+                CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+                CFRelease(nameRef);
+                devices.push_back(name);
+            } else {
+                devices.push_back("Unknown CoreMIDI Source");
+            }
+        }
+    }
+#else
+    // On Linux ALSA
+    if (gSeq) {
+        snd_seq_client_info_t *cinfo = nullptr;
+        snd_seq_port_info_t *pinfo = nullptr;
+        if (snd_seq_client_info_malloc(&cinfo) >= 0 && snd_seq_port_info_malloc(&pinfo) >= 0) {
+            snd_seq_client_info_set_client(cinfo, -1);
+            while (snd_seq_query_next_client(gSeq, cinfo) >= 0) {
+                int client = snd_seq_client_info_get_client(cinfo);
+                if (client == snd_seq_client_id(gSeq)) continue;
+                
+                const char* clientName = snd_seq_client_info_get_name(cinfo);
+                snd_seq_port_info_set_client(pinfo, client);
+                snd_seq_port_info_set_port(pinfo, -1);
+                while (snd_seq_query_next_port(gSeq, pinfo) >= 0) {
+                    unsigned int capability = snd_seq_port_info_get_capability(pinfo);
+                    if ((capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ)) {
+                        const char* portName = snd_seq_port_info_get_name(pinfo);
+                        std::string fullName = clientName ? clientName : "Unknown Client";
+                        if (portName && strlen(portName) > 0) {
+                            fullName += " - " + std::string(portName);
+                        }
+                        devices.push_back(fullName);
+                    }
+                }
+            }
+            snd_seq_port_info_free(pinfo);
+            snd_seq_client_info_free(cinfo);
+        }
+    }
+#endif
+    if (devices.empty()) {
+        devices.push_back("No MIDI devices detected");
+    }
+    return devices;
+}
+
+std::vector<std::string> getSystemConnectedJoysticks() {
+    std::vector<std::string> joysticks;
+    int numJoysticks = SDL_NumJoysticks();
+    for (int i = 0; i < numJoysticks; ++i) {
+        const char* name = SDL_JoystickNameForIndex(i);
+        if (name) {
+            joysticks.push_back(name);
+        } else {
+            joysticks.push_back("Unknown Joystick");
+        }
+    }
+    if (joysticks.empty()) {
+        joysticks.push_back("No USB controllers / Joysticks detected");
+    }
+    return joysticks;
+}
+

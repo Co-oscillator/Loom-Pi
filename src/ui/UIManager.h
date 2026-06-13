@@ -5,6 +5,9 @@
 #include "../AudioEngine.h"
 #include <string>
 #include <vector>
+#include <atomic>
+#include <thread>
+#include <mutex>
 
 class UIManager {
 public:
@@ -489,12 +492,15 @@ private:
     void populateSettingsGeneralTab(lv_obj_t* tab);
     void populateSettingsMidiPadsTab(lv_obj_t* tab);
     void populateSettingsKnobsFadersTab(lv_obj_t* tab);
+    void populateSettingsSystemTab(lv_obj_t* tab);
     void rebuildPadGrid();
     std::string detectChordName(const int* notes, int count);
     
     // Settings UI handles
     lv_obj_t* mCpuLoadLabel = nullptr;
     lv_obj_t* mWtActiveNameLbl = nullptr;
+    lv_obj_t* mSettingsUpdateStatus = nullptr;
+    lv_obj_t* mSettingsUpdateProgress = nullptr;
     
     // Sampler UI handles
     lv_obj_t* mSamplerWaveformContainer = nullptr;
@@ -557,6 +563,8 @@ public:
     
     // Settings – Keyboard mode
     bool mSettingsKeyboardMode = true;
+    std::string mSettingsAudioDevice = "Default";
+    std::string mSettingsFilePath;
     
     // Settings callbacks (General tab)
     static void settingsSampleRateDdEventCb(lv_event_t* e);
@@ -567,6 +575,10 @@ public:
     static void settingsMidiOutChannelDdEventCb(lv_event_t* e);
     static void settingsScaleDropdownEventCb(lv_event_t* e);
     static void settingsScreenDeleteEventCb(lv_event_t* e);
+    static void settingsAudioDeviceDdEventCb(lv_event_t* e);
+    static void settingsUpdateBtnEventCb(lv_event_t* e);
+    static void settingsRebootBtnEventCb(lv_event_t* e);
+    static void settingsShutdownBtnEventCb(lv_event_t* e);
     
     // Settings callbacks (MIDI Pads tab)
     static void settingsPadCountDdEventCb(lv_event_t* e);
@@ -608,6 +620,32 @@ public:
     
     static std::string getParameterNameString(int trackIdx, int paramId, AudioEngine* engine = nullptr);
     static std::string getCompactDestName(int trackIdx, int paramId, AudioEngine* engine = nullptr);
+
+    std::atomic<bool> mUpdateCheckActive{false};
+    std::atomic<bool> mUpdateCheckFinished{false};
+    std::string mLatestVersionStr = "";
+    std::atomic<bool> mUpdateInstallActive{false};
+    std::atomic<bool> mUpdateInstallFinished{false};
+    std::string mUpdateInstallStatusStr = "";
+    int mUpdateInstallProgressPercent = 0;
+
+    // MIDI Monitor log definitions
+    struct MidiLogMessage {
+        std::string typeStr;
+        int channel;
+        int data1;
+        int data2;
+    };
+    std::vector<MidiLogMessage> mMidiLog;
+    std::mutex mMidiLogMutex;
+    void addMidiLog(const std::string& type, int channel, int d1, int d2);
+
+    // Diagnostic console UI handles
+    lv_obj_t* mMidiDeviceListLabel = nullptr;
+    lv_obj_t* mMidiMonitorConsoleLabel = nullptr;
 };
+
+std::vector<std::string> getSystemConnectedMidiInputs();
+std::vector<std::string> getSystemConnectedJoysticks();
 
 #endif // UI_MANAGER_H
