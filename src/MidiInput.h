@@ -175,10 +175,26 @@ static void reconnectMidiSources() {
     if (gMidiInputPort == 0) return;
     
     ItemCount numSources = MIDIGetNumberOfSources();
+    std::cout << "CoreMIDI: " << numSources << " MIDI source(s) found." << std::endl;
     for (ItemCount i = 0; i < numSources; ++i) {
         MIDIEndpointRef source = MIDIGetSource(i);
         if (source != 0) {
-            MIDIPortConnectSource(gMidiInputPort, source, NULL);
+            CFStringRef nameRef = NULL;
+            MIDIObjectGetStringProperty(source, kMIDIPropertyName, &nameRef);
+            if (nameRef) {
+                char name[256];
+                CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+                CFRelease(nameRef);
+                std::cout << "  Source [" << i << "]: " << name << std::endl;
+            } else {
+                std::cout << "  Source [" << i << "]: (Unknown Name)" << std::endl;
+            }
+            OSStatus err = MIDIPortConnectSource(gMidiInputPort, source, NULL);
+            if (err != noErr) {
+                std::cerr << "  CoreMIDI: Failed to connect source, error: " << err << std::endl;
+            } else {
+                std::cout << "  CoreMIDI: Successfully connected source [" << i << "]" << std::endl;
+            }
         }
     }
 }
@@ -621,13 +637,13 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
 
                                             float multiplier = 1.0f;
                                             if (dt < 100) {
-                                                // High-speed quadratic spin acceleration
+                                                // High-speed quadratic spin acceleration (half as aggressive)
                                                 float speedFactor = 100.0f / (float)dt;
-                                                multiplier = speedFactor * speedFactor;
-                                                if (multiplier > 8.0f) multiplier = 8.0f; // cap max acceleration
+                                                multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
+                                                if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
                                             } else if (dt > 300) {
-                                                // Slow turn ultra-fine resolution adjustment
-                                                multiplier = 0.4f;
+                                                // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
+                                                multiplier = 0.8f;
                                             }
 
                                             float paramDelta = delta * multiplier;
@@ -1145,13 +1161,13 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
 
                                 float multiplier = 1.0f;
                                 if (dt < 100) {
-                                    // High-speed quadratic spin acceleration
+                                    // High-speed quadratic spin acceleration (half as aggressive)
                                     float speedFactor = 100.0f / (float)dt;
-                                    multiplier = speedFactor * speedFactor;
-                                    if (multiplier > 8.0f) multiplier = 8.0f; // cap max acceleration
+                                    multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
+                                    if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
                                 } else if (dt > 300) {
-                                    // Slow turn ultra-fine resolution adjustment
-                                    multiplier = 0.4f;
+                                    // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
+                                    multiplier = 0.8f;
                                 }
 
                                 float paramDelta = delta * multiplier;
@@ -1302,6 +1318,64 @@ static void* alsaMidiThreadProc(void* arg) {
     return nullptr;
 }
 
+static pthread_t gMidiAutoConnectThread;
+
+static void autoConnectAlsaSources(snd_seq_t* seq, int ourPort) {
+    if (!seq || ourPort < 0) return;
+    
+    snd_seq_client_info_t *cinfo = nullptr;
+    snd_seq_port_info_t *pinfo = nullptr;
+    
+    if (snd_seq_client_info_malloc(&cinfo) < 0) return;
+    if (snd_seq_port_info_malloc(&pinfo) < 0) {
+        snd_seq_client_info_free(cinfo);
+        return;
+    }
+    
+    snd_seq_client_info_set_client(cinfo, -1);
+    while (snd_seq_query_next_client(seq, cinfo) >= 0) {
+        int client = snd_seq_client_info_get_client(cinfo);
+        if (client == snd_seq_client_id(seq)) {
+            continue; // Skip ourselves
+        }
+        
+        snd_seq_port_info_set_client(pinfo, client);
+        snd_seq_port_info_set_port(pinfo, -1);
+        while (snd_seq_query_next_port(seq, pinfo) >= 0) {
+            unsigned int capability = snd_seq_port_info_get_capability(pinfo);
+            // Check if the port supports read events (is an output/sender)
+            if ((capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ)) {
+                snd_seq_port_subscribe_t *sub = nullptr;
+                if (snd_seq_port_subscribe_malloc(&sub) >= 0) {
+                    snd_seq_addr_t sender, dest;
+                    sender.client = client;
+                    sender.port = snd_seq_port_info_get_port(pinfo);
+                    dest.client = snd_seq_client_id(seq);
+                    dest.port = ourPort;
+                    
+                    snd_seq_port_subscribe_set_sender(sub, &sender);
+                    snd_seq_port_subscribe_set_dest(sub, &dest);
+                    
+                    snd_seq_subscribe_port(seq, sub);
+                    snd_seq_port_subscribe_free(sub);
+                }
+            }
+        }
+    }
+    
+    snd_seq_port_info_free(pinfo);
+    snd_seq_client_info_free(cinfo);
+}
+
+static void* alsaAutoConnectThreadProc(void* arg) {
+    std::cout << "ALSA Sequencer: Background auto-connection thread started." << std::endl;
+    while (gMidiThreadRunning) {
+        autoConnectAlsaSources(gSeq, gInPort);
+        sleep(2);
+    }
+    return nullptr;
+}
+
 static inline void setupMidiInput(MidiCallbackData* data) {
     gMidiCallbackData = *data;
     
@@ -1333,6 +1407,9 @@ static inline void setupMidiInput(MidiCallbackData* data) {
         gMidiThreadRunning = false;
         return;
     }
+    
+    // Start the background auto-connection thread
+    pthread_create(&gMidiAutoConnectThread, nullptr, alsaAutoConnectThreadProc, nullptr);
     
     std::cout << "ALSA Sequencer: Virtual MIDI input port initialized ('LoomPi:LoomPi Input')." << std::endl;
 }

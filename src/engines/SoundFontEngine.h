@@ -4,6 +4,7 @@
 #include "../Utils.h"
 #include "../libs/tsf.h"
 #include "Adsr.h"
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <string>

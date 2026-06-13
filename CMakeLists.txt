@@ -26,6 +26,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(lvgl)
 
+# Filter out assembly (.S) files from target lvgl to prevent compilation failures on ARM (Raspberry Pi)
+get_target_property(LVGL_SOURCES lvgl SOURCES)
+set(LVGL_CLEAN_SOURCES "")
+foreach(source ${LVGL_SOURCES})
+  if(NOT source MATCHES "\\.S$")
+    list(APPEND LVGL_CLEAN_SOURCES ${source})
+  endif()
+endforeach()
+set_target_properties(lvgl PROPERTIES SOURCES "${LVGL_CLEAN_SOURCES}")
+
 target_include_directories(lvgl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lvgl PUBLIC SDL2::SDL2)
 

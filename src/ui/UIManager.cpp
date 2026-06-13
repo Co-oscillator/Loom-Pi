@@ -6,6 +6,17 @@
 #include <fstream>
 #include <cmath>
 
+static int s_activeFmPreset[18] = {0};
+
+static const char* FM_PRESET_NAMES[32] = {
+    "Brass", "Strings Soft", "Orchestra", "Piano", "E. Piano", "Tine Synth",
+    "Bass", "Organ", "Percussive Organ", "Tubular", "Mallet", "Vibe",
+    "Marimba", "Chime", "Flute", "Tubular Bells", "Clavi", "Pluck",
+    "Calliope", "Oboe", "Voice", "Xylophone", "Church Bells", "Synth Lead",
+    "Recorders", "Shimmer", "Filter Sweep", "Funky Rise", "Refs Whisl", "Feedback Noise",
+    "Harmonics", "Space Bell"
+};
+
 float UIManager::mapLinearToNonLinear(float norm, float minVal, float maxVal, const std::string& labelText) {
     std::string labelStr = labelText;
     for (auto & c: labelStr) c = toupper(c);
@@ -27,7 +38,7 @@ float UIManager::mapLinearToNonLinear(float norm, float minVal, float maxVal, co
     if (type == "D") {
         midVal = 0.65f;
     } else if (type == "R") {
-        midVal = 2.0f;
+        midVal = 0.65f;
     }
     
     if (midVal <= minVal || midVal >= maxVal) {
@@ -61,7 +72,7 @@ float UIManager::mapNonLinearToLinear(float val, float minVal, float maxVal, con
     if (type == "D") {
         midVal = 0.65f;
     } else if (type == "R") {
-        midVal = 2.0f;
+        midVal = 0.65f;
     }
     
     if (midVal <= minVal || midVal >= maxVal) {
@@ -89,10 +100,10 @@ float UIManager::scaleParamFromNormalized(int paramId, float normValue) {
         paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
         return mapLinearToNonLinear(normValue, 0.0f, 4.0f, "D");
     }
-    // Release parameters across all engines (0.001f to 8.0f)
+    // Release parameters across all engines (0.001f to 4.0f)
     if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
         paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
-        return mapLinearToNonLinear(normValue, 0.001f, 8.0f, "R");
+        return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "R");
     }
     return normValue;
 }
@@ -108,10 +119,10 @@ float UIManager::normalizeParamValue(int paramId, float scaledValue) {
         paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
         return mapNonLinearToLinear(scaledValue, 0.0f, 4.0f, "D");
     }
-    // Release parameters across all engines (0.001f to 8.0f)
+    // Release parameters across all engines (0.001f to 4.0f)
     if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
         paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
-        return mapNonLinearToLinear(scaledValue, 0.001f, 8.0f, "R");
+        return mapNonLinearToLinear(scaledValue, 0.001f, 4.0f, "R");
     }
     return scaledValue;
 }
@@ -220,7 +231,7 @@ void UIManager::init() {
 
     // Auto-load Init project if it exists at startup
     const char* browseDir = getenv("HOME");
-    std::string homeStr = browseDir ? std::string(browseDir) : ".";
+    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     std::string initLoomPath = homeStr + "/projects/Init.loom";
     std::ifstream f(initLoomPath);
     if (f.good()) {
@@ -233,6 +244,34 @@ void UIManager::init() {
     // Force 16 pads default at startup
     mSettingsPadCount = 16;
     mNeedsScreenRebuild = true;
+
+    // Load custom FM presets persistently
+    std::string presetsFmDir = homeStr + "/presets/fm";
+    mkdir(presetsFmDir.c_str(), 0777); // ensure it exists
+    for (int t = 0; t < 8; ++t) {
+        auto& fmEngine = mEngine.getTracks()[t].fmEngine;
+        fmEngine.mCustomPresets.clear();
+        DIR* dir = opendir(presetsFmDir.c_str());
+        if (dir) {
+            struct dirent* entry;
+            std::vector<std::string> presetFiles;
+            while ((entry = readdir(dir)) != nullptr) {
+                std::string name(entry->d_name);
+                if (name == "." || name == "..") continue;
+                std::string lowerName = name;
+                for (char &c : lowerName) c = std::tolower((unsigned char)c);
+                if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".fmp") {
+                    presetFiles.push_back(name);
+                }
+            }
+            closedir(dir);
+            // Sort files so they are always loaded in alphabetical order
+            std::sort(presetFiles.begin(), presetFiles.end());
+            for (const auto& file : presetFiles) {
+                fmEngine.importPreset(presetsFmDir + "/" + file);
+            }
+        }
+    }
 }
 
 lv_color_t UIManager::getTrackColor(int trackIndex) {
@@ -425,12 +464,12 @@ void UIManager::navBtnEventCb(lv_event_t* e) {
 }
 
 void UIManager::createCenterContentArea() {
-    // Save settings active tab if settings screen is currently shown
-    if (mActiveNav == 5 && mSettingsTabview) {
+    // Save settings active tab if settings tabview exists
+    if (mSettingsTabview) {
         mSettingsActiveTabIdx = lv_tabview_get_tab_active(mSettingsTabview);
     }
-    // Save assign active tab if assign screen is currently shown
-    if (mActiveNav == 4 && mAssignTabview) {
+    // Save assign active tab if assign tabview exists
+    if (mAssignTabview) {
         mAssignActiveTabIdx = lv_tabview_get_tab_active(mAssignTabview);
     }
 
@@ -449,6 +488,31 @@ void UIManager::createCenterContentArea() {
 
     // Clear existing center area
     lv_obj_clean(mCenterArea);
+
+    mSettingsTabview = nullptr;
+    mAssignTabview = nullptr;
+
+    mSamplerWaveformContainer = nullptr;
+    mSamplerStartLine = nullptr;
+    mSamplerEndLine = nullptr;
+    mSamplerRecordBtn = nullptr;
+    mSamplerLatchBtn = nullptr;
+    mSamplerScrubHandle = nullptr;
+    std::fill(std::begin(mSamplerWaveformBars), std::end(mSamplerWaveformBars), nullptr);
+    std::fill(std::begin(mSamplerPlayheadLines), std::end(mSamplerPlayheadLines), nullptr);
+    std::fill(std::begin(mSamplerPlayheadShades), std::end(mSamplerPlayheadShades), nullptr);
+    std::fill(std::begin(mSamplerSliceLines), std::end(mSamplerSliceLines), nullptr);
+    std::fill(std::begin(mSamplerSliceHandles), std::end(mSamplerSliceHandles), nullptr);
+
+    mGranularWaveformContainer = nullptr;
+    mGranularStartLine = nullptr;
+    mGranularEndLine = nullptr;
+    mGranularPlayheadLine = nullptr;
+    mGranularPlayheadShade = nullptr;
+    mGranularRecordBtn = nullptr;
+    mGranularLatchBtn = nullptr;
+    mGranularLockBtn = nullptr;
+    std::fill(std::begin(mGranularWaveformBars), std::end(mGranularWaveformBars), nullptr);
 
     mActiveParamWidgets.clear();
     mActiveFxWidgets.clear();
@@ -2917,7 +2981,7 @@ void UIManager::update() {
         std::lock_guard<std::recursive_mutex> lock(mEngine.getLock());
         for (const auto& w : mActiveParamWidgets) {
             if (w.widget) {
-                float rawVal = mEngine.getTracks()[mActiveTrack].parameters[w.paramId];
+                float rawVal = mEngine.getTracks()[mActiveTrack].appliedParameters[w.paramId];
                 float normalized = 0.0f;
                 if (w.maxVal > w.minVal) {
                     normalized = mapNonLinearToLinear(rawVal, w.minVal, w.maxVal, w.labelText);
@@ -2980,12 +3044,57 @@ void UIManager::update() {
                 }
             }
         }
+
+        // Sync SoundFont text display in real time if visible
+        int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+        if (engineType == 9) {
+            if (mSoundFontActivePresetLbl) {
+                int activeP = mEngine.getTracks()[mActiveTrack].soundFontEngine.getPresetIndex();
+                std::string pName = mEngine.getSoundFontPresetName(mActiveTrack, activeP);
+                if (pName.empty()) pName = "General User GS Default";
+                
+                char expectedBuf[256];
+                snprintf(expectedBuf, sizeof(expectedBuf), "PRESET: %d - %s", activeP, pName.c_str());
+                const char* currentText = lv_label_get_text(mSoundFontActivePresetLbl);
+                if (strcmp(currentText, expectedBuf) != 0) {
+                    lv_label_set_text(mSoundFontActivePresetLbl, expectedBuf);
+                }
+            }
+            if (mSoundFontActiveBankLbl) {
+                std::string bankName = mEngine.getTracks()[mActiveTrack].lastSamplePath;
+                size_t lastSlash = bankName.find_last_of("/\\");
+                if (lastSlash != std::string::npos) {
+                    bankName = bankName.substr(lastSlash + 1);
+                }
+                if (bankName.empty()) bankName = "Default";
+                char expectedBuf[256];
+                snprintf(expectedBuf, sizeof(expectedBuf), "ACTIVE BANK: %s", bankName.c_str());
+                const char* currentText = lv_label_get_text(mSoundFontActiveBankLbl);
+                if (strcmp(currentText, expectedBuf) != 0) {
+                    lv_label_set_text(mSoundFontActiveBankLbl, expectedBuf);
+                }
+            }
+        } else if (engineType == 1) {
+            if (mFmActivePresetLbl) {
+                int activeP = mEngine.getTracks()[mActiveTrack].activeFmPreset;
+                s_activeFmPreset[mActiveTrack] = activeP;
+                const auto& custom = mEngine.getTracks()[mActiveTrack].fmEngine.mCustomPresets;
+                std::string pName = (activeP < 32) ? FM_PRESET_NAMES[activeP] : (activeP - 32 < (int)custom.size() ? custom[activeP - 32].name : "Unknown");
+                
+                char expectedBuf[256];
+                snprintf(expectedBuf, sizeof(expectedBuf), "PRESET: %d - %s", activeP, pName.c_str());
+                const char* currentText = lv_label_get_text(mFmActivePresetLbl);
+                if (strcmp(currentText, expectedBuf) != 0) {
+                    lv_label_set_text(mFmActivePresetLbl, expectedBuf);
+                }
+            }
+        }
     } else if (mActiveNav == 3) {
         // Sync FX Parameters in real time!
         std::lock_guard<std::recursive_mutex> lock(mEngine.getLock());
         for (const auto& w : mActiveFxWidgets) {
             if (w.widget) {
-                float rawVal = mEngine.getTracks()[mActiveTrack].parameters[w.paramId];
+                float rawVal = mEngine.getTracks()[mActiveTrack].appliedParameters[w.paramId];
                 float normalized = 0.0f;
                 if (w.maxVal > w.minVal) {
                     normalized = (rawVal - w.minVal) / (w.maxVal - w.minVal);
@@ -3140,11 +3249,13 @@ void UIManager::update() {
         
         // Highlight active playing step (Playhead Tracking)
         int currentStep = mEngine.getIsPlaying() ? mEngine.getCurrentStep(mActiveTrack, isDrum ? activeDrumIdx : -1) : -1;
+        bool isRecording = mEngine.getIsRecording();
+        lv_color_t playheadColor = isRecording ? lv_color_hex(0xEF4444) : lv_color_hex(0xFFFFFF);
         for (int i = 0; i < 64; ++i) {
             if (mSeqStepButtons[i]) {
                 if (i == currentStep) {
                     lv_obj_set_style_border_width(mSeqStepButtons[i], 3, 0);
-                    lv_obj_set_style_border_color(mSeqStepButtons[i], lv_color_hex(0xFFFFFF), 0);
+                    lv_obj_set_style_border_color(mSeqStepButtons[i], playheadColor, 0);
                 } else {
                     lv_obj_set_style_border_width(mSeqStepButtons[i], 0, 0);
                 }
@@ -3793,6 +3904,8 @@ void UIManager::openFileBrowser(bool isSave) {
     else if (mFileBrowserIsFmImport) titleText = "Import FM Preset";
     else if (mFileBrowserIsWtSelect) titleText = "Select Wavetable";
     else if (mFileBrowserIsWtImport) titleText = "Import WAV File";
+    else if (mFileBrowserIsSfSelect) titleText = "Select SoundFont";
+    else if (mFileBrowserIsSfImport) titleText = "Import SoundFont";
     else if (mFileBrowserIsSampleLoad) titleText = "Load Sample";
     else if (mFileBrowserIsSampleSave) titleText = "Save Sample";
     else if (mFileBrowserIsPresetLoad) titleText = "Load Preset";
@@ -3804,24 +3917,30 @@ void UIManager::openFileBrowser(bool isSave) {
 
     // Initialize current path if empty
     const char* browseDir = getenv("HOME");
-    std::string homeStr = browseDir ? std::string(browseDir) : ".";
+    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     
     // Ensure all target engine directories exist
+    mkdir(homeStr.c_str(), 0777); // Create ~/Loom parent first
     mkdir((homeStr + "/samples").c_str(), 0777);
     mkdir((homeStr + "/wavetables").c_str(), 0777);
     mkdir((homeStr + "/granular").c_str(), 0777);
     mkdir((homeStr + "/soundfonts").c_str(), 0777);
     mkdir((homeStr + "/sequences").c_str(), 0777);
     mkdir((homeStr + "/presets").c_str(), 0777);
+    mkdir((homeStr + "/presets/fm").c_str(), 0777); // Ensure fm subfolder exists
     mkdir((homeStr + "/projects").c_str(), 0777);
 
     if (mFileBrowserCurrentPath.empty()) {
         if (mFileBrowserIsProject) {
             mFileBrowserCurrentPath = homeStr + "/projects";
-        } else if (mFileBrowserIsFmImport || mFileBrowserIsPresetLoad || mFileBrowserIsPresetSave) {
+        } else if (mFileBrowserIsFmImport) {
+            mFileBrowserCurrentPath = homeStr + "/presets/fm";
+        } else if (mFileBrowserIsPresetLoad || mFileBrowserIsPresetSave) {
             mFileBrowserCurrentPath = homeStr + "/presets";
         } else if (mFileBrowserIsWtSelect) {
             mFileBrowserCurrentPath = homeStr + "/wavetables";
+        } else if (mFileBrowserIsSfSelect || mFileBrowserIsSfImport) {
+            mFileBrowserCurrentPath = homeStr + "/soundfonts";
         } else if (mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave) {
             mFileBrowserCurrentPath = homeStr + "/samples";
         } else {
@@ -3841,8 +3960,8 @@ void UIManager::openFileBrowser(bool isSave) {
 
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
-    // Dynamic Shortcut Buttons for Audio Loaders
-    bool showShortcuts = !isSave && (mFileBrowserIsSampleLoad || mFileBrowserIsWtSelect || mFileBrowserIsWtImport);
+    // Dynamic Shortcut Buttons for Audio Loaders and Presets
+    bool showShortcuts = !isSave && (mFileBrowserIsSampleLoad || mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSfSelect || mFileBrowserIsSfImport || mFileBrowserIsFmImport || mFileBrowserIsPresetLoad);
     if (showShortcuts) {
         lv_obj_t* folderRow = lv_obj_create(card);
         lv_obj_set_size(folderRow, 528, 40);
@@ -3861,7 +3980,7 @@ void UIManager::openFileBrowser(bool isSave) {
 
         auto createShortcutBtn = [this, trackColor, folderRow](const char* name, const std::string& targetPath) {
             lv_obj_t* btn = lv_btn_create(folderRow);
-            lv_obj_set_size(btn, 120, 30);
+            lv_obj_set_size(btn, (mFileBrowserIsFmImport || mFileBrowserIsPresetLoad) ? 250 : 120, 30);
             
             bool isActive = (mFileBrowserCurrentPath == targetPath);
             if (isActive) {
@@ -3902,10 +4021,15 @@ void UIManager::openFileBrowser(bool isSave) {
             lv_obj_add_event_cb(btn, freeShortcutCb, LV_EVENT_DELETE, data);
         };
 
-        createShortcutBtn("SAMPLES", homeStr + "/samples");
-        createShortcutBtn("WAVETABLES", homeStr + "/wavetables");
-        createShortcutBtn("GRANULAR", homeStr + "/granular");
-        createShortcutBtn("SOUNDFONTS", homeStr + "/soundfonts");
+        if (mFileBrowserIsFmImport || mFileBrowserIsPresetLoad) {
+            createShortcutBtn("PRESETS", homeStr + "/presets");
+            createShortcutBtn("FM PRESETS", homeStr + "/presets/fm");
+        } else {
+            createShortcutBtn("SAMPLES", homeStr + "/samples");
+            createShortcutBtn("WAVETABLES", homeStr + "/wavetables");
+            createShortcutBtn("GRANULAR", homeStr + "/granular");
+            createShortcutBtn("SOUNDFONTS", homeStr + "/soundfonts");
+        }
     }
 
     // Scrollable file list
@@ -3942,8 +4066,8 @@ void UIManager::openFileBrowser(bool isSave) {
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".bin") matched = true;
                 else if (lowerName.length() >= 6 && lowerName.substr(lowerName.length() - 6) == ".sysex") matched = true;
                 if (!matched) continue;
-            } else if (isSoundFontsFolder) {
-                // Show soundfonts in soundfonts folder
+            } else if (isSoundFontsFolder || mFileBrowserIsSfSelect || mFileBrowserIsSfImport) {
+                // Show soundfonts
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
@@ -4208,7 +4332,7 @@ void UIManager::openSeqStepModal(int stepIdx) {
 
     // Modal card
     lv_obj_t* card = lv_obj_create(overlay);
-    lv_obj_set_size(card, 540, 460);
+    lv_obj_set_size(card, 540, 540);
     lv_obj_center(card);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
@@ -4248,7 +4372,7 @@ void UIManager::openSeqStepModal(int stepIdx) {
 
     // Body Columns Container
     lv_obj_t* bodyContainer = lv_obj_create(card);
-    lv_obj_set_size(bodyContainer, lv_pct(100), 370);
+    lv_obj_set_size(bodyContainer, lv_pct(100), 450);
     lv_obj_set_style_bg_opa(bodyContainer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bodyContainer, 0, 0);
     lv_obj_set_style_pad_all(bodyContainer, 0, 0);
@@ -4258,7 +4382,17 @@ void UIManager::openSeqStepModal(int stepIdx) {
     lv_obj_set_style_pad_column(bodyContainer, 16, 0);
 
     // Fetch existing step details
-    std::vector<Step> currentSteps = mEngine.getSequencerSteps(mActiveTrack);
+    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
+    std::vector<Step> currentSteps;
+    if (isDrum) {
+        currentSteps = mEngine.getDrumSequencerSteps(mActiveTrack, mActiveDrumIdx);
+    } else {
+        currentSteps = mEngine.getSequencerSteps(mActiveTrack);
+    }
+
     Step stepObj;
     if (stepIdx < (int)currentSteps.size()) {
         stepObj = currentSteps[stepIdx];
@@ -4268,7 +4402,7 @@ void UIManager::openSeqStepModal(int stepIdx) {
 
     // Left Column
     lv_obj_t* leftCol = lv_obj_create(bodyContainer);
-    lv_obj_set_size(leftCol, 240, 360);
+    lv_obj_set_size(leftCol, 240, 440);
     lv_obj_set_style_bg_color(leftCol, lv_color_hex(0x222222), 0);
     lv_obj_set_style_bg_opa(leftCol, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(leftCol, lv_color_hex(0x2D2D2D), 0);
@@ -4318,7 +4452,7 @@ void UIManager::openSeqStepModal(int stepIdx) {
         return std::string(buf);
     };
 
-    int currentNoteVal = 60;
+    int currentNoteVal = isDrum ? (60 + mActiveDrumIdx) : 60;
     if (!stepObj.notes.empty()) {
         currentNoteVal = stepObj.notes[0].note;
     }
@@ -4449,7 +4583,7 @@ void UIManager::openSeqStepModal(int stepIdx) {
 
     // Right Column (Parameter Locking Dashboard)
     lv_obj_t* rightCol = lv_obj_create(bodyContainer);
-    lv_obj_set_size(rightCol, 240, 360);
+    lv_obj_set_size(rightCol, 240, 440);
     lv_obj_set_style_bg_color(rightCol, lv_color_hex(0x222222), 0);
     lv_obj_set_style_bg_opa(rightCol, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(rightCol, lv_color_hex(0x2D2D2D), 0);
@@ -4916,7 +5050,7 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
             fullPath = ui->mFileBrowserCurrentPath + "/" + filename;
         } else {
             const char* browseDir = getenv("HOME");
-            std::string dirPath = browseDir ? std::string(browseDir) + "/sequences/" : "./";
+            std::string dirPath = browseDir ? std::string(browseDir) + "/Loom/sequences/" : "./Loom/sequences/";
             fullPath = dirPath + filename;
         }
 
@@ -4939,7 +5073,7 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
             ui->mFileBrowserIsSfSelect = false;
         } else if (ui->mFileBrowserIsSfImport) {
             const char* browseDir = getenv("HOME");
-            std::string homeStr = browseDir ? std::string(browseDir) : ".";
+            std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
             std::string destPath = homeStr + "/soundfonts/" + filename;
             std::ifstream src(fullPath, std::ios::binary);
             std::ofstream dest(destPath, std::ios::binary);
@@ -4974,12 +5108,34 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
             if (ok) {
                 int newPresetId = 100 + (int)fmEngine.mCustomPresets.size() - 1;
                 ui->mEngine.loadFmPreset(ui->mActiveTrack, newPresetId);
+                const char* browseDir = getenv("HOME");
+                std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
+                std::string presetsFmDir = homeStr + "/presets/fm";
+                fmEngine.saveAllCustomPresets(presetsFmDir);
                 std::cout << "Import success: loaded custom preset ID " << newPresetId << std::endl;
             } else {
                 std::cerr << "Import failed for preset: " << fullPath << std::endl;
             }
             ui->mFileBrowserIsFmImport = false;
-        } else if (ui->mFileBrowserIsWtSelect || ui->mFileBrowserIsWtImport) {
+        } else if (ui->mFileBrowserIsWtImport) {
+            const char* browseDir = getenv("HOME");
+            std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
+            std::string destPath = homeStr + "/wavetables/" + filename;
+            std::ifstream src(fullPath, std::ios::binary);
+            std::ofstream dest(destPath, std::ios::binary);
+            if (src && dest) {
+                dest << src.rdbuf();
+                ui->mEngine.loadWavetable(ui->mActiveTrack, destPath);
+                ui->mEngine.getTracks()[ui->mActiveTrack].lastSamplePath = filename;
+                std::cout << "Imported and loaded wavetable: " << destPath << std::endl;
+                if (ui->mWtActiveNameLbl) {
+                    lv_label_set_text_fmt(ui->mWtActiveNameLbl, "ACTIVE: %s", filename);
+                }
+            } else {
+                std::cerr << "Wavetable import copy failed!" << std::endl;
+            }
+            ui->mFileBrowserIsWtImport = false;
+        } else if (ui->mFileBrowserIsWtSelect) {
             ui->mEngine.loadWavetable(ui->mActiveTrack, fullPath);
             std::cout << "Loaded wavetable: " << fullPath << std::endl;
             
@@ -4989,7 +5145,6 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
             }
             
             ui->mFileBrowserIsWtSelect = false;
-            ui->mFileBrowserIsWtImport = false;
         } else if (ui->mFileBrowserIsSampleLoad) {
             ui->mEngine.loadSample(ui->mActiveTrack, fullPath);
             std::cout << "Loaded sample: " << fullPath << std::endl;
@@ -5048,8 +5203,9 @@ void UIManager::fileBrowserSaveBtnEventCb(lv_event_t* e) {
         if (filename && strlen(filename) > 0) {
             std::string nameStr(filename);
             const char* browseDir = getenv("HOME");
+            std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
             if (ui->mFileBrowserIsSampleSave) {
-                std::string dirPath = browseDir ? std::string(browseDir) + "/samples/" : "./samples/";
+                std::string dirPath = homeStr + "/samples/";
                 std::string fullPath = dirPath + nameStr;
                 if (nameStr.find(".wav") == std::string::npos && nameStr.find(".WAV") == std::string::npos) {
                     fullPath += ".wav";
@@ -5058,7 +5214,7 @@ void UIManager::fileBrowserSaveBtnEventCb(lv_event_t* e) {
                 std::cout << "Saved sample to text input: " << fullPath << std::endl;
                 ui->mFileBrowserIsSampleSave = false;
             } else if (ui->mFileBrowserIsPresetSave) {
-                std::string dirPath = browseDir ? std::string(browseDir) + "/presets/" : "./presets/";
+                std::string dirPath = homeStr + "/presets/";
                 std::string fullPath = dirPath + nameStr;
                 if (nameStr.find(".gbs") == std::string::npos) {
                     fullPath += ".gbs";
@@ -5067,7 +5223,7 @@ void UIManager::fileBrowserSaveBtnEventCb(lv_event_t* e) {
                 std::cout << "Saved track preset to text input: " << fullPath << std::endl;
                 ui->mFileBrowserIsPresetSave = false;
             } else if (ui->mFileBrowserIsProject) {
-                std::string dirPath = browseDir ? std::string(browseDir) + "/projects/" : "./projects/";
+                std::string dirPath = homeStr + "/projects/";
                 std::string fullPath = dirPath + nameStr;
                 if (nameStr.find(".loom") == std::string::npos) {
                     fullPath += ".loom";
@@ -5248,6 +5404,10 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
     if (engine && trackIdx >= 0 && trackIdx < 8) {
         engineType = engine->getTracks()[trackIdx].engineType;
     }
+
+    if (paramId == 180 && engineType == 9) return prefix + "SF Preset";
+    if (paramId == 196 && engineType == 1) return prefix + "FM Preset";
+    if (paramId == 181 && engineType == 9) return prefix + "SF Bank";
 
     // Dynamic Filter Cutoff & Resonance naming based on engine type
     if (paramId == 1) {
@@ -7382,7 +7542,7 @@ void UIManager::populateModDestParams(UIManager* ui, int categoryIdx, lv_obj_t* 
         if (categoryIdx == 9) { // Reverb
             globalParams = { {500, "Size"}, {501, "Damp"}, {504, "PreDelay"}, {506, "Tone"}, {502, "Mod Depth"}, {503, "Mix"} };
         } else if (categoryIdx == 10) { // Delay
-            globalParams = { {520, "Time"}, {521, "Feedback"}, {523, "Filt Mix"}, {524, "Filt Res"}, {522, "Mix"} };
+            globalParams = { {520, "Time"}, {521, "Feedback"}, {523, "Cutoff"}, {524, "Filt Res"}, {522, "Mix"} };
         } else if (categoryIdx == 11) { // Chorus
             globalParams = { {510, "Rate"}, {511, "Depth"}, {513, "Voices"}, {512, "Mix"} };
         } else if (categoryIdx == 12) { // Phaser
@@ -8007,6 +8167,7 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({159, "Drive"});
         params.push_back({157, "Brightness"});
         params.push_back({355, "Glide"});
+        params.push_back({196, "FM Preset"});
         
         // 6 Operators: 6 params each
         const char* OP_NAMES[6] = {"Op1", "Op2", "Op3", "Op4", "Op5", "Op6"};
@@ -8107,6 +8268,11 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({650, "CYM Decay"});
         params.push_back({651, "CYM Col"});
         params.push_back({655, "CYM Gain"});
+    } else if (engineType == 9) { // SoundFont
+        params.push_back({180, "SF Preset"});
+        params.push_back({181, "SF Bank"});
+        params.push_back({7, "LFO Rate"});
+        params.push_back({8, "LFO Depth"});
     }
     return params;
 }
@@ -8249,7 +8415,7 @@ void UIManager::populateFxScreen() {
         addPedalKnob(del, "Time", 520, 0.01f, 2.0f);
         addPedalKnob(del, "Feedback", 521, 0.0f, 0.99f);
         addPedalDropdown(del, "Type", 525, "Digital\nAnalog\nTape\nPingPong");
-        addPedalKnob(del, "Filt Mix", 523, 0.0f, 1.0f);
+        addPedalKnob(del, "Cutoff", 523, 0.0f, 1.0f);
         addPedalKnob(del, "Filt Res", 524, 0.0f, 0.95f);
         addPedalDropdown(del, "Filt Mode", 526, "LP\nHP\nBP");
         addPedalKnob(del, "Mix", 522, 0.0f, 1.0f);
@@ -10508,7 +10674,7 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     addSynthSlider(faderRow1, "A", 100, 0.001f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "D", 101, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "S", 102, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow1, "R", 103, 0.001f, 8.0f, 2, false);
+    addSynthSlider(faderRow1, "R", 103, 0.001f, 4.0f, 2, false);
 
     // --- FILTER ENVELOPE CARD ---
     lv_obj_t* filterCard = createEnvCard(tab, "FILTER ENVELOPE", 365);
@@ -10527,7 +10693,7 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     addSynthSlider(faderRow2, "A", 114, 0.001f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "D", 115, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "S", 116, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow2, "R", 117, 0.001f, 8.0f, 2, false);
+    addSynthSlider(faderRow2, "R", 117, 0.001f, 4.0f, 2, false);
 }
 
 void UIManager::addSynthKnob(lv_obj_t* parent, const char* labelText, int paramId, float minVal, float maxVal, int decimals, bool isPercent) {
@@ -10890,17 +11056,6 @@ void UIManager::synthParamDropdownEventCb(lv_event_t* e) {
 // --- FM Synthesis Parameters Screen Tab Implementation ---
 // =========================================================================
 
-static int s_activeFmPreset[18] = {0};
-
-static const char* FM_PRESET_NAMES[32] = {
-    "Brass", "Strings Soft", "Orchestra", "Piano", "E. Piano", "Tine Synth",
-    "Bass", "Organ", "Percussive Organ", "Tubular", "Mallet", "Vibe",
-    "Marimba", "Chime", "Flute", "Tubular Bells", "Clavi", "Pluck",
-    "Calliope", "Oboe", "Voice", "Xylophone", "Church Bells", "Synth Lead",
-    "Recorders", "Shimmer", "Filter Sweep", "Funky Rise", "Refs Whisl", "Feedback Noise",
-    "Harmonics", "Space Bell"
-};
-
 void UIManager::populateParamFmTab(lv_obj_t* tab1, lv_obj_t* tab2, lv_obj_t* tab3) {
     populateParamFmOperatorsTab(tab1);
     populateParamFmRoutingTab(tab2);
@@ -11054,7 +11209,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     addSynthSlider(midCol, "A", base + 1, 0.001f, 4.0f, 2, false);
     addSynthSlider(midCol, "D", base + 2, 0.0f, 4.0f, 2, false);
     addSynthSlider(midCol, "S", base + 3, 0.0f, 1.0f, 2, true);
-    addSynthSlider(midCol, "R", base + 4, 0.001f, 8.0f, 2, false);
+    addSynthSlider(midCol, "R", base + 4, 0.001f, 4.0f, 2, false);
 
     // Right Column: Level & Ratio Knobs
     lv_obj_t* rightCol = lv_obj_create(detailCard);
@@ -11155,6 +11310,9 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
         ui->openFileBrowser(false);
     }, LV_EVENT_CLICKED, this);
 
+    // Preset selection knob directly in Preset Management card
+    addSynthKnob(leftCard, "PRESET", 196, 0.0f, 1.0f, 0, false);
+
     // --- ROUTING & ALGORITHM CARD ---
     lv_obj_t* rightCard = createRoutingCard(tab, "ROUTING & ALGORITHM", 365);
 
@@ -11184,6 +11342,7 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
 
     addSynthKnob(row2, "BRIGHTNESS", 157, 0.0f, 1.0f, 2, true);
     addSynthKnob(row2, "GLIDE", 355, 0.0f, 1.0f, 2, false);
+    addSynthKnob(row2, "PRESET", 196, 0.0f, 1.0f, 0, false);
 }
 
 void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
@@ -11250,7 +11409,7 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     addSynthSlider(faderRow1, "A", 114, 0.001f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "D", 115, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow1, "S", 116, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow1, "R", 117, 0.001f, 8.0f, 2, false);
+    addSynthSlider(faderRow1, "R", 117, 0.001f, 4.0f, 2, false);
 
     lv_obj_t* bottomAmt = lv_obj_create(filterEnvCard);
     lv_obj_set_size(bottomAmt, 282, 85);
@@ -11280,7 +11439,7 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     addSynthSlider(faderRow2, "A", 100, 0.001f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "D", 101, 0.0f, 4.0f, 2, false);
     addSynthSlider(faderRow2, "S", 102, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow2, "R", 103, 0.001f, 8.0f, 2, false);
+    addSynthSlider(faderRow2, "R", 103, 0.001f, 4.0f, 2, false);
 
     // Spacer block to keep symmetry
     lv_obj_t* spacer = lv_obj_create(ampEnvCard);
@@ -11325,9 +11484,8 @@ void UIManager::fmOpBlockEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(ui->mActiveTrack, 153, (float)carrierMask);
     }
 
-    // Clean and rebuild the Operator tab to update state/colors
-    lv_obj_clean(tab);
-    ui->populateParamFmOperatorsTab(tab);
+    // Safely request a full screen rebuild on the next frame to avoid use-after-free or event dispatch crash
+    ui->mNeedsScreenRebuild = true;
 }
 
 void UIManager::fmOpModeDropdownEventCb(lv_event_t* e) {
@@ -11361,9 +11519,8 @@ void UIManager::fmOpModeDropdownEventCb(lv_event_t* e) {
     ui->mEngine.setParameter(ui->mActiveTrack, 155, (float)activeMask);
     ui->mEngine.setParameter(ui->mActiveTrack, 153, (float)carrierMask);
 
-    // Clean and rebuild the Operator tab to sync colors and faders
-    lv_obj_clean(tab);
-    ui->populateParamFmOperatorsTab(tab);
+    // Safely request a full screen rebuild on the next frame to avoid use-after-free or event dispatch crash
+    ui->mNeedsScreenRebuild = true;
 }
 
 // =========================================================================
@@ -11610,7 +11767,7 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     addSynthSlider(ampRow, "A", 454, 0.001f, 4.0f, 2, false);
     addSynthSlider(ampRow, "D", 455, 0.0f, 4.0f, 2, false);
     addSynthSlider(ampRow, "S", 456, 0.0f, 1.0f, 2, true);
-    addSynthSlider(ampRow, "R", 457, 0.001f, 8.0f, 2, false);
+    addSynthSlider(ampRow, "R", 457, 0.001f, 4.0f, 2, false);
 
     // --- FILTER ENVELOPE CARD ---
     lv_obj_t* filterEnvCard = createEnvCard(tab, "FILTER ENVELOPE", 290);
@@ -11628,7 +11785,7 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     addSynthSlider(filterEnvRow, "A", 471, 0.001f, 4.0f, 2, false);
     addSynthSlider(filterEnvRow, "D", 472, 0.0f, 4.0f, 2, false);
     addSynthSlider(filterEnvRow, "S", 473, 0.0f, 1.0f, 2, true);
-    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 8.0f, 2, false);
+    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 4.0f, 2, false);
 }
 
 void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
@@ -11741,6 +11898,21 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_center(saveLbl);
     
     lv_obj_add_event_cb(saveBtn, UIManager::samplerSaveBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Source Selector Dropdown
+    lv_obj_t* srcDd = lv_dropdown_create(topRow);
+    lv_obj_set_size(srcDd, 120, 36);
+    lv_dropdown_set_options(srcDd, "MIC\nLINE-IN\nRESAMPLE");
+    int currentSrc = mEngine.mRecordingSource.load();
+    if (currentSrc > 2) currentSrc = 0;
+    lv_dropdown_set_selected(srcDd, currentSrc);
+    lv_obj_set_style_bg_color(srcDd, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(srcDd, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_width(srcDd, 1, 0);
+    lv_obj_set_style_radius(srcDd, 8, 0);
+    lv_obj_set_style_text_font(srcDd, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(srcDd, lv_color_hex(0xEEEEEE), 0);
+    lv_obj_add_event_cb(srcDd, UIManager::audioInSourceDropdownEventCb, LV_EVENT_VALUE_CHANGED, this);
 
     // Row 2: Waveform Container
     mSamplerWaveformContainer = lv_obj_create(tab);
@@ -12033,7 +12205,7 @@ void UIManager::populateParamSamplerSynthesisTab(lv_obj_t* tab) {
     addSynthSlider(adsrRow, "A", 310, 0.001f, 4.0f, 2, false, 230);
     addSynthSlider(adsrRow, "D", 311, 0.0f, 4.0f, 2, false, 230);
     addSynthSlider(adsrRow, "S", 312, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(adsrRow, "R", 313, 0.001f, 8.0f, 2, false, 230);
+    addSynthSlider(adsrRow, "R", 313, 0.001f, 4.0f, 2, false, 230);
 
     // Envelope modulation intensity knob below
     addSynthKnob(envCard, "ENV AMT", 314, 0.0f, 1.0f, 2, true);
@@ -12449,6 +12621,21 @@ void UIManager::populateParamGranularSamplingTab(lv_obj_t* tab) {
     
     lv_obj_add_event_cb(saveBtn, UIManager::granularSaveBtnEventCb, LV_EVENT_CLICKED, this);
 
+    // Source Selector Dropdown
+    lv_obj_t* srcDd = lv_dropdown_create(topRow);
+    lv_obj_set_size(srcDd, 120, 36);
+    lv_dropdown_set_options(srcDd, "MIC\nLINE-IN\nRESAMPLE");
+    int currentSrc = mEngine.mRecordingSource.load();
+    if (currentSrc > 2) currentSrc = 0;
+    lv_dropdown_set_selected(srcDd, currentSrc);
+    lv_obj_set_style_bg_color(srcDd, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(srcDd, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_width(srcDd, 1, 0);
+    lv_obj_set_style_radius(srcDd, 8, 0);
+    lv_obj_set_style_text_font(srcDd, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(srcDd, lv_color_hex(0xEEEEEE), 0);
+    lv_obj_add_event_cb(srcDd, UIManager::audioInSourceDropdownEventCb, LV_EVENT_VALUE_CHANGED, this);
+
     // 6. SLICE LOCK button removed for Granular Engine
     mGranularLockBtn = nullptr;
 
@@ -12831,7 +13018,7 @@ void UIManager::populateParamGranularSynthTab(lv_obj_t* tab) {
     addSynthSlider(ampRow, "A", 425, 0.001f, 4.0f, 2, false, 140);
     addSynthSlider(ampRow, "D", 426, 0.0f, 4.0f, 2, false, 140);
     addSynthSlider(ampRow, "S", 427, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(ampRow, "R", 428, 0.001f, 8.0f, 2, false, 140);
+    addSynthSlider(ampRow, "R", 428, 0.001f, 4.0f, 2, false, 140);
 
     // --- PITCH & RANDOMNESS CARD ---
     lv_obj_t* pitchCard = createEnvCard(bottomRow, "PITCH & RANDOM", 370);
@@ -13118,12 +13305,12 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     lv_obj_set_style_border_color(infoCard, trackColor, 0);
     lv_obj_set_style_border_width(infoCard, 1, 0);
     lv_obj_set_style_radius(infoCard, 16, 0);
-    lv_obj_set_style_pad_all(infoCard, 24, 0);
+    lv_obj_set_style_pad_all(infoCard, 16, 0);
     lv_obj_remove_flag(infoCard, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(infoCard, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(infoCard, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(infoCard, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(infoCard, 20, 0);
+    lv_obj_set_style_pad_row(infoCard, 8, 0);
 
     // active bank label
     std::string bankPath = mEngine.getTracks()[mActiveTrack].lastSamplePath;
@@ -13147,6 +13334,20 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     lv_label_set_text_fmt(mSoundFontActivePresetLbl, "PRESET: %d - %s", activeP, pName.c_str());
     lv_obj_set_style_text_font(mSoundFontActivePresetLbl, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mSoundFontActivePresetLbl, trackColor, 0);
+
+    // 2.3 Row for encoder/knob parameters 180 and 181
+    lv_obj_t* knobsRow = lv_obj_create(infoCard);
+    lv_obj_set_size(knobsRow, 300, 100);
+    lv_obj_set_style_bg_opa(knobsRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(knobsRow, 0, 0);
+    lv_obj_set_style_pad_all(knobsRow, 0, 0);
+    lv_obj_remove_flag(knobsRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(knobsRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(knobsRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(knobsRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    addSynthKnob(knobsRow, "PRESET", 180, 0.0f, 1.0f, 2, true);
+    addSynthKnob(knobsRow, "BANK", 181, 0.0f, 1.0f, 2, true);
 }
 
 void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
@@ -13303,7 +13504,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 4.0f, 2, false, 140);
     addSynthSlider(faderRow, "DECAY", 101, 0.0f, 4.0f, 2, false, 140);
     addSynthSlider(faderRow, "SUSTAIN", 102, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 8.0f, 2, false, 140);
+    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 4.0f, 2, false, 140);
 }
 
 void UIManager::soundfontLoadBtnCb(lv_event_t* e) {
@@ -13317,7 +13518,7 @@ void UIManager::soundfontLoadBtnCb(lv_event_t* e) {
     ui->mFileBrowserIsFmImport = false;
 
     const char* browseDir = getenv("HOME");
-    std::string homeStr = browseDir ? std::string(browseDir) : ".";
+    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     ui->mFileBrowserCurrentPath = homeStr + "/soundfonts";
     ui->openFileBrowser(false);
 }
@@ -13333,7 +13534,7 @@ void UIManager::soundfontImportBtnCb(lv_event_t* e) {
     ui->mFileBrowserIsFmImport = false;
 
     const char* browseDir = getenv("HOME");
-    std::string homeStr = browseDir ? std::string(browseDir) : ".";
+    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     ui->mFileBrowserCurrentPath = homeStr;
     ui->openFileBrowser(false);
 }
@@ -13494,6 +13695,14 @@ void UIManager::soundfontPresetItemSelectCb(lv_event_t* e) {
 
     ui->mEngine.setSoundFontPreset(ui->mActiveTrack, (int)p);
 
+    int presetCount = ui->mEngine.getSoundFontPresetCount(ui->mActiveTrack);
+    if (presetCount > 1) {
+        float presetVal = (float)p / (presetCount - 1);
+        ui->mEngine.setParameter(ui->mActiveTrack, 180, presetVal, true);
+    } else {
+        ui->mEngine.setParameter(ui->mActiveTrack, 180, 0.0f, true);
+    }
+
     if (ui->mSoundFontActivePresetLbl) {
         std::string pName = ui->mEngine.getSoundFontPresetName(ui->mActiveTrack, (int)p);
         lv_label_set_text_fmt(ui->mSoundFontActivePresetLbl, "PRESET: %d - %s", (int)p, pName.c_str());
@@ -13584,31 +13793,113 @@ void UIManager::fmPresetSelectCb(lv_event_t* e) {
     for (int p = 0; p < totalCount; ++p) {
         std::string name = (p < 32) ? FM_PRESET_NAMES[p] : custom[p - 32].name;
 
-        lv_obj_t* btn = lv_button_create(gridCont);
-        lv_obj_set_size(btn, 134, 40);
-        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_radius(btn, 6, 0);
-        lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
-        lv_obj_set_style_border_width(btn, 1, 0);
-        lv_obj_remove_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+        if (p < 32) {
+            lv_obj_t* btn = lv_button_create(gridCont);
+            lv_obj_set_size(btn, 134, 40);
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x1A1A1A), 0);
+            lv_obj_set_style_radius(btn, 6, 0);
+            lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(btn, 1, 0);
+            lv_obj_remove_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* label = lv_label_create(btn);
-        lv_label_set_text_fmt(label, "%d: %s", p, name.c_str());
-        lv_obj_set_style_text_font(label, &lv_font_montserrat_10, 0);
-        lv_obj_set_style_text_color(label, lv_color_hex(0xCCCCCC), 0);
-        lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
-        lv_obj_set_width(label, 118);
-        lv_obj_center(label);
+            lv_obj_t* label = lv_label_create(btn);
+            lv_label_set_text_fmt(label, "%d: %s", p, name.c_str());
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(label, lv_color_hex(0xCCCCCC), 0);
+            lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+            lv_obj_set_width(label, 118);
+            lv_obj_center(label);
 
-        if (p == activePresetIdx) {
-            lv_obj_set_style_border_color(btn, trackColor, 0);
-            lv_obj_set_style_border_width(btn, 2, 0);
-            lv_obj_set_style_text_color(label, trackColor, 0);
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+            if (p == activePresetIdx) {
+                lv_obj_set_style_border_color(btn, trackColor, 0);
+                lv_obj_set_style_border_width(btn, 2, 0);
+                lv_obj_set_style_text_color(label, trackColor, 0);
+                lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+            }
+
+            lv_obj_set_user_data(btn, (void*)(uintptr_t)p);
+            lv_obj_add_event_cb(btn, UIManager::fmPresetItemSelectCb, LV_EVENT_CLICKED, ui);
+        } else {
+            // Container for custom preset + delete button
+            lv_obj_t* cont = lv_obj_create(gridCont);
+            lv_obj_set_size(cont, 134, 40);
+            lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(cont, 0, 0);
+            lv_obj_set_style_pad_all(cont, 0, 0);
+            lv_obj_remove_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+
+            // Select button
+            lv_obj_t* btn = lv_button_create(cont);
+            lv_obj_set_size(btn, 98, 40);
+            lv_obj_align(btn, LV_ALIGN_LEFT_MID, 0, 0);
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x1A1A1A), 0);
+            lv_obj_set_style_radius(btn, 6, 0);
+            lv_obj_set_style_border_color(btn, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(btn, 1, 0);
+            lv_obj_remove_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+
+            lv_obj_t* label = lv_label_create(btn);
+            lv_label_set_text_fmt(label, "%d: %s", p, name.c_str());
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(label, lv_color_hex(0xCCCCCC), 0);
+            lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+            lv_obj_set_width(label, 82);
+            lv_obj_center(label);
+
+            if (p == activePresetIdx) {
+                lv_obj_set_style_border_color(btn, trackColor, 0);
+                lv_obj_set_style_border_width(btn, 2, 0);
+                lv_obj_set_style_text_color(label, trackColor, 0);
+                lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+            }
+
+            lv_obj_set_user_data(btn, (void*)(uintptr_t)p);
+            lv_obj_add_event_cb(btn, UIManager::fmPresetItemSelectCb, LV_EVENT_CLICKED, ui);
+
+            // Delete button
+            lv_obj_t* delBtn = lv_button_create(cont);
+            lv_obj_set_size(delBtn, 32, 40);
+            lv_obj_align(delBtn, LV_ALIGN_RIGHT_MID, 0, 0);
+            lv_obj_set_style_bg_color(delBtn, lv_color_hex(0x661111), 0);
+            lv_obj_set_style_radius(delBtn, 6, 0);
+            lv_obj_t* delLbl = lv_label_create(delBtn);
+            lv_label_set_text(delLbl, "X");
+            lv_obj_center(delLbl);
+
+            struct FmDeleteData {
+                UIManager* ui;
+                int customIdx;
+            };
+            FmDeleteData* fDel = new FmDeleteData{ui, p - 32};
+
+            auto fmDelCb = [](lv_event_t* ev) {
+                FmDeleteData* d = (FmDeleteData*)lv_event_get_user_data(ev);
+                if (d) {
+                    UIManager* ui = d->ui;
+                    const char* browseDir = getenv("HOME");
+                    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
+                    std::string presetsFmDir = homeStr + "/presets/fm";
+                    ui->mEngine.getTracks()[ui->mActiveTrack].fmEngine.deleteCustomPreset(d->customIdx, presetsFmDir);
+                    
+                    if (ui->mFmPresetModal) {
+                        lv_obj_delete(ui->mFmPresetModal);
+                        ui->mFmPresetModal = nullptr;
+                    }
+                    // Call fmPresetSelectCb with nullptr event to recreate
+                    lv_event_t dummyEvent;
+                    memset(&dummyEvent, 0, sizeof(dummyEvent));
+                    dummyEvent.user_data = ui;
+                    ui->fmPresetSelectCb(&dummyEvent);
+                }
+            };
+            lv_obj_add_event_cb(delBtn, fmDelCb, LV_EVENT_CLICKED, fDel);
+
+            auto freeFmDelCb = [](lv_event_t* ev) {
+                FmDeleteData* d = (FmDeleteData*)lv_event_get_user_data(ev);
+                delete d;
+            };
+            lv_obj_add_event_cb(delBtn, freeFmDelCb, LV_EVENT_DELETE, fDel);
         }
-
-        lv_obj_set_user_data(btn, (void*)(uintptr_t)p);
-        lv_obj_add_event_cb(btn, UIManager::fmPresetItemSelectCb, LV_EVENT_CLICKED, ui);
     }
 }
 
@@ -13699,9 +13990,9 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
 
     lv_obj_t* srcDd = lv_dropdown_create(sourceRow);
     lv_obj_set_size(srcDd, 180, 36);
-    lv_dropdown_set_options(srcDd, "MICROPHONE\nRESAMPLING");
+    lv_dropdown_set_options(srcDd, "MICROPHONE\nLINE-IN\nRESAMPLING");
     int currentSrc = mEngine.mRecordingSource.load();
-    if (currentSrc > 1) currentSrc = 0;
+    if (currentSrc > 2) currentSrc = 0;
     lv_dropdown_set_selected(srcDd, currentSrc);
     lv_obj_set_style_bg_color(srcDd, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(srcDd, lv_color_hex(0x444444), 0);
@@ -13921,8 +14212,9 @@ void UIManager::audioInSourceDropdownEventCb(lv_event_t* e) {
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     int sel = lv_dropdown_get_selected(dd);
-    ui->mEngine.setRecordingSource(sel); // 0 = MIC, 1 = RESAMPLE
-    std::cout << "Audio Input Source changed to: " << (sel == 0 ? "MIC" : "RESAMPLE") << std::endl;
+    ui->mEngine.setRecordingSource(sel); // 0 = MIC, 1 = LINE_IN, 2 = RESAMPLE
+    const char* srcNames[] = {"MIC", "LINE-IN", "RESAMPLE"};
+    std::cout << "Audio Input Source changed to: " << srcNames[sel % 3] << std::endl;
 }
 
 void UIManager::populateParamFmDrumTab1(lv_obj_t* tab) {
@@ -14119,24 +14411,46 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
     }
     // FM (1)
     else if (engineType == 1) {
-        ui->mEngine.setParameter(activeTrk, 30, rRange(0.1f, 0.9f));    // Op 1 Ratio
-        ui->mEngine.setParameter(activeTrk, 31, rRange(0.1f, 0.9f));    // Op 2 Ratio
-        ui->mEngine.setParameter(activeTrk, 32, rRange(0.2f, 1.0f));    // Op 1 Level
-        ui->mEngine.setParameter(activeTrk, 33, rRange(0.0f, 0.85f));   // Op 2 Level
-        ui->mEngine.setParameter(activeTrk, 34, (float)(rand() % 6) / 5.0f); // Algorithm
-        ui->mEngine.setParameter(activeTrk, 35, rRange(0.0f, 0.8f));    // Feedback
+        ui->mEngine.setParameter(activeTrk, 150, (float)(rand() % 6)); // Algorithm (0-5)
+        ui->mEngine.setParameter(activeTrk, 151, rRange(0.15f, 0.95f)); // Cutoff
+        ui->mEngine.setParameter(activeTrk, 152, rRange(0.0f, 0.85f));  // Resonance
+        ui->mEngine.setParameter(activeTrk, 154, rRange(0.0f, 0.85f));  // Feedback
+        ui->mEngine.setParameter(activeTrk, 157, rRange(0.1f, 0.9f));   // Brightness
+        ui->mEngine.setParameter(activeTrk, 158, rRange(0.0f, 0.5f));   // Detune
+        ui->mEngine.setParameter(activeTrk, 159, rRange(0.0f, 0.8f));   // Feedback Drive
 
-        // Operator 1 ADSR
+        // Main Amp ADSR
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
-        ui->mEngine.setParameter(activeTrk, 102, rRange(0.0f, 1.0f));   // S
+        ui->mEngine.setParameter(activeTrk, 102, rRange(0.2f, 1.0f));   // S
         ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
 
-        // Operator 2 ADSR
-        ui->mEngine.setParameter(activeTrk, 104, rRange(0.001f, 1.5f)); // A
-        ui->mEngine.setParameter(activeTrk, 105, rRange(0.01f, 2.0f));  // D
-        ui->mEngine.setParameter(activeTrk, 106, rRange(0.0f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 107, rRange(0.01f, 3.0f));  // R
+        // Filter EG
+        ui->mEngine.setParameter(activeTrk, 114, rRange(0.001f, 1.5f)); // A
+        ui->mEngine.setParameter(activeTrk, 115, rRange(0.01f, 2.0f));  // D
+        ui->mEngine.setParameter(activeTrk, 116, rRange(0.0f, 1.0f));   // S
+        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 118, rRange(-1.0f, 1.0f)); // Env Amt
+
+        // Active/Carrier masks (Ensure at least Op 1 is active)
+        int activeMask = 1 | (rand() % 64);
+        int carrierMask = 1 | (rand() % activeMask);
+        ui->mEngine.setParameter(activeTrk, 155, (float)activeMask);
+        ui->mEngine.setParameter(activeTrk, 153, (float)carrierMask);
+
+        // Randomize all 6 operators
+        for (int op = 0; op < 6; ++op) {
+            int base = 160 + op * 6;
+            ui->mEngine.setParameter(activeTrk, base + 0, rRange(0.0f, 1.0f));   // Level
+            ui->mEngine.setParameter(activeTrk, base + 1, rRange(0.001f, 2.0f)); // Attack
+            ui->mEngine.setParameter(activeTrk, base + 2, rRange(0.01f, 3.0f));  // Decay
+            ui->mEngine.setParameter(activeTrk, base + 3, rRange(0.0f, 1.0f));   // Sustain
+            ui->mEngine.setParameter(activeTrk, base + 4, rRange(0.01f, 4.0f));  // Release
+            
+            float ratioOptions[] = {0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 8.0f, 10.0f, 12.0f};
+            float selRatio = ratioOptions[rand() % 10];
+            ui->mEngine.setParameter(activeTrk, base + 5, selRatio / 16.0f);    // Ratio normalized
+        }
     }
     // Sampler (2)
     else if (engineType == 2) {
@@ -14250,9 +14564,8 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
 
     std::cout << "UIManager: Randomized sound parameters on Track " << activeTrk << std::endl;
 
-    // Refresh UI to display new values
-    lv_obj_clean(ui->mCenterArea);
-    ui->populateParamScreen();
+    // Refresh UI to display new values asynchronously on the next frame update
+    ui->mNeedsScreenRebuild = true;
 }
 
 void UIManager::defaultPatchBtnEventCb(lv_event_t* e) {
@@ -14260,8 +14573,8 @@ void UIManager::defaultPatchBtnEventCb(lv_event_t* e) {
     ui->mEngine.restoreTrackPreset(ui->mActiveTrack);
     std::cout << "UIManager: Restored default patch for engine type: " 
               << ui->mEngine.getTracks()[ui->mActiveTrack].engineType << std::endl;
-    lv_obj_clean(ui->mCenterArea);
-    ui->populateParamScreen();
+    // Refresh UI to display new values asynchronously on the next frame update
+    ui->mNeedsScreenRebuild = true;
 }
 
 void UIManager::loadPatchBtnEventCb(lv_event_t* e) {

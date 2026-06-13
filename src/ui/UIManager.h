@@ -225,6 +225,7 @@ private:
     lv_obj_t* mStepModalProbSlider = nullptr;
     lv_obj_t* mStepModalGateSlider = nullptr;
     lv_obj_t* mStepModalSkipSw = nullptr;
+    lv_obj_t* mStepModalMicrotimingSlider = nullptr;
     lv_obj_t* mStepModalPLockDd = nullptr;
     lv_obj_t* mStepModalPLockSlider = nullptr;
 

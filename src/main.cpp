@@ -21,8 +21,8 @@ void audioCallback(void* userdata, Uint8* stream, int len) {
 // Audio Capture Callback
 void audioCaptureCallback(void* userdata, Uint8* stream, int len) {
     float* in = reinterpret_cast<float*>(stream);
-    int numFrames = len / sizeof(float); // Mono float capture
-    gEngine.renderInput(in, numFrames, 1);
+    int numFrames = len / (sizeof(float) * 2); // Stereo float capture
+    gEngine.renderInput(in, numFrames, 2);
 }
 
 int main() {
@@ -58,7 +58,7 @@ int main() {
     SDL_zero(wantCapture);
     wantCapture.freq = 48000;
     wantCapture.format = AUDIO_F32SYS;
-    wantCapture.channels = 1;
+    wantCapture.channels = 2;
     wantCapture.samples = 256;
     wantCapture.callback = audioCaptureCallback;
 

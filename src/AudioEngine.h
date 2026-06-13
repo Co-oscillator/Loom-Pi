@@ -39,7 +39,7 @@
 
 class AudioEngine {
 public:
-  enum RecordingSource { MIC = 0, RESAMPLE = 1, SYSTEM = 2 };
+  enum RecordingSource { MIC = 0, LINE_IN = 1, RESAMPLE = 2 };
 
   AudioEngine();
   virtual ~AudioEngine();
@@ -132,6 +132,7 @@ public:
   void setSoundFontMapping(int trackIndex, int knobIndex, int paramId);
   int getSoundFontPresetCount(int trackIndex);
   std::string getSoundFontPresetName(int trackIndex, int presetIndex);
+  std::vector<std::string> getSoundFontFilesList();
   void clearSequencer(int trackIndex);
   void setMasterVolume(float volume);
   bool getVelocitySensitivityEnabled() const { return mVelocitySensitivityEnabled; }
@@ -419,6 +420,7 @@ public:
     bool isChainEnabled = false;
 
     int mSilenceFrames = 0;
+    int activeFmPreset = 0;
   };
 
   std::vector<Track> mTracks;
@@ -508,7 +510,7 @@ public:
   bool mVelocitySensitivityEnabled = false;
   bool mFastGranularEnabled = false;
   bool mIsFloatFormat = true; // Assume Float, but verify at stream open
-  int mAudioOutputMode = 0; // 0=Stereo, 1=Mono (L-Only), 2=Pseudo-Stereo (Delay), 3=Phase-Invert
+  int mAudioOutputMode = 2; // 0=Stereo, 1=Mono (L-Only), 2=Pseudo-Stereo (Delay), 3=Phase-Invert
   float mDelaySpreadBuffer[512] = {0.0f};
   int mDelaySpreadWritePtr = 0;
 

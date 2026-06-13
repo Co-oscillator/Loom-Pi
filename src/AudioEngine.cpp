@@ -4,6 +4,7 @@
 #include "engines/BitcrusherFx.h"
 #include <fstream>
 #include <sstream>
+#include <dirent.h>
 
 #include <algorithm>
 
@@ -432,7 +433,7 @@ void AudioEngine::initTrack(int i) {
     // Auto-load default SoundFont if lastSamplePath is empty
     if (mTracks[i].lastSamplePath.empty()) {
       const char* home = getenv("HOME");
-      std::string homeStr = home ? std::string(home) : ".";
+      std::string homeStr = home ? std::string(home) + "/Loom" : "./Loom";
       std::string defaultPath = homeStr + "/soundfonts/GeneralUser-GS.sf2";
       FILE* f = fopen(defaultPath.c_str(), "rb");
       if (f) {
@@ -1207,10 +1208,50 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
     if (track.engineType == 0) { // Subtractive
       track.subtractiveEngine.setParameter(parameterId, value);
     } else if (track.engineType == 1) { // FM
-      if (parameterId == 156) {
+      if (parameterId == 196) { // Preset selection knob
+        int totalPresets = 32 + (int)track.fmEngine.mCustomPresets.size();
+        if (totalPresets > 0) {
+          int presetIdx = (int)(value * (totalPresets - 1) + 0.5f);
+          if (presetIdx >= 0 && presetIdx < totalPresets) {
+            if (track.activeFmPreset != presetIdx) {
+              // Re-use thread-safe loadFmPreset to reload all parameters in sync
+              loadFmPreset(trackIndex, presetIdx);
+            }
+          }
+        }
+      } else if (parameterId == 156) {
         track.fmEngine.setParameter(156, value); // Mode
       } else {
         track.fmEngine.setParameter(parameterId, value);
+      }
+    } else if (track.engineType == 9) { // SoundFont
+      if (parameterId == 180) { // Preset selection knob
+        int presetCount = track.soundFontEngine.getPresetCount();
+        if (presetCount > 0) {
+          int presetIdx = (int)(value * (presetCount - 1) + 0.5f);
+          if (presetIdx >= 0 && presetIdx < presetCount) {
+            track.soundFontEngine.setPreset(presetIdx);
+          }
+        }
+      } else if (parameterId == 181) { // Bank selection knob
+        std::vector<std::string> sfFiles = getSoundFontFilesList();
+        if (!sfFiles.empty()) {
+          int bankIdx = (int)(value * (sfFiles.size() - 1) + 0.5f);
+          if (bankIdx >= 0 && bankIdx < (int)sfFiles.size()) {
+            const char* home = getenv("HOME");
+            std::string homeStr = home ? std::string(home) + "/Loom" : "./Loom";
+            std::string fullPath = homeStr + "/soundfonts/" + sfFiles[bankIdx];
+            // Only load if it's different from the currently loaded bank
+            if (track.lastSamplePath != sfFiles[bankIdx]) {
+              track.soundFontEngine.load(fullPath);
+              track.lastSamplePath = sfFiles[bankIdx];
+              // reset preset parameter
+              track.parameters[180] = 0.0f;
+              track.appliedParameters[180] = 0.0f;
+              track.soundFontEngine.setPreset(0);
+            }
+          }
+        }
       }
     }
   }
@@ -2036,7 +2077,13 @@ void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t
   for (int i = 0; i < numFrames; ++i) {
     float combined = 0.0f;
     if (channels == 2) {
-      combined = (inputData[i * 2] + inputData[i * 2 + 1]) * 0.5f;
+      if (mRecordingSource == MIC) {
+        combined = inputData[i * 2];
+      } else if (mRecordingSource == LINE_IN) {
+        combined = inputData[i * 2 + 1];
+      } else {
+        combined = (inputData[i * 2] + inputData[i * 2 + 1]) * 0.5f;
+      }
     } else {
       combined = inputData[i];
     }
@@ -2044,7 +2091,7 @@ void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t
     mInputWritePtr++;
   }
 
-  if (mRecordingSource != MIC) {
+  if (mRecordingSource != MIC && mRecordingSource != LINE_IN) {
     return;
   }
 
@@ -2057,7 +2104,11 @@ void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t
     for (int i = 0; i < numFrames; ++i) {
       float sampleToPush = 0.0f;
       if (channels == 2) {
-        sampleToPush = (inputData[i * 2] + inputData[i * 2 + 1]) * 0.5f;
+        if (mRecordingSource == MIC) {
+          sampleToPush = inputData[i * 2];
+        } else {
+          sampleToPush = inputData[i * 2 + 1];
+        }
       } else {
         sampleToPush = inputData[i];
       }
@@ -2510,7 +2561,7 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
 
     // Push to resampling recorder (Sampler/Granular)
     bool isStillRecording = mIsRecordingSample;
-    if ((mRecordingSource == RESAMPLE || mRecordingSource == SYSTEM) && isStillRecording &&
+    if (mRecordingSource == RESAMPLE && isStillRecording &&
         mRecordingTrackIndex != -1) {
       auto &recTrack = mTracks[mRecordingTrackIndex];
       std::vector<float> resampleBuffer;
@@ -4009,6 +4060,17 @@ void AudioEngine::loadFmPreset(int trackIndex, int presetId) {
   if (trackIndex >= 0 && trackIndex < mTracks.size()) {
     Track &track = mTracks[trackIndex];
     track.fmEngine.loadPreset(presetId);
+    track.activeFmPreset = presetId;
+
+    // Normalize and sync parameter 180
+    int totalPresets = 32 + (int)track.fmEngine.mCustomPresets.size();
+    if (totalPresets > 1) {
+      track.parameters[180] = (float)presetId / (float)(totalPresets - 1);
+      track.appliedParameters[180] = track.parameters[180];
+    } else {
+      track.parameters[180] = 0.0f;
+      track.appliedParameters[180] = 0.0f;
+    }
 
     // SYNC: Read back parameters from Engine to Track State for UI
     track.parameters[150] = (float)track.fmEngine.getAlgorithm();
@@ -4167,13 +4229,13 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
     }
     mInputReadPtr = savedReadPtr;
 
-    float trackBuffersL[8][kAudioBlockSize];
-    float trackBuffersR[8][kAudioBlockSize];
+    float trackBuffersL[8][kAudioBlockSize] = {{0.0f}};
+    float trackBuffersR[8][kAudioBlockSize] = {{0.0f}};
 
-    float trackVolBlock[8][kAudioBlockSize];
-    float trackPanLBlock[8][kAudioBlockSize];
-    float trackPanRBlock[8][kAudioBlockSize];
-    float trackFxSendsBlock[8][18][kAudioBlockSize];
+    float trackVolBlock[8][kAudioBlockSize] = {{0.0f}};
+    float trackPanLBlock[8][kAudioBlockSize] = {{0.0f}};
+    float trackPanRBlock[8][kAudioBlockSize] = {{0.0f}};
+    float trackFxSendsBlock[8][18][kAudioBlockSize] = {{{0.0f}}};
 
     for (int t = 0; t < (int)mTracks.size(); ++t) {
       Track &track = mTracks[t];
@@ -4839,8 +4901,56 @@ void AudioEngine::loadSoundFont(int trackIndex, const std::string &path) {
 
     std::lock_guard<std::recursive_mutex> lock(mLock);
     mTracks[trackIndex].soundFontEngine.load(path);
-    mTracks[trackIndex].lastSamplePath = path;
+    
+    std::string filename = path;
+    size_t lastSlash = filename.find_last_of("/\\");
+    if (lastSlash != std::string::npos) {
+      filename = filename.substr(lastSlash + 1);
+    }
+    mTracks[trackIndex].lastSamplePath = filename;
+
+    // Sync bank parameter 181
+    std::vector<std::string> sfFiles = getSoundFontFilesList();
+    int bankIdx = -1;
+    for (int i = 0; i < (int)sfFiles.size(); ++i) {
+      if (sfFiles[i] == filename) {
+        bankIdx = i;
+        break;
+      }
+    }
+    if (bankIdx != -1 && sfFiles.size() > 1) {
+      float bankVal = (float)bankIdx / (sfFiles.size() - 1);
+      mTracks[trackIndex].parameters[181] = bankVal;
+      mTracks[trackIndex].appliedParameters[181] = bankVal;
+    } else {
+      mTracks[trackIndex].parameters[181] = 0.0f;
+      mTracks[trackIndex].appliedParameters[181] = 0.0f;
+    }
   }
+}
+
+std::vector<std::string> AudioEngine::getSoundFontFilesList() {
+  std::vector<std::string> sfFiles;
+  const char* home = getenv("HOME");
+  std::string homeStr = home ? std::string(home) + "/Loom" : "./Loom";
+  std::string dirPath = homeStr + "/soundfonts";
+  DIR* dir = opendir(dirPath.c_str());
+  if (dir) {
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+      std::string name = entry->d_name;
+      if (name == "." || name == "..") continue;
+      std::string lowerName = name;
+      for (char &c : lowerName) c = std::tolower((unsigned char)c);
+      if ((lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf2") ||
+          (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf3")) {
+        sfFiles.push_back(name);
+      }
+    }
+    closedir(dir);
+  }
+  std::sort(sfFiles.begin(), sfFiles.end());
+  return sfFiles;
 }
 
 void AudioEngine::setSoundFontPreset(int trackIndex, int presetIndex) {

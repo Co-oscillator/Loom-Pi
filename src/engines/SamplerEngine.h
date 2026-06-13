@@ -765,6 +765,14 @@ public:
     // FIX: Only run this in Scrub Mode (prevents Auto-Play loop in other
     // Track target for per-sample interpolation
     if (mPlayMode == Scrub) {
+      if (std::abs(mScrubPosition - (float)mLastScrubParam) > 1e-7f) {
+        if (mInteractionTimer == 0 && !buffer.empty()) {
+          // First touch/update from controller: snap smoothed target position to
+          // the current playhead position to avoid sudden jumps/snaps backwards.
+          mSmoothedScrubPos = mVoices[0].position / (double)buffer.size();
+        }
+        mInteractionTimer = 24000; // 500ms hangover window at 48kHz to bridge all MIDI/UI steps
+      }
       mLastScrubParam =
           mScrubPosition; // Will be used in next render() for range
     }
@@ -885,31 +893,21 @@ public:
           double trimStartSamples = mTrimStart * buffer.size();
           double trimEndSamples = mTrimEnd * buffer.size();
 
-          // Slew-limit the target position to avoid parameter-rate snaps
-          // (Increased to 0.02f for snappier feel)
-          mSmoothedScrubPos += (mScrubPosition - mSmoothedScrubPos) * 0.02f;
+          // Slew-limit the target position to reconstruct a smooth, continuous
+          // trajectory from discrete 60Hz UI or MIDI parameter updates.
+          // (Set to 0.00025f for more slew and a beautiful, fluid, zipper-noise-free resample pitch)
+          mSmoothedScrubPos += (mScrubPosition - mSmoothedScrubPos) * 0.00025f;
           double currentTarget = mSmoothedScrubPos * buffer.size();
 
           // Clamp target
           currentTarget = std::max(trimStartSamples,
                                    std::min(trimEndSamples, currentTarget));
 
-          // Interaction Detection: Detect if user is touching OR if the target
-          // is still moving towards the smoothing goal
-          double targetDelta = std::abs(mScrubPosition - mSmoothedScrubPos);
-          bool isInteracting = mScrubGate || (targetDelta > 0.0001);
-
-          // Mass-Spring-Damper Physics
-          double dist = currentTarget - v.position;
-          // Stiffness (k): Reverting to "Ultra Heavy Mass" v2.1 constants
-          // (3e-7) This eliminates high-freq ringing (graininess) and provides
-          // fluid movement.
-          double k = 0.0000003;
-          double springForce = dist * k;
-
-          // Damping (drag): Higher damping to suppress any tiny oscillations
-          double drag = 0.002;
-          double dampingForce = -mSmoothSpeed * drag;
+          // Robust Interaction state via the hangover timer
+          if (mInteractionTimer > 0) {
+            mInteractionTimer--;
+          }
+          bool isInteracting = mScrubGate || (mInteractionTimer > 0);
 
           if (isInteracting) {
             // Initial Snap logic on fresh touch
@@ -919,16 +917,23 @@ public:
               mSmoothedScrubPos = mScrubPosition;
             }
 
-            mSmoothSpeed += (springForce + dampingForce);
+            // High-fidelity OVERDAMPED (zeta = 1.118) elastic tracking with zero warble
+            double targetSpeed = (currentTarget - v.position) * 0.0008; // k1 = 0.0008
+            mSmoothSpeed += (targetSpeed - mSmoothSpeed) * 0.004;       // k2 = 0.004 (critical damping condition satisfied for k2 > 4*k1)
           } else if (mMotorRunning) {
             // Playback motor (1.0x speed)
             mSmoothSpeed += (1.0 - mSmoothSpeed) * 0.0005;
           } else {
-            // NATURAL DECAY: Reduced platter friction for longer "throw"
-            // coasting
-            mSmoothSpeed *= 0.99998;
-            if (std::abs(mSmoothSpeed) < 0.015)
-              mSmoothSpeed = 0.0;
+            // NATURAL DECAY: High-quality physical platter/tape inertia
+            // Viscous drag (exponential decay)
+            mSmoothSpeed *= 0.9995;
+            // Coulomb friction (constant deceleration for a crisp, physical stop)
+            double coulombDecel = 0.00015;
+            if (mSmoothSpeed > 0.0) {
+              mSmoothSpeed = std::max(0.0, mSmoothSpeed - coulombDecel);
+            } else if (mSmoothSpeed < 0.0) {
+              mSmoothSpeed = std::min(0.0, mSmoothSpeed + coulombDecel);
+            }
           }
 
           mLastScrubParam = mScrubPosition;
@@ -1333,6 +1338,7 @@ private:
   double mSmoothSpeed = 0.0;
   double mSmoothedScrubPos = 0.0;
   double mLastScrubParam = 0.0; // Track previous target for velocity calc
+  int mInteractionTimer = 0;    // Hangover timer to prevent interaction state flickering
 
   // Parameters
   float mTrimStart = 0.0f;

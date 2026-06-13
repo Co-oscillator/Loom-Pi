@@ -11,6 +11,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <dirent.h>
+#include <cstdio>
 
 
 class FmOperator {
@@ -1583,6 +1585,94 @@ public:
       }
     }
     mCustomPresets.push_back(p);
+    return true;
+  }
+
+  bool savePresetToFile(const CustomPreset& p, const std::string& filepath) {
+    std::ofstream file(filepath);
+    if (!file.is_open()) return false;
+    file << "NAME:" << p.name << "\n";
+    file << "ALGORITHM:" << p.algorithm << "\n";
+    file << "CUTOFF:" << p.cutoff << "\n";
+    file << "RESONANCE:" << p.resonance << "\n";
+    file << "CARRIER_MASK:" << p.carrierMask << "\n";
+    file << "ACTIVE_MASK:" << p.activeMask << "\n";
+    file << "FEEDBACK:" << p.feedback << "\n";
+    file << "FEEDBACK_DRIVE:" << p.feedbackDrive << "\n";
+    file << "BRIGHTNESS:" << p.brightness << "\n";
+    file << "GLIDE:" << p.glide << "\n";
+    file << "DETUNE:" << p.detune << "\n";
+    file << "FILTER_MODE:" << p.filterMode << "\n";
+    file << "ATTACK:" << p.attack << "\n";
+    file << "DECAY:" << p.decay << "\n";
+    file << "SUSTAIN:" << p.sustain << "\n";
+    file << "RELEASE:" << p.release << "\n";
+    file << "FILTER_ATTACK:" << p.filterAttack << "\n";
+    file << "FILTER_DECAY:" << p.filterDecay << "\n";
+    file << "FILTER_SUSTAIN:" << p.filterSustain << "\n";
+    file << "FILTER_RELEASE:" << p.filterRelease << "\n";
+    file << "FILTER_ENV_AMOUNT:" << p.filterEnvAmount << "\n";
+    for (int op = 0; op < 6; ++op) {
+      file << "OP" << (op + 1) << "_LEVEL:" << p.opLevels[op] << "\n";
+      file << "OP" << (op + 1) << "_RATIO:" << p.opRatios[op] << "\n";
+      file << "OP" << (op + 1) << "_ATTACK:" << p.opAttack[op] << "\n";
+      file << "OP" << (op + 1) << "_DECAY:" << p.opDecay[op] << "\n";
+      file << "OP" << (op + 1) << "_SUSTAIN:" << p.opSustain[op] << "\n";
+      file << "OP" << (op + 1) << "_RELEASE:" << p.opRelease[op] << "\n";
+    }
+    file.close();
+    return true;
+  }
+
+  void saveAllCustomPresets(const std::string& dirPath) {
+    DIR* dir = opendir(dirPath.c_str());
+    if (dir) {
+      struct dirent* entry;
+      std::vector<std::string> toDelete;
+      while ((entry = readdir(dir)) != nullptr) {
+        std::string name(entry->d_name);
+        if (name.rfind("custom_", 0) == 0) {
+          toDelete.push_back(dirPath + "/" + name);
+        }
+      }
+      closedir(dir);
+      for (const auto& path : toDelete) {
+        std::remove(path.c_str());
+      }
+    }
+
+    for (size_t i = 0; i < mCustomPresets.size(); ++i) {
+      std::string filename = "custom_" + std::to_string(i) + "_" + mCustomPresets[i].name + ".fmp";
+      for (char &c : filename) {
+        if (c == '/' || c == '\\' || c == ' ' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
+          c = '_';
+        }
+      }
+      savePresetToFile(mCustomPresets[i], dirPath + "/" + filename);
+    }
+  }
+
+  bool deleteCustomPreset(int idx, const std::string& dirPath) {
+    if (idx < 0 || idx >= (int)mCustomPresets.size()) return false;
+    mCustomPresets.erase(mCustomPresets.begin() + idx);
+
+    DIR* dir = opendir(dirPath.c_str());
+    if (dir) {
+      struct dirent* entry;
+      std::vector<std::string> toDelete;
+      while ((entry = readdir(dir)) != nullptr) {
+        std::string name(entry->d_name);
+        if (name.rfind("custom_", 0) == 0) {
+          toDelete.push_back(dirPath + "/" + name);
+        }
+      }
+      closedir(dir);
+      for (const auto& path : toDelete) {
+        std::remove(path.c_str());
+      }
+    }
+
+    saveAllCustomPresets(dirPath);
     return true;
   }
 
