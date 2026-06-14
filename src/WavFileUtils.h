@@ -95,32 +95,21 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
   outSampleRate = header.sampleRate;
   outNumChannels = header.numChannels;
 
-  // Skip chunks until 'data'
-  // Simplified parser (assumes standard structure logic, but robust enough to
-  // skip junk) Wait, the header struct assumes fixed layout, which is dangerous
-  // if 'fmt ' is larger or extra chunks exist before 'data'. Let's rewrite
-  // strictly to parse chunks.
-
   file.seekg(12, std::ios::beg); // Skip RIFF WAVE
 
   uint32_t chunkId, chunkSize;
   bool foundData = false;
   int audioFormat = 1;
+  int bitsPerSample = 16;
 
-  // Need to loop chunks
   while (file.read(reinterpret_cast<char *>(&chunkId), 4)) {
     file.read(reinterpret_cast<char *>(&chunkSize), 4);
-
-    // Check chunk type (Need endianness handling? Android is Little Endian
-    // usually. WAV is Little Endian.) 'fmt ' = 0x20746D66 'data' = 0x61746164
-    // 'slce' = 0x65636C73
 
     char id[5];
     std::memcpy(id, &chunkId, 4);
     id[4] = '\0';
 
     if (std::strncmp(id, "fmt ", 4) == 0) {
-      // Read format details if needed, but we rely on simple PCM
       if (chunkSize >= 16) {
         uint16_t fmtTag, channels, bits;
         uint32_t sRate;
@@ -133,6 +122,7 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
 
         outNumChannels = channels;
         outSampleRate = sRate;
+        bitsPerSample = bits;
         if (fmtTag != 1 && fmtTag != 3)
           return false; // Only PCM or IEEE Float
         audioFormat = fmtTag;
@@ -141,22 +131,50 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
       }
     } else if (std::strncmp(id, "data", 4) == 0) {
       foundData = true;
-      if (audioFormat == 1) { // PCM (Int16)
-        int numSamples = chunkSize / 2;
-        outData.resize(numSamples);
-        for (int i = 0; i < numSamples; ++i) {
-          int16_t s;
-          file.read(reinterpret_cast<char *>(&s), 2);
-          outData[i] = s / 32767.0f;
+      if (audioFormat == 1) { // PCM
+        if (bitsPerSample == 16) {
+          int numSamples = chunkSize / 2;
+          outData.resize(numSamples);
+          for (int i = 0; i < numSamples; ++i) {
+            int16_t s;
+            file.read(reinterpret_cast<char *>(&s), 2);
+            outData[i] = s / 32767.0f;
+          }
+        } else if (bitsPerSample == 24) {
+          int numSamples = chunkSize / 3;
+          outData.resize(numSamples);
+          for (int i = 0; i < numSamples; ++i) {
+            uint8_t b[3];
+            file.read(reinterpret_cast<char*>(b), 3);
+            int32_t s = (b[0]) | (b[1] << 8) | (b[2] << 16);
+            if (s & 0x800000) s |= ~0xffffff; // Sign extension
+            outData[i] = s / 8388607.0f;
+          }
+        } else if (bitsPerSample == 8) {
+          int numSamples = chunkSize;
+          outData.resize(numSamples);
+          for (int i = 0; i < numSamples; ++i) {
+            uint8_t s;
+            file.read(reinterpret_cast<char *>(&s), 1);
+            outData[i] = (s - 128) / 128.0f; // WAV 8-bit is unsigned (0-255)
+          }
+        } else if (bitsPerSample == 32) {
+          int numSamples = chunkSize / 4;
+          outData.resize(numSamples);
+          for (int i = 0; i < numSamples; ++i) {
+            int32_t s;
+            file.read(reinterpret_cast<char *>(&s), 4);
+            outData[i] = s / 2147483647.0f;
+          }
+        } else {
+          // Unsupported bits per sample: skip chunk
+          file.ignore(chunkSize);
         }
       } else if (audioFormat == 3) { // IEEE Float
         int numSamples = chunkSize / 4;
         outData.resize(numSamples);
         file.read(reinterpret_cast<char *>(outData.data()), chunkSize);
       }
-      // Handle odd padding byte if size is odd? WAV standard says alignment to
-      // 2 bytes, but chunk size tells truth. data chunk logic usually end of
-      // stream for simple files, but metadata can follow.
     } else if (std::strncmp(id, "slce", 4) == 0) {
       uint32_t numSlices;
       file.read(reinterpret_cast<char *>(&numSlices), 4);
