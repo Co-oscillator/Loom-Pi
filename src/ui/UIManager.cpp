@@ -592,6 +592,14 @@ void UIManager::populateArpScreen() {
     lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "Settings");
     lv_obj_t* tab3 = lv_tabview_add_tab(tabview, "Pattern");
 
+    // Style the individual tab buttons in the tab bar
+    for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
+        lv_obj_t* btn = lv_obj_get_child(tab_bar, i);
+        lv_obj_set_style_text_font(btn, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(btn, lv_color_hex(0x888888), 0);
+        lv_obj_set_style_text_color(btn, getTrackColor(mActiveTrack), LV_STATE_CHECKED);
+    }
+
     // Clear standard tab padding to give us full screen area
     lv_obj_set_style_pad_all(tab1, 10, 0);
     lv_obj_set_style_pad_all(tab3, 10, 0);
@@ -2416,10 +2424,10 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(perfTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(perfTitle, trackColor, 0);
 
-    mCpuLoadLabel = lv_label_create(perfCard);
-    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
-    lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0xCCCCCC), 0);
+    mCpuLoadLabelSystem = lv_label_create(perfCard);
+    lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+    lv_obj_set_style_text_font(mCpuLoadLabelSystem, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mCpuLoadLabelSystem, lv_color_hex(0xCCCCCC), 0);
 
     lv_obj_t* sampleRateLbl = lv_label_create(perfCard);
     lv_label_set_text_fmt(sampleRateLbl, "Sample Rate: %d Hz", (int)mEngine.getSampleRate());
@@ -3205,6 +3213,7 @@ void UIManager::settingsKeyboardModeSwitchEventCb(lv_event_t* e) {
 void UIManager::settingsScreenDeleteEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     ui->mCpuLoadLabel = nullptr;
+    ui->mCpuLoadLabelSystem = nullptr;
     ui->mSettingsRootDd = nullptr;
     ui->mSettingsScaleDd = nullptr;
     ui->mSettingsScaleBtn = nullptr;
@@ -3427,6 +3436,9 @@ void UIManager::update() {
     } else if (mActiveNav == 5) {
         if (mCpuLoadLabel != nullptr) {
             lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+        }
+        if (mCpuLoadLabelSystem != nullptr) {
+            lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
         }
 
         // Rate-limit USB/MIDI device scanning to once per second

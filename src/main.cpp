@@ -68,7 +68,7 @@ int main() {
     gEngine.init(48000.0f);
     
     // 2. Init SDL Audio Subsystem
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+    if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         std::cerr << "SDL Audio Init Failed: " << SDL_GetError() << std::endl;
         return 1;
     }

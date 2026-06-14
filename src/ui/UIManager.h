@@ -498,6 +498,7 @@ private:
     
     // Settings UI handles
     lv_obj_t* mCpuLoadLabel = nullptr;
+    lv_obj_t* mCpuLoadLabelSystem = nullptr;
     lv_obj_t* mWtActiveNameLbl = nullptr;
     lv_obj_t* mSettingsUpdateStatus = nullptr;
     lv_obj_t* mSettingsUpdateProgress = nullptr;
