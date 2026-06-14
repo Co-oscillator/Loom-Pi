@@ -268,6 +268,7 @@ void UIManager::init() {
     const char* browseDir = getenv("HOME");
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     std::string initLoomPath = homeStr + "/projects/Init.loom";
+    mSettingsPadCount = 16;
     mSettingsFilePath = initLoomPath + ".settings";
     std::ifstream f(initLoomPath);
     if (f.good()) {
@@ -276,9 +277,6 @@ void UIManager::init() {
         mEngine.loadProject(initLoomPath);
         loadSettings(mSettingsFilePath);
     }
-    
-    // Force 16 pads default at startup
-    mSettingsPadCount = 16;
     mNeedsScreenRebuild = true;
 
     // Load custom FM presets persistently
@@ -508,6 +506,18 @@ void UIManager::createCenterContentArea() {
     if (mAssignTabview) {
         mAssignActiveTabIdx = lv_tabview_get_tab_active(mAssignTabview);
     }
+    // Save param active tab if param tabview exists
+    if (mParamTabview) {
+        mParamActiveTabIdx = lv_tabview_get_tab_active(mParamTabview);
+    }
+
+    int currentEngineType = mEngine.getTracks()[mActiveTrack].engineType;
+    if (mActiveTrack != mLastActiveTrack || mActiveNav != mLastActiveNav || currentEngineType != mLastEngineType) {
+        mParamActiveTabIdx = 0;
+        mLastActiveTrack = mActiveTrack;
+        mLastActiveNav = mActiveNav;
+        mLastEngineType = currentEngineType;
+    }
 
     // Safely close and delete all active popup modals to prevent them from getting stuck when switching screens
     if (mRemapModal) { lv_obj_delete(mRemapModal); mRemapModal = nullptr; }
@@ -527,6 +537,7 @@ void UIManager::createCenterContentArea() {
 
     mSettingsTabview = nullptr;
     mAssignTabview = nullptr;
+    mParamTabview = nullptr;
 
     mSamplerWaveformContainer = nullptr;
     mSamplerStartLine = nullptr;
@@ -1846,11 +1857,11 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
 
     lv_obj_t* padCountDd = lv_dropdown_create(configRow);
     lv_obj_set_size(padCountDd, 80, 36);
-    lv_dropdown_set_options(padCountDd, "4\n8\n12\n16");
+    lv_dropdown_set_options(padCountDd, "4\n8\n12\n16\n20\n24");
     lv_obj_set_style_bg_color(padCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(padCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(padCountDd, 6, 0);
-    int countIdx = (mSettingsPadCount == 4) ? 0 : (mSettingsPadCount == 8) ? 1 : (mSettingsPadCount == 12) ? 2 : 3;
+    int countIdx = (mSettingsPadCount == 4) ? 0 : (mSettingsPadCount == 8) ? 1 : (mSettingsPadCount == 12) ? 2 : (mSettingsPadCount == 16) ? 3 : (mSettingsPadCount == 20) ? 4 : 5;
     lv_dropdown_set_selected(padCountDd, countIdx);
     lv_obj_add_event_cb(padCountDd, settingsPadCountDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
@@ -1947,6 +1958,46 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_obj_set_style_pad_all(mSettingsPadGrid, 8, 0);
     lv_obj_remove_flag(mSettingsPadGrid, LV_OBJ_FLAG_SCROLLABLE);
 
+    // Pad Learn Button in the lower right
+    lv_obj_t* padLearnBtn = lv_button_create(tab);
+    lv_obj_set_size(padLearnBtn, 150, 40);
+    lv_obj_add_flag(padLearnBtn, LV_OBJ_FLAG_FLOATING);
+    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
+    if (mPadLearnActive) {
+        lv_obj_set_style_bg_color(padLearnBtn, trackColor, 0);
+    } else {
+        lv_obj_set_style_bg_color(padLearnBtn, lv_color_hex(0x2D2D2D), 0);
+    }
+    lv_obj_set_style_radius(padLearnBtn, 6, 0);
+    
+    mPadLearnBtnLabel = lv_label_create(padLearnBtn);
+    if (mPadLearnActive) {
+        if (mPadLearnTarget >= 0) {
+            lv_label_set_text_fmt(mPadLearnBtnLabel, "LEARNING PAD %d", mPadLearnTarget + 1);
+        } else {
+            lv_label_set_text(mPadLearnBtnLabel, "LEARN: TAP PAD");
+        }
+    } else {
+        lv_label_set_text(mPadLearnBtnLabel, "PAD LEARN");
+    }
+    lv_obj_set_style_text_font(mPadLearnBtnLabel, &lv_font_montserrat_10, 0);
+    lv_obj_center(mPadLearnBtnLabel);
+    
+    auto padLearnCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->mPadLearnActive = !ui->mPadLearnActive;
+        ui->mPadLearnTarget = -1;
+        lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+        if (ui->mPadLearnActive) {
+            lv_label_set_text(ui->mPadLearnBtnLabel, "LEARN: TAP PAD");
+            lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mActiveTrack), 0);
+        } else {
+            lv_label_set_text(ui->mPadLearnBtnLabel, "PAD LEARN");
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
+        }
+    };
+    lv_obj_add_event_cb(padLearnBtn, padLearnCb, LV_EVENT_CLICKED, this);
+
     rebuildPadGrid();
 }
 
@@ -1958,7 +2009,7 @@ void UIManager::rebuildPadGrid() {
     int cols = 4;
     int rows = (mSettingsPadCount + cols - 1) / cols;
     int padW = 190;
-    int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : 105;
+    int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : (rows <= 4) ? 105 : 70;
     int gapX = 12;
     int gapY = 8;
 
@@ -1968,10 +2019,14 @@ void UIManager::rebuildPadGrid() {
         int x = c * (padW + gapX);
         int y = r * (padH + gapY);
 
+        int noteMapVal = mSettingsPadNoteMap[i];
+        std::string noteMapName = std::string(kNoteNames[noteMapVal % 12]) + std::to_string(noteMapVal / 12 - 1);
+        bool isLearnTarget = (mPadLearnActive && mPadLearnTarget == i);
+
         lv_obj_t* pad = lv_obj_create(mSettingsPadGrid);
         lv_obj_set_size(pad, padW, padH);
         lv_obj_set_pos(pad, x, y);
-        lv_obj_set_style_bg_color(pad, lv_color_hex(0x222222), 0);
+        lv_obj_set_style_bg_color(pad, isLearnTarget ? lv_color_hex(0x884400) : lv_color_hex(0x222222), 0);
         lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
         lv_obj_set_style_border_color(pad, trackColor, 0);
         lv_obj_set_style_border_width(pad, 2, 0);
@@ -1996,12 +2051,12 @@ void UIManager::rebuildPadGrid() {
                 if (noteVal < 0) noteVal = 0;
                 if (noteVal > 127) noteVal = 127;
                 std::string noteName = std::string(kNoteNames[noteVal % 12]) + std::to_string(noteVal / 12 - 1);
-                lv_label_set_text_fmt(label, "PAD %d\n(%s)", i + 1, noteName.c_str());
+                lv_label_set_text_fmt(label, "PAD %d\n(%s)\n[%s]", i + 1, noteName.c_str(), noteMapName.c_str());
                 break;
             }
             case 1: { // FX
                 int fxIdx = mSettingsPadFxAssign[i] % kNumFxSlots;
-                lv_label_set_text(label, kFxNames[fxIdx]);
+                lv_label_set_text_fmt(label, "%s\n[%s]", kFxNames[fxIdx], noteMapName.c_str());
                 if (mSettingsPadFxToggleState[i] && !mSettingsFxPadMomentary) {
                     lv_obj_set_style_bg_color(pad, lv_color_hex(0x335544), 0);
                 }
@@ -2067,17 +2122,17 @@ void UIManager::rebuildPadGrid() {
                 int note = baseNote + octShift * 12 + intervals[degIdx];
                 int noteName = note % 12;
                 int octave = (note / 12) - 1;
-                lv_label_set_text_fmt(label, "%s%d", kNoteNames[noteName], octave);
+                lv_label_set_text_fmt(label, "%s%d\n[%s]", kNoteNames[noteName], octave, noteMapName.c_str());
                 break;
             }
             case 3: { // FM Drum
                 int drumIdx = mSettingsPadDrumAssign[i] % 8;
-                lv_label_set_text(label, kFmDrumNames[drumIdx]);
+                lv_label_set_text_fmt(label, "%s\n[%s]", kFmDrumNames[drumIdx], noteMapName.c_str());
                 break;
             }
             case 4: { // Analogue Drum
                 int drumIdx = mSettingsPadDrumAssign[i] % 8;
-                lv_label_set_text(label, kAnalogDrumNames[drumIdx]);
+                lv_label_set_text_fmt(label, "%s\n[%s]", kAnalogDrumNames[drumIdx], noteMapName.c_str());
                 break;
             }
             case 5: { // Slices
@@ -2085,7 +2140,7 @@ void UIManager::rebuildPadGrid() {
                 int numSlices = (int)slicePoints.size();
                 if (numSlices <= 0) numSlices = 1;
                 int sliceIdx = i % numSlices;
-                lv_label_set_text_fmt(label, "PAD %d\nSlice %d", i + 1, sliceIdx + 1);
+                lv_label_set_text_fmt(label, "PAD %d\nSlice %d\n[%s]", i + 1, sliceIdx + 1, noteMapName.c_str());
                 break;
             }
         }
@@ -2157,7 +2212,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     lv_obj_t* knobCountDd = lv_dropdown_create(controlsRow);
     lv_obj_set_size(knobCountDd, 80, 36);
-    lv_dropdown_set_options(knobCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12");
+    lv_dropdown_set_options(knobCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24");
     lv_obj_set_style_bg_color(knobCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(knobCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(knobCountDd, 6, 0);
@@ -2171,7 +2226,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     lv_obj_t* sliderCountDd = lv_dropdown_create(controlsRow);
     lv_obj_set_size(sliderCountDd, 80, 36);
-    lv_dropdown_set_options(sliderCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12");
+    lv_dropdown_set_options(sliderCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24");
     lv_obj_set_style_bg_color(sliderCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(sliderCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(sliderCountDd, 6, 0);
@@ -2318,6 +2373,73 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
             delete d;
         };
         lv_obj_add_event_cb(ccDd, freeCb, LV_EVENT_DELETE, data);
+    }
+
+    // Add a divider and title for Transport / System CCs
+    lv_obj_t* transTitle = lv_label_create(tableContainer);
+    lv_obj_set_width(transTitle, lv_pct(100));
+    lv_label_set_text(transTitle, "SYSTEM & TRANSPORT CC ASSIGNMENTS");
+    lv_obj_set_style_text_font(transTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(transTitle, trackColor, 0);
+    lv_obj_set_style_pad_top(transTitle, 15, 0);
+
+    struct TransportMapping {
+        std::string name;
+        int* pCcVal;
+    };
+    std::vector<TransportMapping> transMap = {
+        {"PLAY / TOGGLE", &mCcPlay},
+        {"STOP (IF DISCRETE)", &mCcStop},
+        {"RECORD", &mCcRecord},
+        {"CLEAR SEQUENCE", &mCcClear},
+        {"PREV TRACK", &mCcPrevTrack},
+        {"NEXT TRACK", &mCcNextTrack}
+    };
+
+    for (size_t i = 0; i < transMap.size(); ++i) {
+        lv_obj_t* row = lv_obj_create(tableContainer);
+        lv_obj_set_size(row, 340, 40);
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+        lv_obj_t* nameLbl = lv_label_create(row);
+        lv_label_set_text_fmt(nameLbl, "%s (CC %d)", transMap[i].name.c_str(), *(transMap[i].pCcVal));
+        lv_obj_set_style_text_font(nameLbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(nameLbl, lv_color_hex(0xCCCCCC), 0);
+
+        lv_obj_t* ccDd = lv_dropdown_create(row);
+        lv_obj_set_size(ccDd, 110, 32);
+        lv_dropdown_set_options(ccDd, ccOptions.c_str());
+        lv_dropdown_set_selected(ccDd, *(transMap[i].pCcVal));
+        lv_obj_set_style_bg_color(ccDd, lv_color_hex(0x2A2A2A), 0);
+        lv_obj_set_style_text_font(ccDd, &lv_font_montserrat_12, 0);
+
+        struct TransChangeData {
+            UIManager* ui;
+            int* pCcVal;
+            lv_obj_t* lbl;
+            std::string name;
+        };
+        TransChangeData* tData = new TransChangeData{this, transMap[i].pCcVal, nameLbl, transMap[i].name};
+        
+        auto transClickCb = [](lv_event_t* e) {
+            TransChangeData* d = (TransChangeData*)lv_event_get_user_data(e);
+            lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+            int selected = lv_dropdown_get_selected(dd);
+            *(d->pCcVal) = selected;
+            lv_label_set_text_fmt(d->lbl, "%s (CC %d)", d->name.c_str(), selected);
+        };
+        lv_obj_add_event_cb(ccDd, transClickCb, LV_EVENT_VALUE_CHANGED, tData);
+
+        auto transFreeCb = [](lv_event_t* e) {
+            TransChangeData* d = (TransChangeData*)lv_event_get_user_data(e);
+            delete d;
+        };
+        lv_obj_add_event_cb(ccDd, transFreeCb, LV_EVENT_DELETE, tData);
     }
 }
 
@@ -2752,14 +2874,23 @@ void UIManager::settingsFxPadBehaviorSwitchEventCb(lv_event_t* e) {
         lv_label_set_text(label, ui->mSettingsFxPadMomentary ? "Momentary" : "Toggle");
     }
     // Reset toggle states when switching
-    for (int i = 0; i < 16; ++i) ui->mSettingsPadFxToggleState[i] = false;
+    for (int i = 0; i < 24; ++i) ui->mSettingsPadFxToggleState[i] = false;
 }
 
 void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* pad = (lv_obj_t*)lv_event_get_target(e);
     int padIdx = (int)(intptr_t)lv_obj_get_user_data(pad);
-    if (padIdx < 0 || padIdx >= 16) return;
+    if (padIdx < 0 || padIdx >= 24) return;
+
+    if (ui->mPadLearnActive) {
+        ui->mPadLearnTarget = padIdx;
+        if (ui->mPadLearnBtnLabel) {
+            lv_label_set_text_fmt(ui->mPadLearnBtnLabel, "LEARNING PAD %d", padIdx + 1);
+        }
+        ui->rebuildPadGrid();
+        return;
+    }
 
     switch (ui->mSettingsPadMode) {
         case 0: { // Keyboard - trigger note
@@ -2969,7 +3100,7 @@ void UIManager::settingsFxSelectBtnEventCb(lv_event_t* e) {
     int padIdx = (packedData >> 16) & 0xFFFF;
     int fxIdx = packedData & 0xFFFF;
 
-    if (padIdx >= 0 && padIdx < 16 && fxIdx >= 0 && fxIdx < kNumFxSlots) {
+    if (padIdx >= 0 && padIdx < 24 && fxIdx >= 0 && fxIdx < kNumFxSlots) {
         ui->mSettingsPadFxAssign[padIdx] = fxIdx;
         std::cout << "Settings: Pad " << padIdx + 1 << " reassigned to FX " << kFxNames[fxIdx] << std::endl;
         
@@ -3292,8 +3423,10 @@ void UIManager::settingsScreenDeleteEventCb(lv_event_t* e) {
 static void setBacklightPower(bool on) {
     if (on) {
         std::system("sudo sh -c 'echo 0 > /sys/class/backlight/rpi_backlight/bl_power' 2>/dev/null");
+        std::system("vcgencmd display_power 1 2>/dev/null");
     } else {
         std::system("sudo sh -c 'echo 1 > /sys/class/backlight/rpi_backlight/bl_power' 2>/dev/null");
+        std::system("vcgencmd display_power 0 2>/dev/null");
     }
 }
 
@@ -3336,8 +3469,9 @@ void UIManager::update() {
             lv_obj_set_style_radius(mSleepOverlay, 0, 0);
             lv_obj_add_flag(mSleepOverlay, LV_OBJ_FLAG_FLOATING);
             
-            // Turn off backlight
+            // Turn off backlight & hide cursor
             setBacklightPower(false);
+            SDL_ShowCursor(SDL_DISABLE);
 
             // Touch anywhere to wake up
             auto wakeUpCb = [](lv_event_t* e) {
@@ -3346,6 +3480,7 @@ void UIManager::update() {
                     lv_obj_delete(ui->mSleepOverlay);
                     ui->mSleepOverlay = nullptr;
                     setBacklightPower(true);
+                    SDL_ShowCursor(SDL_ENABLE);
                     lv_display_trigger_activity(nullptr);
                 }
             };
@@ -10603,6 +10738,7 @@ void UIManager::populateParamScreen() {
     if (engineType == 0) {
         // Subtractive Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 480);
@@ -10634,6 +10770,7 @@ void UIManager::populateParamScreen() {
     } else if (engineType == 1) {
         // FM Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 480);
@@ -10663,6 +10800,7 @@ void UIManager::populateParamScreen() {
     } else if (engineType == 2) {
         // Sampler Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 480);
@@ -10690,6 +10828,7 @@ void UIManager::populateParamScreen() {
     } else if (engineType == 3) {
         // Granular Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 550);
@@ -10717,6 +10856,7 @@ void UIManager::populateParamScreen() {
     } else if (engineType == 4) {
         // Wavetable Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 480);
@@ -10743,6 +10883,7 @@ void UIManager::populateParamScreen() {
         populateParamWavetableFilterTab(tab2);
     } else if (engineType == 9) {
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 550);
@@ -10768,6 +10909,7 @@ void UIManager::populateParamScreen() {
         populateParamSoundFontSynthTab(tab2);
     } else if (engineType == 8) {
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 550);
@@ -10793,6 +10935,7 @@ void UIManager::populateParamScreen() {
         populateParamAudioInFilterEnvTab(tab2);
     } else if (engineType == 5) {
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 550);
@@ -10818,6 +10961,7 @@ void UIManager::populateParamScreen() {
         populateParamFmDrumTab2(tab2);
     } else if (engineType == 6) {
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
         lv_obj_set_size(tabview, 790, 550);
@@ -10841,6 +10985,10 @@ void UIManager::populateParamScreen() {
 
         populateParamAnalogDrumTab1(tab1);
         populateParamAnalogDrumTab2(tab2);
+    }
+
+    if (mParamTabview) {
+        lv_tabview_set_active(mParamTabview, mParamActiveTabIdx, LV_ANIM_OFF);
     }
 
     // Create floating action bar container in the bottom right corner of mCenterArea
@@ -15195,14 +15343,14 @@ void UIManager::createMidiLearnButton() {
 void UIManager::applyDefaultMidiMappings(int trackIdx, int engineType) {
     if (trackIdx < 0 || trackIdx >= 8) return;
 
-    // Apply default CC IDs: Knobs 70-81, Faders 12-23
-    for (int k = 0; k < 12; ++k) {
+    // Apply default CC IDs: Knobs 70-93, Faders 12-35
+    for (int k = 0; k < 24; ++k) {
         mSeqMidiKnobCC[trackIdx][k] = 70 + k;
         mSeqMidiKnobParam[trackIdx][k] = -1;
         mSeqMidiKnobValue[trackIdx][k] = 0.5f;
         mSeqMidiKnobInverted[trackIdx][k] = false;
     }
-    for (int f = 0; f < 12; ++f) {
+    for (int f = 0; f < 24; ++f) {
         mSeqMidiFaderCC[trackIdx][f] = 12 + f;
         mSeqMidiFaderParam[trackIdx][f] = -1;
         mSeqMidiFaderValue[trackIdx][f] = 0.8f;
@@ -15314,15 +15462,26 @@ void UIManager::saveSettings(const std::string& path) {
     file << "AUDIO_OUTPUT_MODE:" << mEngine.getAudioOutputMode() << "\n";
     file << "AUDIO_DEVICE:" << mSettingsAudioDevice << "\n";
 
+    // Transport & custom configurations
+    file << "PLAY_CC:" << mCcPlay << "\n";
+    file << "STOP_CC:" << mCcStop << "\n";
+    file << "RECORD_CC:" << mCcRecord << "\n";
+    file << "CLEAR_CC:" << mCcClear << "\n";
+    file << "PREV_TRACK_CC:" << mCcPrevTrack << "\n";
+    file << "NEXT_TRACK_CC:" << mCcNextTrack << "\n";
+    file << "PAD_NOTE_MAP:";
+    for (int i = 0; i < 24; ++i) file << mSettingsPadNoteMap[i] << (i < 23 ? " " : "");
+    file << "\n";
+
     file << "PAD_FX_ASSIGN:";
-    for (int i = 0; i < 16; ++i) file << mSettingsPadFxAssign[i] << (i < 15 ? " " : "");
+    for (int i = 0; i < 24; ++i) file << mSettingsPadFxAssign[i] << (i < 23 ? " " : "");
     file << "\n";
 
     file << "PAD_DRUM_ASSIGN:";
-    for (int i = 0; i < 16; ++i) file << mSettingsPadDrumAssign[i] << (i < 15 ? " " : "");
+    for (int i = 0; i < 24; ++i) file << mSettingsPadDrumAssign[i] << (i < 23 ? " " : "");
     file << "\n";
 
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0; i < 24; ++i) {
         file << "PAD_CHORD:" << i << ":" << mSettingsPadChordCount[i];
         for (int n = 0; n < mSettingsPadChordCount[i]; ++n) {
             file << " " << mSettingsPadChordNotes[i][n];
@@ -15331,10 +15490,10 @@ void UIManager::saveSettings(const std::string& path) {
     }
 
     for (int t = 0; t < 8; ++t) {
-        for (int k = 0; k < 12; ++k) {
+        for (int k = 0; k < 24; ++k) {
             file << "KNOB_MAP:" << t << ":" << k << ":" << mSeqMidiKnobCC[t][k] << ":" << mSeqMidiKnobParam[t][k] << ":" << mSeqMidiKnobValue[t][k] << ":" << (mSeqMidiKnobInverted[t][k] ? 1 : 0) << "\n";
         }
-        for (int f = 0; f < 12; ++f) {
+        for (int f = 0; f < 24; ++f) {
             file << "FADER_MAP:" << t << ":" << f << ":" << mSeqMidiFaderCC[t][f] << ":" << mSeqMidiFaderParam[t][f] << ":" << mSeqMidiFaderValue[t][f] << ":" << (mSeqMidiFaderInverted[t][f] ? 1 : 0) << "\n";
         }
         file << "AFTERTOUCH_MAP:" << t << ":" << mAftertouchDestParamId[t] << "\n";
@@ -15387,12 +15546,27 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
             else if (key == "AUDIO_DEVICE") mSettingsAudioDevice = val;
-            else if (key == "PAD_FX_ASSIGN") {
+            else if (key == "PLAY_CC") mCcPlay = std::stoi(val);
+            else if (key == "STOP_CC") mCcStop = std::stoi(val);
+            else if (key == "RECORD_CC") mCcRecord = std::stoi(val);
+            else if (key == "CLEAR_CC") mCcClear = std::stoi(val);
+            else if (key == "PREV_TRACK_CC") mCcPrevTrack = std::stoi(val);
+            else if (key == "NEXT_TRACK_CC") mCcNextTrack = std::stoi(val);
+            else if (key == "PAD_NOTE_MAP") {
                 std::stringstream ss(val);
-                for (int i = 0; i < 16; ++i) ss >> mSettingsPadFxAssign[i];
+                for (int i = 0; i < 24; ++i) {
+                    if (ss >> mSettingsPadNoteMap[i]) {}
+                }
+            } else if (key == "PAD_FX_ASSIGN") {
+                std::stringstream ss(val);
+                for (int i = 0; i < 24; ++i) {
+                    if (ss >> mSettingsPadFxAssign[i]) {}
+                }
             } else if (key == "PAD_DRUM_ASSIGN") {
                 std::stringstream ss(val);
-                for (int i = 0; i < 16; ++i) ss >> mSettingsPadDrumAssign[i];
+                for (int i = 0; i < 24; ++i) {
+                    if (ss >> mSettingsPadDrumAssign[i]) {}
+                }
             } else if (key == "PAD_CHORD") {
                 size_t p2 = val.find(':');
                 if (p2 != std::string::npos) {
@@ -15400,9 +15574,11 @@ void UIManager::loadSettings(const std::string& path) {
                     std::stringstream ss(val.substr(p2 + 1));
                     int noteCount = 0;
                     ss >> noteCount;
-                    mSettingsPadChordCount[padIdx] = noteCount;
-                    for (int n = 0; n < noteCount; ++n) {
-                        ss >> mSettingsPadChordNotes[padIdx][n];
+                    if (padIdx >= 0 && padIdx < 24) {
+                        mSettingsPadChordCount[padIdx] = noteCount;
+                        for (int n = 0; n < noteCount; ++n) {
+                            ss >> mSettingsPadChordNotes[padIdx][n];
+                        }
                     }
                 }
             } else if (key == "KNOB_MAP") {
@@ -15415,8 +15591,8 @@ void UIManager::loadSettings(const std::string& path) {
                 if (ss.peek() == ':') {
                     ss >> colon >> inv;
                 }
-                if (t >= 0 && t < 8 && k >= 0 && k < 12) {
-                    mSeqMidiKnobCC[t][k] = 70 + k; // Force correct default CC
+                if (t >= 0 && t < 8 && k >= 0 && k < 24) {
+                    mSeqMidiKnobCC[t][k] = cc;
                     int engineType = mEngine.getTracks()[t].engineType;
                     if (engineType == 2 && p >= 100 && p <= 103) {
                         p = 310 + (p - 100);
@@ -15439,8 +15615,8 @@ void UIManager::loadSettings(const std::string& path) {
                 if (ss.peek() == ':') {
                     ss >> colon >> inv;
                 }
-                if (t >= 0 && t < 8 && f >= 0 && f < 12) {
-                    mSeqMidiFaderCC[t][f] = 12 + f; // Force correct default CC
+                if (t >= 0 && t < 8 && f >= 0 && f < 24) {
+                    mSeqMidiFaderCC[t][f] = cc;
                     int engineType = mEngine.getTracks()[t].engineType;
                     if (engineType == 2 && p >= 100 && p <= 103) {
                         p = 310 + (p - 100);

@@ -266,10 +266,29 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     uint8_t velocity = packet->data[b + 2];
                     int activeTrack = data->ui->getActiveTrack();
                     int targetTrack = activeTrack;
+
+                    if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
+                        if (velocity > 0) {
+                            data->ui->mSettingsPadNoteMap[data->ui->mPadLearnTarget] = note;
+                            data->ui->mPadLearnActive = false;
+                            data->ui->mNeedsScreenRebuild = true;
+                        }
+                        b += 3;
+                        continue;
+                    }
+
+                    int padIdx = -1;
+                    if (data->ui->mSettingsPadMode != 0) {
+                        for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                            if (note == data->ui->mSettingsPadNoteMap[i]) {
+                                padIdx = i;
+                                break;
+                            }
+                        }
+                    }
                     
-                    // Intercept pads 20-35 as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
-                    if (note >= 20 && note <= 35 && data->ui->mSettingsPadMode != 0) {
-                        int padIdx = note - 20; // 0 to 15
+                    // Intercept pads as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
+                    if (padIdx >= 0) {
                         
                         // Keep track of the most recently played FX pad for channel pressure routing
                         if (data->ui->mSettingsPadMode == 1) {
@@ -412,9 +431,18 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     int activeTrack = data->ui->getActiveTrack();
                     int targetTrack = activeTrack;
                     
-                    // Intercept pads 20-35 as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
-                    if (note >= 20 && note <= 35 && data->ui->mSettingsPadMode != 0) {
-                        int padIdx = note - 20; // 0 to 15
+                    int padIdx = -1;
+                    if (data->ui->mSettingsPadMode != 0) {
+                        for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                            if (note == data->ui->mSettingsPadNoteMap[i]) {
+                                padIdx = i;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Intercept pads as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
+                    if (padIdx >= 0) {
                         
                         // Clear the active FX pad index if it matches the one being released
                         if (data->ui->mSettingsPadMode == 1 && data->ui->mLastActiveFxPadIdx == padIdx) {
@@ -501,25 +529,29 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     uint8_t val = packet->data[b + 2];
                     
                     // Hardware transport & navigation CC buttons
-                    if (cc == 59) {
+                    if (cc == data->ui->mCcPlay && cc == data->ui->mCcStop) {
                         data->engine->setPlaying(val >= 64);
-                    } else if (cc == 60) {
+                    } else if (cc == data->ui->mCcPlay && val >= 64) {
+                        data->engine->setPlaying(true);
+                    } else if (cc == data->ui->mCcStop && val >= 64) {
+                        data->engine->setPlaying(false);
+                    } else if (cc == data->ui->mCcRecord) {
                         bool recState = (val >= 64);
                         data->engine->setIsRecording(recState);
                         if (recState) data->engine->setPlaying(true);
-                    } else if (cc == 61) {
+                    } else if (cc == data->ui->mCcClear) {
                         if (val >= 64) {
                             int activeTrack = data->ui->getActiveTrack();
                             data->engine->clearSequencer(activeTrack);
                         }
-                    } else if (cc == 62) {
+                    } else if (cc == data->ui->mCcPrevTrack) {
                         if (val >= 64) {
                             int activeTrack = data->ui->getActiveTrack();
                             int prevTrk = (activeTrack - 1 + 8) % 8;
                             data->ui->setActiveTrack(prevTrk);
                             data->ui->mNeedsScreenRebuild = true;
                         }
-                    } else if (cc == 63) {
+                    } else if (cc == data->ui->mCcNextTrack) {
                         if (val >= 64) {
                             int activeTrack = data->ui->getActiveTrack();
                             int nextTrk = (activeTrack + 1) % 8;
@@ -716,9 +748,17 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     float floatVal = pressure / 127.0f;
                     int activeTrack = data->ui->getActiveTrack();
                     
-                    if (data->ui->mSettingsPadMode == 1 && note >= 20 && note <= 35) {
+                    int padIdx = -1;
+                    if (data->ui->mSettingsPadMode == 1) {
+                        for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                            if (note == data->ui->mSettingsPadNoteMap[i]) {
+                                padIdx = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (padIdx >= 0) {
                         // Modulate Send and Mix levels for the specific FX pedal
-                        int padIdx = note - 20;
                         int pedalIdx = data->ui->mSettingsPadFxAssign[padIdx];
                         data->engine->setParameter(activeTrack, 2000 + (pedalIdx * 10), floatVal);
                         data->engine->updateEngineParameter(-1, 3000 + pedalIdx, floatVal);
@@ -798,13 +838,32 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
     if (messageType == 0x90) { // Note On
         uint8_t note = d1;
         uint8_t velocity = d2;
+
+        if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
+            if (velocity > 0) {
+                data->ui->mSettingsPadNoteMap[data->ui->mPadLearnTarget] = note;
+                data->ui->mPadLearnActive = false;
+                data->ui->mNeedsScreenRebuild = true;
+            }
+            return;
+        }
+
         data->ui->addMidiLog(velocity > 0 ? "Note On" : "Note Off", channel + 1, note, velocity);
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
         
-        // Intercept pads 20-35 as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
-        if (note >= 20 && note <= 35 && data->ui->mSettingsPadMode != 0) {
-            int padIdx = note - 20; // 0 to 15
+        int padIdx = -1;
+        if (data->ui->mSettingsPadMode != 0) {
+            for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                if (note == data->ui->mSettingsPadNoteMap[i]) {
+                    padIdx = i;
+                    break;
+                }
+            }
+        }
+
+        // Intercept pads as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
+        if (padIdx >= 0) {
             
             // Keep track of the most recently played FX pad for channel pressure routing
             if (data->ui->mSettingsPadMode == 1) {
@@ -943,9 +1002,18 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
         
-        // Intercept pads 20-35 as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
-        if (note >= 20 && note <= 35 && data->ui->mSettingsPadMode != 0) {
-            int padIdx = note - 20; // 0 to 15
+        int padIdx = -1;
+        if (data->ui->mSettingsPadMode != 0) {
+            for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                if (note == data->ui->mSettingsPadNoteMap[i]) {
+                    padIdx = i;
+                    break;
+                }
+            }
+        }
+
+        // Intercept pads as FX/Drum pad triggers ONLY if pad mode is not Keyboard (0)
+        if (padIdx >= 0) {
             
             // Clear the active FX pad index if it matches the one being released
             if (data->ui->mSettingsPadMode == 1 && data->ui->mLastActiveFxPadIdx == padIdx) {
@@ -1028,25 +1096,29 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         data->ui->addMidiLog("CC", channel + 1, cc, val);
         
         // Hardware transport & navigation CC buttons
-        if (cc == 59) {
+        if (cc == data->ui->mCcPlay && cc == data->ui->mCcStop) {
             data->engine->setPlaying(val >= 64);
-        } else if (cc == 60) {
+        } else if (cc == data->ui->mCcPlay && val >= 64) {
+            data->engine->setPlaying(true);
+        } else if (cc == data->ui->mCcStop && val >= 64) {
+            data->engine->setPlaying(false);
+        } else if (cc == data->ui->mCcRecord) {
             bool recState = (val >= 64);
             data->engine->setIsRecording(recState);
             if (recState) data->engine->setPlaying(true);
-        } else if (cc == 61) {
+        } else if (cc == data->ui->mCcClear) {
             if (val >= 64) {
                 int activeTrack = data->ui->getActiveTrack();
                 data->engine->clearSequencer(activeTrack);
             }
-        } else if (cc == 62) {
+        } else if (cc == data->ui->mCcPrevTrack) {
             if (val >= 64) {
                 int activeTrack = data->ui->getActiveTrack();
                 int prevTrk = (activeTrack - 1 + 8) % 8;
                 data->ui->setActiveTrack(prevTrk);
                 data->ui->mNeedsScreenRebuild = true;
             }
-        } else if (cc == 63) {
+        } else if (cc == data->ui->mCcNextTrack) {
             if (val >= 64) {
                 int activeTrack = data->ui->getActiveTrack();
                 int nextTrk = (activeTrack + 1) % 8;
@@ -1233,9 +1305,17 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         float floatVal = pressure / 127.0f;
         int activeTrack = data->ui->getActiveTrack();
         
-        if (data->ui->mSettingsPadMode == 1 && note >= 20 && note <= 35) {
+        int padIdx = -1;
+        if (data->ui->mSettingsPadMode == 1) {
+            for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
+                if (note == data->ui->mSettingsPadNoteMap[i]) {
+                    padIdx = i;
+                    break;
+                }
+            }
+        }
+        if (padIdx >= 0) {
             // Modulate Send and Mix levels for the specific FX pedal
-            int padIdx = note - 20;
             int pedalIdx = data->ui->mSettingsPadFxAssign[padIdx];
             data->engine->setParameter(activeTrack, 2000 + (pedalIdx * 10), floatVal);
             data->engine->updateEngineParameter(-1, 3000 + pedalIdx, floatVal);

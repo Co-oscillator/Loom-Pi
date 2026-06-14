@@ -27,19 +27,27 @@ public:
     bool isFileBrowserOpen() const { return mSeqModal != nullptr; }
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
-    int mSeqMidiKnobCC[8][12];
-    int mSeqMidiKnobParam[8][12]; // mapped param IDs
-    float mSeqMidiKnobValue[8][12];
-    bool mSeqMidiKnobInverted[8][12];
-    uint32_t mLastKnobMs[8][12] = {0};
-    uint8_t mLastKnobCcVal[8][12] = {0};
-    bool mKnobInitialized[8][12] = {false};
-    int mSeqMidiFaderCC[8][12];
-    int mSeqMidiFaderParam[8][12]; // mapped param IDs
-    float mSeqMidiFaderValue[8][12];
-    bool mSeqMidiFaderInverted[8][12];
+    int mSeqMidiKnobCC[8][24];
+    int mSeqMidiKnobParam[8][24]; // mapped param IDs
+    float mSeqMidiKnobValue[8][24];
+    bool mSeqMidiKnobInverted[8][24];
+    uint32_t mLastKnobMs[8][24] = {0};
+    uint8_t mLastKnobCcVal[8][24] = {0};
+    bool mKnobInitialized[8][24] = {false};
+    int mSeqMidiFaderCC[8][24];
+    int mSeqMidiFaderParam[8][24]; // mapped param IDs
+    float mSeqMidiFaderValue[8][24];
+    bool mSeqMidiFaderInverted[8][24];
     int mSettingsKnobCount = 12;
     int mSettingsSliderCount = 4;
+
+    // Transport CC mapping configuration
+    int mCcPlay = 59;
+    int mCcStop = 59;
+    int mCcRecord = 60;
+    int mCcClear = 61;
+    int mCcPrevTrack = 62;
+    int mCcNextTrack = 63;
 
     // Real-time synchronization widget tracking structures
     struct ParamWidgetTracking {
@@ -303,10 +311,10 @@ private:
     // Assign screen state
     
     // Assign screen real-time widgets tracking
-    lv_obj_t* mAssignKnobArcs[12] = {nullptr};
-    lv_obj_t* mAssignKnobValLabels[12] = {nullptr};
-    lv_obj_t* mAssignFaderSliders[12] = {nullptr};
-    lv_obj_t* mAssignFaderValLabels[12] = {nullptr};
+    lv_obj_t* mAssignKnobArcs[24] = {nullptr};
+    lv_obj_t* mAssignKnobValLabels[24] = {nullptr};
+    lv_obj_t* mAssignFaderSliders[24] = {nullptr};
+    lv_obj_t* mAssignFaderValLabels[24] = {nullptr};
     int mFxChainPedals[2][5]; // [chainIndex][slotIndex], stores pedal ID (0-16) or -1 for empty
 
     // Modal and routing picking state
@@ -321,6 +329,11 @@ private:
     lv_obj_t* mActiveRoutingsContainer = nullptr;
     lv_obj_t* mAssignTabview = nullptr;
     int mAssignActiveTabIdx = 0;
+    lv_obj_t* mParamTabview = nullptr;
+    int mParamActiveTabIdx = 0;
+    int mLastActiveTrack = 0;
+    int mLastActiveNav = 0;
+    int mLastEngineType = -1;
     int mActiveDrumIdx = 0;
     lv_obj_t* mRemapModal = nullptr;
     int mRemapTargetIndex = 0; // 0-7 for knobs, 8-15 for faders
@@ -553,14 +566,20 @@ public:
     int mSettingsOctaveOffset = 0; // -5 to +5
     lv_obj_t* mSettingsOctaveDd = nullptr;
     bool mSettingsFxPadMomentary = true; // true=Momentary, false=Toggle
-    int mSettingsPadFxAssign[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
-    int mSettingsPadDrumAssign[16] = {0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7};
-    int mSettingsPadChordNotes[16][8] = {};
-    int mSettingsPadChordCount[16] = {};
-    bool mSettingsPadFxToggleState[16] = {}; // For toggle mode: is FX currently on?
+    int mSettingsPadFxAssign[24] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
+    int mSettingsPadDrumAssign[24] = {0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7};
+    int mSettingsPadChordNotes[24][8] = {};
+    int mSettingsPadChordCount[24] = {};
+    bool mSettingsPadFxToggleState[24] = {}; // For toggle mode: is FX currently on?
     int mSettingsChordRecordingPad = -1;
     int mSettingsMidiTrackSelect = 0;
     int mSettingsActiveTabIdx = 0;
+
+    // Pad learn state
+    int mSettingsPadNoteMap[24] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43};
+    bool mPadLearnActive = false;
+    int mPadLearnTarget = -1;
+    lv_obj_t* mPadLearnBtnLabel = nullptr;
     
     // Settings – Keyboard mode
     bool mSettingsKeyboardMode = true;
