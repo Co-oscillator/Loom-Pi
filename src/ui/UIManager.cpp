@@ -3496,16 +3496,21 @@ void UIManager::update() {
             }
         }
     } else if (mActiveNav == 5) {
-        if (mCpuLoadLabel != nullptr) {
-            lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
-        }
-        if (mCpuLoadLabelSystem != nullptr) {
-            lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+        static uint32_t lastCpuUpdateMs = 0;
+        uint32_t now = SDL_GetTicks();
+        if (now - lastCpuUpdateMs > 500 || lastCpuUpdateMs == 0) {
+            lastCpuUpdateMs = now;
+            if (mCpuLoadLabel != nullptr) {
+                lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+            }
+            if (mCpuLoadLabelSystem != nullptr) {
+                lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+            }
         }
 
         // Rate-limit USB/MIDI device scanning to once per second
         static uint32_t lastScanMs = 0;
-        uint32_t now = SDL_GetTicks();
+        now = SDL_GetTicks();
         if (now - lastScanMs > 1000 || lastScanMs == 0) {
             lastScanMs = now;
             if (mMidiDeviceListLabel != nullptr) {
