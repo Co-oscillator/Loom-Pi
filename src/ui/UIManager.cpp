@@ -3511,6 +3511,10 @@ void UIManager::update() {
                     ui->mSleepOverlay = nullptr;
                     setBacklightPower(true);
                     SDL_ShowCursor(SDL_ENABLE);
+                    // Force cursor driver update under KMSDRM/X11
+                    int mx, my;
+                    SDL_GetMouseState(&mx, &my);
+                    SDL_WarpMouseInWindow(nullptr, mx, my);
                     lv_display_trigger_activity(nullptr);
                 }
             };
