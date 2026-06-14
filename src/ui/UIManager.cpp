@@ -163,6 +163,34 @@ float UIManager::normalizeParamValue(int paramId, float scaledValue) {
 }
 
 UIManager::UIManager(AudioEngine& engine) : mEngine(engine) {
+    mCcPlay = 59;
+    mCcStop = 59;
+    mCcRecord = 60;
+    mCcClear = 61;
+    mCcPrevTrack = 62;
+    mCcNextTrack = 63;
+    
+    mSettingsPadCount = 16;
+    mSettingsPadMode = 0;
+    mSettingsOctaveOffset = 0;
+    mSettingsFxPadMomentary = false;
+    mSettingsKeyboardMode = false;
+    mSettingsAudioDevice = "";
+    
+    mSettingsKnobCount = 12;
+    mSettingsSliderCount = 4;
+
+    for (int i = 0; i < 24; ++i) {
+        mSettingsPadNoteMap[i] = 20 + i;
+        mSettingsPadFxAssign[i] = i % 8;
+        mSettingsPadDrumAssign[i] = i % 8;
+        mSettingsPadChordCount[i] = 0;
+        mSettingsPadFxToggleState[i] = false;
+        for (int j = 0; j < 8; ++j) {
+            mSettingsPadChordNotes[i][j] = 60;
+        }
+    }
+
     for (int t = 0; t < 8; ++t) {
         mTrackEnabled[t] = true; // Default all tracks to enabled for now
         mAftertouchDestParamId[t] = -1;
@@ -2008,9 +2036,9 @@ void UIManager::rebuildPadGrid() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     int cols = 4;
     int rows = (mSettingsPadCount + cols - 1) / cols;
-    int padW = 190;
+    int padW = 180;
     int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : (rows <= 4) ? 105 : 70;
-    int gapX = 12;
+    int gapX = 10;
     int gapY = 8;
 
     for (int i = 0; i < mSettingsPadCount; ++i) {
@@ -2825,7 +2853,7 @@ void UIManager::settingsPadCountDdEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
     int sel = lv_dropdown_get_selected(dd);
-    int counts[] = {4, 8, 12, 16};
+    int counts[] = {4, 8, 12, 16, 20, 24};
     ui->mSettingsPadCount = counts[sel];
     ui->rebuildPadGrid();
 }
@@ -2835,6 +2863,7 @@ void UIManager::settingsKnobCountDdEventCb(lv_event_t* e) {
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
     int sel = lv_dropdown_get_selected(dd);
     ui->mSettingsKnobCount = sel + 2;
+    ui->mNeedsScreenRebuild = true;
     std::cout << "Settings: Knob Count set to " << ui->mSettingsKnobCount << std::endl;
 }
 
@@ -2843,6 +2872,7 @@ void UIManager::settingsSliderCountDdEventCb(lv_event_t* e) {
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
     int sel = lv_dropdown_get_selected(dd);
     ui->mSettingsSliderCount = sel + 2;
+    ui->mNeedsScreenRebuild = true;
     std::cout << "Settings: Slider Count set to " << ui->mSettingsSliderCount << std::endl;
 }
 
