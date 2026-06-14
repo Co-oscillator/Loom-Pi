@@ -6,6 +6,37 @@
 #include <sys/stat.h>
 #include <fstream>
 #include <cmath>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+static std::string getLocalIPAddress() {
+    std::string ipAddr = "Unknown";
+    struct ifaddrs *interfaces = nullptr;
+    struct ifaddrs *tempAddr = nullptr;
+    
+    if (getifaddrs(&interfaces) == 0) {
+        tempAddr = interfaces;
+        while (tempAddr != nullptr) {
+            if (tempAddr->ifa_addr != nullptr && tempAddr->ifa_addr->sa_family == AF_INET) {
+                std::string interfaceName = tempAddr->ifa_name;
+                if (interfaceName != "lo" && interfaceName.find("lo") == std::string::npos) {
+                    char ip[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &(((struct sockaddr_in*)tempAddr->ifa_addr)->sin_addr), ip, INET_ADDRSTRLEN);
+                    ipAddr = ip;
+                    if (interfaceName.find("wlan") != std::string::npos || interfaceName.find("eth") != std::string::npos || interfaceName.find("en") != std::string::npos) {
+                        freeifaddrs(interfaces);
+                        return ipAddr;
+                    }
+                }
+            }
+            tempAddr = tempAddr->ifa_next;
+        }
+        freeifaddrs(interfaces);
+    }
+    return ipAddr;
+}
+
 
 extern std::string gCurrentAudioDevice;
 extern bool switchAudioDevice(const std::string& deviceName);
@@ -2438,6 +2469,12 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_label_set_text(bufferSizeLbl, "Buffer Size: 256 samples");
     lv_obj_set_style_text_font(bufferSizeLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(bufferSizeLbl, lv_color_hex(0xAAAAAA), 0);
+
+    lv_obj_t* ipAddressLbl = lv_label_create(perfCard);
+    std::string ip = getLocalIPAddress();
+    lv_label_set_text_fmt(ipAddressLbl, "IP Address: %s", ip.c_str());
+    lv_obj_set_style_text_font(ipAddressLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(ipAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     // Separator line
     lv_obj_t* sepLine = lv_obj_create(perfCard);
