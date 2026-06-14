@@ -15607,23 +15607,26 @@ void UIManager::startBluetoothScan() {
     mBtStatusChanged = true;
 
     std::thread scanThread([this]() {
-        // Run scan for 6 seconds
-        std::system("timeout 6 bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
+        // Ensure Bluetooth power is ON
+        std::system("bluetoothctl power on");
+
+        // Run scan with line-buffering to ensure output is written to file before process is terminated
+        std::system("timeout 6 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
 
         std::vector<BtDevice> foundDevices;
         
-        // 1. Get paired/known devices first
+        // Retrieve all known/paired/discovered devices after scanning (updates the cache)
         auto pairedLines = runCommandAndGetLines("bluetoothctl devices");
         for (const auto& line : pairedLines) {
             std::string mac, name;
             if (parseBtLine(line, mac, name)) {
-                if (!name.empty()) {
-                    foundDevices.push_back({mac, name + " (Paired)"});
+                if (!name.empty() && name != mac) {
+                    foundDevices.push_back({mac, name});
                 }
             }
         }
 
-        // 2. Read scan log
+        // Also parse scan log for any newly resolved names
         auto scanLines = runCommandAndGetLines("cat /tmp/bt_scan.log");
         for (const auto& line : scanLines) {
             std::string mac, name;
