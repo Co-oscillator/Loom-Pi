@@ -4549,16 +4549,51 @@ void UIManager::openFileBrowser(bool isSave) {
 
     // Populate with files from working directory
     std::string dirPath = mFileBrowserCurrentPath;
+    bool anyFile = false;
+
+    // Add "📁 .. (Parent Folder)" if not at the root Loom directory
+    if (mFileBrowserCurrentPath != homeStr) {
+        lv_obj_t* item = lv_list_add_button(fileList, nullptr, "📁 .. (Parent Folder)");
+        lv_obj_set_style_text_font(lv_obj_get_child(item, -1), &lv_font_montserrat_12, 0);
+        
+        auto upFolderCb = [](lv_event_t* e) {
+            UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+            if (!ui) return;
+            size_t lastSlash = ui->mFileBrowserCurrentPath.find_last_of("/\\");
+            if (lastSlash != std::string::npos && lastSlash > 0) {
+                ui->mFileBrowserCurrentPath = ui->mFileBrowserCurrentPath.substr(0, lastSlash);
+                ui->openFileBrowser(ui->mFileBrowserIsSave);
+            }
+        };
+        lv_obj_add_event_cb(item, upFolderCb, LV_EVENT_CLICKED, this);
+        anyFile = true;
+    }
 
     DIR* dir = opendir(dirPath.c_str());
     if (!dir) dir = opendir("."); // fallback to cwd
-    bool anyFile = false;
     if (dir) {
         struct dirent* entry;
+        std::vector<std::string> subdirs;
+        std::vector<std::string> matchingFiles;
+
         while ((entry = readdir(dir)) != nullptr) {
             std::string name(entry->d_name);
             if (name.rfind(".", 0) == 0) continue;
             
+            std::string fullItemPath = dirPath + "/" + name;
+            struct stat st;
+            bool isDir = (entry->d_type == DT_DIR);
+            if (entry->d_type == DT_UNKNOWN) {
+                if (stat(fullItemPath.c_str(), &st) == 0) {
+                    isDir = S_ISDIR(st.st_mode);
+                }
+            }
+
+            if (isDir) {
+                subdirs.push_back(name);
+                continue;
+            }
+
             std::string lowerPath = dirPath;
             for (char &c : lowerPath) c = std::tolower((unsigned char)c);
             bool isSoundFontsFolder = (lowerPath.find("soundfonts") != std::string::npos);
@@ -4572,17 +4607,15 @@ void UIManager::openFileBrowser(bool isSave) {
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sys") matched = true;
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".bin") matched = true;
                 else if (lowerName.length() >= 6 && lowerName.substr(lowerName.length() - 6) == ".sysex") matched = true;
-                if (!matched) continue;
+                if (matched) matchingFiles.push_back(name);
             } else if (isSoundFontsFolder || mFileBrowserIsSfSelect || mFileBrowserIsSfImport) {
-                // Show soundfonts
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
                 if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf2") matched = true;
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf3") matched = true;
-                if (!matched) continue;
+                if (matched) matchingFiles.push_back(name);
             } else if (mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave) {
-                // Show WAV, WT, AIFF files
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
@@ -4590,32 +4623,66 @@ void UIManager::openFileBrowser(bool isSave) {
                 else if (lowerName.length() >= 3 && lowerName.substr(lowerName.length() - 3) == ".wt") matched = true;
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".aif") matched = true;
                 else if (lowerName.length() >= 5 && lowerName.substr(lowerName.length() - 5) == ".aiff") matched = true;
-                if (!matched) continue;
+                if (matched) matchingFiles.push_back(name);
             } else if (mFileBrowserIsPresetLoad || mFileBrowserIsPresetSave) {
-                // Show .gbs preset files
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
                 if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".gbs") matched = true;
-                if (!matched) continue;
+                if (matched) matchingFiles.push_back(name);
             } else if (mFileBrowserIsProject) {
-                // Show .loom project files
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
                 if (lowerName.length() >= 5 && lowerName.substr(lowerName.length() - 5) == ".loom") matched = true;
-                if (!matched) continue;
+                if (matched) matchingFiles.push_back(name);
             } else {
-                if (name.rfind(".seq", name.size() - 4) == std::string::npos &&
-                    name.rfind(".json", name.size() - 5) == std::string::npos) continue;
+                if (name.rfind(".seq", name.size() - 4) != std::string::npos ||
+                    name.rfind(".json", name.size() - 5) != std::string::npos) {
+                    matchingFiles.push_back(name);
+                }
             }
+        }
+        closedir(dir);
+
+        // Sort subdirectories alphabetically and add them first
+        std::sort(subdirs.begin(), subdirs.end());
+        for (const auto& s : subdirs) {
+            std::string dispName = "📁 " + s;
+            lv_obj_t* item = lv_list_add_button(fileList, nullptr, dispName.c_str());
+            lv_obj_set_style_text_font(lv_obj_get_child(item, -1), &lv_font_montserrat_12, 0);
             
-            lv_obj_t* item = lv_list_add_button(fileList, nullptr, name.c_str());
+            struct DirClickData {
+                UIManager* ui;
+                std::string folderName;
+            };
+            DirClickData* clickData = new DirClickData{this, s};
+            
+            auto dirClickCb = [](lv_event_t* e) {
+                DirClickData* d = (DirClickData*)lv_event_get_user_data(e);
+                if (d && d->ui) {
+                    d->ui->mFileBrowserCurrentPath = d->ui->mFileBrowserCurrentPath + "/" + d->folderName;
+                    d->ui->openFileBrowser(d->ui->mFileBrowserIsSave);
+                }
+            };
+            lv_obj_add_event_cb(item, dirClickCb, LV_EVENT_CLICKED, clickData);
+            
+            auto dirFreeCb = [](lv_event_t* e) {
+                DirClickData* d = (DirClickData*)lv_event_get_user_data(e);
+                delete d;
+            };
+            lv_obj_add_event_cb(item, dirFreeCb, LV_EVENT_DELETE, clickData);
+            anyFile = true;
+        }
+
+        // Sort matching files alphabetically and add them next
+        std::sort(matchingFiles.begin(), matchingFiles.end());
+        for (const auto& f : matchingFiles) {
+            lv_obj_t* item = lv_list_add_button(fileList, nullptr, f.c_str());
             lv_obj_set_style_text_font(lv_obj_get_child(item, -1), &lv_font_montserrat_12, 0);
             lv_obj_add_event_cb(item, fileBrowserItemEventCb, LV_EVENT_CLICKED, this);
             anyFile = true;
         }
-        closedir(dir);
     }
     if (!anyFile) {
         std::string emptyMsg = "(no sequences found)";
