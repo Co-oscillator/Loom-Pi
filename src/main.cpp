@@ -3,6 +3,7 @@
 #include <iostream>
 #include <SDL.h>
 #include "lvgl.h"
+#include "src/indev/lv_indev_private.h"
 #include "ui/UIManager.h"
 #include "MidiInput.h"
 #include <unordered_map>
@@ -162,6 +163,45 @@ int main() {
         // Selectively grab ONLY keyboard events using SDL_PeepEvents.
         // This leaves mouse/touch events in the queue for LVGL's SDL driver.
         SDL_PumpEvents(); // Refresh the event queue
+
+        // Handle scroll wheel on active slider/knob when left mouse button is held
+        SDL_Event wheelEvent;
+        while (SDL_PeepEvents(&wheelEvent, 1, SDL_GETEVENT, SDL_MOUSEWHEEL, SDL_MOUSEWHEEL) > 0) {
+            int mouseX, mouseY;
+            Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+            if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+                if (indev && indev->pointer.act_obj) {
+                    lv_obj_t* obj = indev->pointer.act_obj;
+                    if (lv_obj_check_type(obj, &lv_slider_class)) {
+                        int32_t val = lv_slider_get_value(obj);
+                        int32_t min = lv_slider_get_min_value(obj);
+                        int32_t max = lv_slider_get_max_value(obj);
+                        int32_t step = (max - min) / 30; // ~3% step per click
+                        if (step < 1) step = 1;
+                        int32_t newVal = val + (wheelEvent.wheel.y * step);
+                        if (newVal < min) newVal = min;
+                        if (newVal > max) newVal = max;
+                        if (newVal != val) {
+                            lv_slider_set_value(obj, newVal, LV_ANIM_OFF);
+                            lv_obj_send_event(obj, LV_EVENT_VALUE_CHANGED, nullptr);
+                        }
+                    } else if (lv_obj_check_type(obj, &lv_arc_class)) {
+                        int32_t val = lv_arc_get_value(obj);
+                        int32_t min = lv_arc_get_min_value(obj);
+                        int32_t max = lv_arc_get_max_value(obj);
+                        int32_t step = (max - min) / 30; // ~3% step per click
+                        if (step < 1) step = 1;
+                        int32_t newVal = val + (wheelEvent.wheel.y * step);
+                        if (newVal < min) newVal = min;
+                        if (newVal > max) newVal = max;
+                        if (newVal != val) {
+                            lv_arc_set_value(obj, newVal);
+                            lv_obj_send_event(obj, LV_EVENT_VALUE_CHANGED, nullptr);
+                        }
+                    }
+                }
+            }
+        }
         
         // Check for quit
         SDL_Event quitEvent;
