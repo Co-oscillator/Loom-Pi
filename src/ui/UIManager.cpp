@@ -15612,8 +15612,40 @@ void UIManager::startBluetoothScan() {
     mBtStatusChanged = true;
 
     std::thread scanThread([this]() {
+        // Unblock bluetooth hardware/software RF kill switch
+        std::system("rfkill unblock bluetooth 2>/dev/null");
+        
         // Ensure Bluetooth power is ON
         std::system("bluetoothctl power on");
+
+        // Verify if a controller is available and powered
+        auto showLines = runCommandAndGetLines("bluetoothctl show");
+        bool controllerFound = false;
+        bool poweredOn = false;
+        for (const auto& line : showLines) {
+            if (line.find("Controller") != std::string::npos) {
+                controllerFound = true;
+            }
+            if (line.find("Powered: yes") != std::string::npos) {
+                poweredOn = true;
+            }
+        }
+
+        if (!controllerFound) {
+            mBtStatusStr = "Error: No Bluetooth controller found!";
+            mBtStatusChanged = true;
+            mBtScanning = false;
+            return;
+        } else if (!poweredOn) {
+            mBtStatusStr = "Error: Bluetooth controller powered OFF.";
+            mBtStatusChanged = true;
+            mBtScanning = false;
+            return;
+        }
+
+        // Register default agent
+        std::system("bluetoothctl agent on 2>/dev/null");
+        std::system("bluetoothctl default-agent 2>/dev/null");
 
         // Run scan with line-buffering to ensure output is written to file before process is terminated
         std::system("timeout 6 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
