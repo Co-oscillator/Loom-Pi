@@ -109,6 +109,8 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
     std::memcpy(id, &chunkId, 4);
     id[4] = '\0';
 
+    uint32_t alignedSize = chunkSize + (chunkSize & 1);
+
     if (std::strncmp(id, "fmt ", 4) == 0) {
       if (chunkSize >= 16) {
         uint16_t fmtTag, channels, bits;
@@ -118,7 +120,7 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
         file.read(reinterpret_cast<char *>(&sRate), 4);
         file.ignore(6); // ByteRate, BlockAlign
         file.read(reinterpret_cast<char *>(&bits), 2);
-        file.ignore(chunkSize - 16);
+        file.ignore(alignedSize - 16);
 
         outNumChannels = channels;
         outSampleRate = sRate;
@@ -127,7 +129,7 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
           return false; // Only PCM or IEEE Float
         audioFormat = fmtTag;
       } else {
-        file.ignore(chunkSize);
+        file.ignore(alignedSize);
       }
     } else if (std::strncmp(id, "data", 4) == 0) {
       foundData = true;
@@ -167,7 +169,6 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
             outData[i] = s / 2147483647.0f;
           }
         } else {
-          // Unsupported bits per sample: skip chunk
           file.ignore(chunkSize);
         }
       } else if (audioFormat == 3) { // IEEE Float
@@ -175,14 +176,25 @@ inline bool loadWav(const std::string &path, std::vector<float> &outData,
         outData.resize(numSamples);
         file.read(reinterpret_cast<char *>(outData.data()), chunkSize);
       }
+      
+      // Skip padding byte if data chunk size was odd
+      if (alignedSize > chunkSize) {
+        file.ignore(alignedSize - chunkSize);
+      }
     } else if (std::strncmp(id, "slce", 4) == 0) {
       uint32_t numSlices;
       file.read(reinterpret_cast<char *>(&numSlices), 4);
       outSlices.resize(numSlices);
       file.read(reinterpret_cast<char *>(outSlices.data()),
                 numSlices * sizeof(float));
+                
+      // Skip padding if necessary
+      uint32_t bytesRead = 4 + numSlices * sizeof(float);
+      if (alignedSize > bytesRead) {
+        file.ignore(alignedSize - bytesRead);
+      }
     } else {
-      file.ignore(chunkSize);
+      file.ignore(alignedSize);
     }
   }
   return foundData;
