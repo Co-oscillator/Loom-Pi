@@ -2546,6 +2546,22 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mMidiMonitorConsoleLabel, lv_color_hex(0x00FF88), 0); // Retro green console text
     lv_label_set_long_mode(mMidiMonitorConsoleLabel, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(mMidiMonitorConsoleLabel, 210);
+
+    // Separator line
+    lv_obj_t* btSepLine = lv_obj_create(diagCard);
+    lv_obj_set_size(btSepLine, 210, 1);
+    lv_obj_set_style_bg_color(btSepLine, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(btSepLine, 0, 0);
+
+    // Bluetooth button
+    lv_obj_t* btBtn = lv_button_create(diagCard);
+    lv_obj_set_size(btBtn, 200, 34);
+    lv_obj_set_style_bg_color(btBtn, trackColor, 0);
+    lv_obj_t* btBtnLbl = lv_label_create(btBtn);
+    lv_label_set_text(btBtnLbl, "PAIR BLUETOOTH");
+    lv_obj_set_style_text_font(btBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(btBtnLbl);
+    lv_obj_add_event_cb(btBtn, settingsBtPairBtnEventCb, LV_EVENT_CLICKED, this);
 }
 
 // ==========================================================================
@@ -3635,6 +3651,59 @@ void UIManager::update() {
             updateSamplerWaveformPreview();
         } else if (mEngine.getTracks()[mActiveTrack].engineType == 3) {
             updateGranularWaveformPreview();
+        }
+    }
+
+    // Real-time Bluetooth UI update
+    if (mBtModal != nullptr) {
+        if (mBtStatusChanged) {
+            mBtStatusChanged = false;
+            if (mBtStatusLabel) {
+                lv_label_set_text_fmt(mBtStatusLabel, "Status: %s", mBtStatusStr.c_str());
+            }
+        }
+
+        if (mBtDeviceListChanged) {
+            mBtDeviceListChanged = false;
+            if (mBtListContainer) {
+                // Clear all children first
+                lv_obj_clean(mBtListContainer);
+                
+                std::lock_guard<std::mutex> lock(mBtMutex);
+                if (mBtDevices.empty()) {
+                    lv_obj_t* emptyLbl = lv_label_create(mBtListContainer);
+                    lv_label_set_text(emptyLbl, "No devices found.");
+                    lv_obj_set_style_text_font(emptyLbl, &lv_font_montserrat_12, 0);
+                    lv_obj_set_style_text_color(emptyLbl, lv_color_hex(0x666666), 0);
+                } else {
+                    struct BtDeviceSelectData {
+                        UIManager* ui;
+                        std::string mac;
+                    };
+
+                    for (const auto& dev : mBtDevices) {
+                        lv_obj_t* btn = lv_button_create(mBtListContainer);
+                        lv_obj_set_size(btn, 480, 40);
+                        lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
+                        lv_obj_set_style_border_color(btn, lv_color_hex(0x444444), 0);
+                        lv_obj_set_style_border_width(btn, 1, 0);
+                        
+                        lv_obj_t* btnLbl = lv_label_create(btn);
+                        lv_label_set_text_fmt(btnLbl, "%s   [%s]", dev.name.c_str(), dev.mac.c_str());
+                        lv_obj_set_style_text_font(btnLbl, &lv_font_montserrat_12, 0);
+                        lv_obj_center(btnLbl);
+                        
+                        BtDeviceSelectData* selectData = new BtDeviceSelectData{this, dev.mac};
+                        lv_obj_add_event_cb(btn, btDeviceSelectEventCb, LV_EVENT_CLICKED, selectData);
+                        
+                        auto selectFreeCb = [](lv_event_t* e) {
+                            BtDeviceSelectData* d = (BtDeviceSelectData*)lv_event_get_user_data(e);
+                            delete d;
+                        };
+                        lv_obj_add_event_cb(btn, selectFreeCb, LV_EVENT_DELETE, selectData);
+                    }
+                }
+            }
         }
     }
 }
@@ -15351,6 +15420,265 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
     std::cout << "Settings: Restart requested. Exiting process..." << std::endl;
     std::exit(0);
+}
+
+// =========================================================================
+// --- Bluetooth Pairing Manager ---
+// =========================================================================
+
+static bool parseBtLine(const std::string& line, std::string& mac, std::string& name) {
+    if (line.length() < 17) return false;
+    for (size_t i = 0; i <= line.length() - 17; ++i) {
+        bool isMac = true;
+        for (int j = 0; j < 17; ++j) {
+            char c = line[i + j];
+            if (j == 2 || j == 5 || j == 8 || j == 11 || j == 14) {
+                if (c != ':') { isMac = false; break; }
+            } else {
+                if (!std::isxdigit(static_cast<unsigned char>(c))) { isMac = false; break; }
+            }
+        }
+        if (isMac) {
+            mac = line.substr(i, 17);
+            size_t nameStart = i + 18;
+            if (nameStart < line.length()) {
+                name = line.substr(nameStart);
+                if (name.rfind("Name: ", 0) == 0) {
+                    name = name.substr(6);
+                }
+                name.erase(name.begin(), std::find_if(name.begin(), name.end(), [](unsigned char ch) {
+                    return !std::isspace(ch);
+                }));
+                name.erase(std::find_if(name.rbegin(), name.rend(), [](unsigned char ch) {
+                    return !std::isspace(ch);
+                }).base(), name.end());
+            } else {
+                name = "";
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+static std::vector<std::string> runCommandAndGetLines(const std::string& cmd) {
+    std::vector<std::string> lines;
+    FILE* fp = popen(cmd.c_str(), "r");
+    if (!fp) return lines;
+    char buf[512];
+    while (fgets(buf, sizeof(buf), fp)) {
+        std::string line(buf);
+        while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+            line.pop_back();
+        }
+        lines.push_back(line);
+    }
+    pclose(fp);
+    return lines;
+}
+
+void UIManager::settingsBtPairBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (ui) ui->openBtPairModal();
+}
+
+void UIManager::btCloseEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    if (ui->mBtModal) {
+        lv_obj_delete(ui->mBtModal);
+        ui->mBtModal = nullptr;
+        ui->mBtListContainer = nullptr;
+        ui->mBtStatusLabel = nullptr;
+    }
+}
+
+struct BtDeviceSelectData {
+    UIManager* ui;
+    std::string mac;
+};
+
+void UIManager::btDeviceSelectEventCb(lv_event_t* e) {
+    BtDeviceSelectData* data = (BtDeviceSelectData*)lv_event_get_user_data(e);
+    if (!data || !data->ui) return;
+    data->ui->connectBluetoothDevice(data->mac);
+}
+
+void UIManager::openBtPairModal() {
+    if (mBtModal) {
+        lv_obj_delete(mBtModal);
+        mBtModal = nullptr;
+    }
+
+    lv_obj_t* overlay = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_pos(overlay, 0, 0);
+    lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
+    lv_obj_set_style_border_width(overlay, 0, 0);
+    lv_obj_add_flag(overlay, LV_OBJ_FLAG_FLOATING);
+    mBtModal = overlay;
+
+    lv_obj_t* card = lv_obj_create(overlay);
+    lv_obj_set_size(card, 560, 420);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(card, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_width(card, 1, 0);
+    lv_obj_set_style_radius(card, 12, 0);
+    lv_obj_set_style_pad_all(card, 12, 0);
+    lv_obj_set_layout(card, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(card, 10, 0);
+
+    // Title
+    lv_obj_t* titleLbl = lv_label_create(card);
+    lv_label_set_text(titleLbl, "BLUETOOTH DEVICE MANAGER");
+    lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(titleLbl, getTrackColor(mActiveTrack), 0);
+
+    // Status Label
+    mBtStatusLabel = lv_label_create(card);
+    lv_label_set_text(mBtStatusLabel, "Status: Idle");
+    lv_obj_set_style_text_font(mBtStatusLabel, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mBtStatusLabel, lv_color_hex(0xAAAAAA), 0);
+
+    // List Container
+    mBtListContainer = lv_obj_create(card);
+    lv_obj_set_size(mBtListContainer, 500, 240);
+    lv_obj_set_style_bg_color(mBtListContainer, lv_color_hex(0x121212), 0);
+    lv_obj_set_style_border_color(mBtListContainer, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(mBtListContainer, 1, 0);
+    lv_obj_set_style_radius(mBtListContainer, 8, 0);
+    lv_obj_set_style_pad_all(mBtListContainer, 8, 0);
+    lv_obj_set_layout(mBtListContainer, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mBtListContainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(mBtListContainer, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(mBtListContainer, 6, 0);
+
+    // Instructions/Scan placeholder
+    lv_obj_t* placeholder = lv_label_create(mBtListContainer);
+    lv_label_set_text(placeholder, "Press SCAN to search for devices...");
+    lv_obj_set_style_text_font(placeholder, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(placeholder, lv_color_hex(0x666666), 0);
+    lv_obj_align(placeholder, LV_ALIGN_CENTER, 0, 0);
+
+    // Bottom Action buttons row
+    lv_obj_t* btnRow = lv_obj_create(card);
+    lv_obj_set_size(btnRow, 500, 50);
+    lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btnRow, 0, 0);
+    lv_obj_set_style_pad_all(btnRow, 0, 0);
+    lv_obj_set_layout(btnRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // SCAN Button
+    lv_obj_t* scanBtn = lv_button_create(btnRow);
+    lv_obj_set_size(scanBtn, 140, 36);
+    lv_obj_set_style_bg_color(scanBtn, getTrackColor(mActiveTrack), 0);
+    lv_obj_t* scanLbl = lv_label_create(scanBtn);
+    lv_label_set_text(scanLbl, "SCAN");
+    lv_obj_set_style_text_font(scanLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(scanLbl);
+    
+    auto scanClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        if (ui) ui->startBluetoothScan();
+    };
+    lv_obj_add_event_cb(scanBtn, scanClickCb, LV_EVENT_CLICKED, this);
+
+    // CLOSE Button
+    lv_obj_t* closeBtn = lv_button_create(btnRow);
+    lv_obj_set_size(closeBtn, 140, 36);
+    lv_obj_set_style_bg_color(closeBtn, lv_color_hex(0x444444), 0);
+    lv_obj_t* closeLbl = lv_label_create(closeBtn);
+    lv_label_set_text(closeLbl, "CLOSE");
+    lv_obj_set_style_text_font(closeLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(closeLbl);
+    lv_obj_add_event_cb(closeBtn, btCloseEventCb, LV_EVENT_CLICKED, this);
+}
+
+void UIManager::startBluetoothScan() {
+    if (mBtScanning) return;
+    mBtScanning = true;
+    mBtStatusStr = "Scanning for devices...";
+    mBtStatusChanged = true;
+
+    std::thread scanThread([this]() {
+        // Run scan for 6 seconds
+        std::system("timeout 6 bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
+
+        std::vector<BtDevice> foundDevices;
+        
+        // 1. Get paired/known devices first
+        auto pairedLines = runCommandAndGetLines("bluetoothctl devices");
+        for (const auto& line : pairedLines) {
+            std::string mac, name;
+            if (parseBtLine(line, mac, name)) {
+                if (!name.empty()) {
+                    foundDevices.push_back({mac, name + " (Paired)"});
+                }
+            }
+        }
+
+        // 2. Read scan log
+        auto scanLines = runCommandAndGetLines("cat /tmp/bt_scan.log");
+        for (const auto& line : scanLines) {
+            std::string mac, name;
+            if (parseBtLine(line, mac, name)) {
+                if (!name.empty() && name != mac) {
+                    // Check if MAC is already in list
+                    auto it = std::find_if(foundDevices.begin(), foundDevices.end(), [&](const BtDevice& d) {
+                        return d.mac == mac;
+                    });
+                    if (it == foundDevices.end()) {
+                        foundDevices.push_back({mac, name});
+                    }
+                }
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(mBtMutex);
+            mBtDevices = std::move(foundDevices);
+            mBtDeviceListChanged = true;
+        }
+
+        mBtScanning = false;
+        mBtStatusStr = "Scan finished.";
+        mBtStatusChanged = true;
+    });
+    scanThread.detach();
+}
+
+void UIManager::connectBluetoothDevice(const std::string& mac) {
+    mBtStatusStr = "Pairing " + mac + "...";
+    mBtStatusChanged = true;
+
+    std::thread connThread([this, mac]() {
+        std::string cmdPair = "bluetoothctl pair " + mac;
+        std::string cmdTrust = "bluetoothctl trust " + mac;
+        std::string cmdConnect = "bluetoothctl connect " + mac;
+
+        std::cout << "BT: Executing: " << cmdPair << std::endl;
+        std::system(cmdPair.c_str());
+        
+        std::cout << "BT: Executing: " << cmdTrust << std::endl;
+        std::system(cmdTrust.c_str());
+        
+        std::cout << "BT: Executing: " << cmdConnect << std::endl;
+        int retConnect = std::system(cmdConnect.c_str());
+
+        if (retConnect == 0) {
+            mBtStatusStr = "Connected successfully!";
+        } else {
+            mBtStatusStr = "Connection failed.";
+        }
+        mBtStatusChanged = true;
+    });
+    connThread.detach();
 }
 
 

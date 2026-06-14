@@ -645,6 +645,30 @@ public:
     // Diagnostic console UI handles
     lv_obj_t* mMidiDeviceListLabel = nullptr;
     lv_obj_t* mMidiMonitorConsoleLabel = nullptr;
+
+    // Bluetooth pairing manager declarations
+    struct BtDevice {
+        std::string mac;
+        std::string name;
+    };
+    std::vector<BtDevice> mBtDevices;
+    std::mutex mBtMutex;
+    std::atomic<bool> mBtScanning{false};
+    std::string mBtStatusStr = "Idle";
+    std::atomic<bool> mBtStatusChanged{false};
+    std::atomic<bool> mBtDeviceListChanged{false};
+
+    lv_obj_t* mBtModal = nullptr;
+    lv_obj_t* mBtListContainer = nullptr;
+    lv_obj_t* mBtStatusLabel = nullptr;
+
+    void openBtPairModal();
+    void startBluetoothScan();
+    void connectBluetoothDevice(const std::string& mac);
+
+    static void settingsBtPairBtnEventCb(lv_event_t* e);
+    static void btDeviceSelectEventCb(lv_event_t* e);
+    static void btCloseEventCb(lv_event_t* e);
 };
 
 std::vector<std::string> getSystemConnectedMidiInputs();
