@@ -3289,7 +3289,71 @@ void UIManager::settingsScreenDeleteEventCb(lv_event_t* e) {
     ui->mSettingsUpdateStatus = nullptr;
 }
 
+static void setBacklightPower(bool on) {
+    if (on) {
+        std::system("sudo sh -c 'echo 0 > /sys/class/backlight/rpi_backlight/bl_power' 2>/dev/null");
+    } else {
+        std::system("sudo sh -c 'echo 1 > /sys/class/backlight/rpi_backlight/bl_power' 2>/dev/null");
+    }
+}
+
 void UIManager::update() {
+    // Check screen sleep timeout (2 minutes of inactivity)
+    bool isAnythingPlaying = false;
+    if (mEngine.getIsPlaying()) {
+        isAnythingPlaying = true;
+    } else {
+        for (int i = 0; i < 8; ++i) {
+            if (mEngine.getActiveNoteMask(i) != 0) {
+                isAnythingPlaying = true;
+                break;
+            }
+            if (mEngine.getTracks()[i].isTrackEnabled) {
+                const auto& arp = mEngine.getTracks()[i].arpeggiator;
+                if (arp.getMode() != ArpMode::OFF && !arp.getNotes().empty()) {
+                    isAnythingPlaying = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (isAnythingPlaying) {
+        // Active playback resets the display inactive timer so it doesn't sleep during playback
+        lv_display_trigger_activity(nullptr);
+    }
+
+    if (mSleepOverlay == nullptr) {
+        // Check if we should enter sleep mode
+        if (lv_display_get_inactive_time(nullptr) > 120000) {
+            // Create full-screen black overlay covering everything
+            mSleepOverlay = lv_obj_create(lv_layer_sys());
+            lv_obj_set_size(mSleepOverlay, lv_pct(100), lv_pct(100));
+            lv_obj_set_pos(mSleepOverlay, 0, 0);
+            lv_obj_set_style_bg_color(mSleepOverlay, lv_color_hex(0x000000), 0);
+            lv_obj_set_style_bg_opa(mSleepOverlay, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_width(mSleepOverlay, 0, 0);
+            lv_obj_set_style_radius(mSleepOverlay, 0, 0);
+            lv_obj_add_flag(mSleepOverlay, LV_OBJ_FLAG_FLOATING);
+            
+            // Turn off backlight
+            setBacklightPower(false);
+
+            // Touch anywhere to wake up
+            auto wakeUpCb = [](lv_event_t* e) {
+                UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+                if (ui && ui->mSleepOverlay) {
+                    lv_obj_delete(ui->mSleepOverlay);
+                    ui->mSleepOverlay = nullptr;
+                    setBacklightPower(true);
+                    lv_display_trigger_activity(nullptr);
+                }
+            };
+            lv_obj_add_event_cb(mSleepOverlay, wakeUpCb, LV_EVENT_CLICKED, this);
+            lv_obj_add_event_cb(mSleepOverlay, wakeUpCb, LV_EVENT_PRESSED, this);
+        }
+    }
+
     if (mNeedsScreenRebuild) {
         mNeedsScreenRebuild = false;
         createCenterContentArea();
@@ -15359,6 +15423,14 @@ void UIManager::loadSettings(const std::string& path) {
 }
 
 void UIManager::addMidiLog(const std::string& type, int channel, int d1, int d2) {
+    // Reset inactivity timer on MIDI event
+    lv_display_trigger_activity(nullptr);
+    if (mSleepOverlay != nullptr) {
+        lv_obj_delete(mSleepOverlay);
+        mSleepOverlay = nullptr;
+        setBacklightPower(true);
+    }
+
     std::lock_guard<std::mutex> lock(mMidiLogMutex);
     MidiLogMessage msg;
     msg.typeStr = type;

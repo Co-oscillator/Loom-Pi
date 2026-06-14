@@ -661,6 +661,7 @@ public:
     lv_obj_t* mBtModal = nullptr;
     lv_obj_t* mBtListContainer = nullptr;
     lv_obj_t* mBtStatusLabel = nullptr;
+    lv_obj_t* mSleepOverlay = nullptr;
 
     void openBtPairModal();
     void startBluetoothScan();
