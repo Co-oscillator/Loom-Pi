@@ -578,6 +578,7 @@ public:
     static void settingsScreenDeleteEventCb(lv_event_t* e);
     static void settingsAudioDeviceDdEventCb(lv_event_t* e);
     static void settingsUpdateBtnEventCb(lv_event_t* e);
+    static void settingsRestartBtnEventCb(lv_event_t* e);
     static void settingsRebootBtnEventCb(lv_event_t* e);
     static void settingsShutdownBtnEventCb(lv_event_t* e);
     

@@ -2467,6 +2467,15 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_center(updateBtnLbl);
     lv_obj_add_event_cb(updateBtn, settingsUpdateBtnEventCb, LV_EVENT_CLICKED, this);
 
+    lv_obj_t* restartBtn = lv_button_create(perfCard);
+    lv_obj_set_size(restartBtn, 180, 34);
+    lv_obj_set_style_bg_color(restartBtn, lv_color_hex(0xE06C75), 0);
+    lv_obj_t* restartBtnLbl = lv_label_create(restartBtn);
+    lv_label_set_text(restartBtnLbl, "RESTART LOOM");
+    lv_obj_set_style_text_font(restartBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(restartBtnLbl);
+    lv_obj_add_event_cb(restartBtn, settingsRestartBtnEventCb, LV_EVENT_CLICKED, this);
+
 
     // --- Column 3: USB/MIDI Diagnostic Monitor ---
     lv_obj_t* diagCard = lv_obj_create(tab);
@@ -15301,4 +15310,10 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
     });
     updateThread.detach();
 }
+
+void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
+    std::cout << "Settings: Restart requested. Exiting process..." << std::endl;
+    std::exit(0);
+}
+
 
