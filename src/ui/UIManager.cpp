@@ -293,7 +293,7 @@ void UIManager::init() {
             std::vector<std::string> presetFiles;
             while ((entry = readdir(dir)) != nullptr) {
                 std::string name(entry->d_name);
-                if (name == "." || name == "..") continue;
+                if (name.rfind(".", 0) == 0) continue;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
                 if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".fmp") {
@@ -4493,7 +4493,7 @@ void UIManager::openFileBrowser(bool isSave) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != nullptr) {
             std::string name(entry->d_name);
-            if (name == "." || name == "..") continue;
+            if (name.rfind(".", 0) == 0) continue;
             
             std::string lowerPath = dirPath;
             for (char &c : lowerPath) c = std::tolower((unsigned char)c);
