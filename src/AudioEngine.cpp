@@ -1,5 +1,6 @@
 #define TSF_IMPLEMENTATION
 #include "AudioEngine.h"
+#include <iostream>
 #include "WavFileUtils.h" // New
 #include "engines/BitcrusherFx.h"
 #include <fstream>
@@ -4819,17 +4820,22 @@ void AudioEngine::setEngineType(int trackIndex, int type) {
   mCommandQueue.push_back(cmd);
 }
 void AudioEngine::loadSoundFont(int trackIndex, const std::string &path) {
+  std::cout << "SoundFont: Loading path '" << path << "' on track " << trackIndex << std::endl;
   if (trackIndex >= 0 && trackIndex < (int)mTracks.size()) {
     FILE *f = fopen(path.c_str(), "rb");
-    if (!f)
+    if (!f) {
+      std::cerr << "SoundFont Error: fopen failed for path '" << path << "'" << std::endl;
       return;
+    }
 
     // Check file size > 1KB (SoundFonts are usually larger)
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fclose(f); // <--- Close AFTER using
 
+    std::cout << "SoundFont: File size is " << size << " bytes" << std::endl;
     if (size < 1024) {
+      std::cerr << "SoundFont Error: File too small (" << size << " bytes)" << std::endl;
       return;
     }
 

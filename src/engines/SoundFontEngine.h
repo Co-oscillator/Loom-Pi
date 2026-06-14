@@ -7,6 +7,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -75,14 +76,19 @@ public:
   void load(const std::string &path) {
     if (mMutex) {
       std::lock_guard<std::mutex> lock(*mMutex);
-      if (mTsf)
+      if (mTsf) {
         tsf_close(mTsf);
+        mTsf = nullptr;
+      }
       mTsf = tsf_load_filename(path.c_str());
       if (mTsf) {
         tsf_set_output(mTsf, TSF_STEREO_INTERLEAVED, 48000, 0.0f);
         tsf_channel_set_pitchrange(mTsf, 0, 24.0f); // +/- 2 octaves
         mBufferPos = 128;                           // Force reload
         mPresetIndex = 0;                           // Default preset
+        std::cout << "SoundFont: tsf_load_filename succeeded. Preset count: " << tsf_get_presetcount(mTsf) << std::endl;
+      } else {
+        std::cerr << "SoundFont Error: tsf_load_filename failed to parse/decode '" << path << "'" << std::endl;
       }
     }
   }
