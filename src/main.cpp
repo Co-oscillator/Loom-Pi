@@ -166,10 +166,12 @@ int main() {
 
         // Handle scroll wheel on active slider/knob when left mouse button is held
         SDL_Event wheelEvent;
-        while (SDL_PeepEvents(&wheelEvent, 1, SDL_GETEVENT, SDL_MOUSEWHEEL, SDL_MOUSEWHEEL) > 0) {
+        while (SDL_PeepEvents(&wheelEvent, 1, SDL_PEEKEVENT, SDL_MOUSEWHEEL, SDL_MOUSEWHEEL) > 0) {
             int mouseX, mouseY;
             Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
             if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+                // Consume (remove) the event since we are handling it for slider/knob control mapping
+                SDL_PeepEvents(&wheelEvent, 1, SDL_GETEVENT, SDL_MOUSEWHEEL, SDL_MOUSEWHEEL);
                 if (indev && indev->pointer.act_obj) {
                     lv_obj_t* obj = indev->pointer.act_obj;
                     if (lv_obj_check_type(obj, &lv_slider_class)) {
@@ -200,6 +202,9 @@ int main() {
                         }
                     }
                 }
+            } else {
+                // Left mouse button is not held: leave the scroll event in the queue for LVGL's default SDL driver to scroll containers
+                break;
             }
         }
         
