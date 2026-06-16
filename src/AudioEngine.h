@@ -62,6 +62,7 @@ public:
   void triggerNote(int trackIndex, int note, int velocity);
   void releaseNote(int trackIndex, int note);
   void setTempo(float bpm);
+  float getBpm() const { return mBpm; }
   void setPlaying(bool playing);
   void setStep(int trackIndex, int stepIndex, bool active,
                const std::vector<int> &notes, float velocity = 0.8f,

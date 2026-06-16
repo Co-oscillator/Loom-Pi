@@ -410,11 +410,81 @@ void UIManager::createRightNavBar() {
     }
 }
 
+bool UIManager::isTrackPlaying(int trackIdx) {
+    if (trackIdx < 0 || trackIdx >= 8) return false;
+    const auto& track = mEngine.getTracks()[trackIdx];
+    if (!track.isTrackEnabled) return false;
+    
+    // Check if the synth voice is rendering sound, or any note is gate-active
+    if (track.isActive) return true;
+    if (mEngine.getActiveNoteMask(trackIdx) != 0) return true;
+    
+    // Check if Audio In engine is selected (it is always processing if enabled)
+    if (track.engineType == 8) return true;
+    
+    // Check if arpeggiator has active notes
+    if (track.arpeggiator.getMode() != ArpMode::OFF && !track.arpeggiator.getNotes().empty()) return true;
+    
+    // Check if sequence is playing notes
+    if (mEngine.getIsPlaying()) {
+        // Sequencer is running, check if track has active steps or triggers
+        const auto& seq = track.sequencer;
+        if (seq.getLoopLength() > 0) {
+            const auto& steps = seq.getSteps();
+            for (int s = 0; s < seq.getLoopLength(); ++s) {
+                if (steps[s].active && !steps[s].notes.empty()) return true;
+            }
+        }
+        // Also check drum sequencers if FmDrum/AnalogDrum
+        if (track.engineType == 5 || track.engineType == 6) {
+            for (int d = 0; d < 16; ++d) {
+                const auto& dseq = track.drumSequencers[d];
+                if (dseq.getLoopLength() > 0) {
+                    const auto& dsteps = dseq.getSteps();
+                    for (int s = 0; s < dseq.getLoopLength(); ++s) {
+                        if (dsteps[s].active && !dsteps[s].notes.empty()) return true;
+                    }
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
 void UIManager::updateHighlighting() {
+    uint32_t tMs = lv_tick_get();
+    float bpm = mEngine.getBpm();
+    if (bpm < 1.0f) bpm = 80.0f;
+
     for (int i = 0; i < 8; ++i) {
+        const auto& track = mEngine.getTracks()[i];
+        bool isPlaying = isTrackPlaying(i);
+
         if (i == mActiveTrack) {
             lv_obj_set_style_border_width(mTrackButtons[i], 3, 0);
+            lv_obj_set_style_border_color(mTrackButtons[i], lv_color_hex(0xFFFFFF), 0);
+            lv_obj_set_style_border_opa(mTrackButtons[i], LV_OPA_COVER, 0);
             lv_obj_set_style_bg_opa(mTrackButtons[i], LV_OPA_COVER, 0);
+        } else if (isPlaying) {
+            // Pulse the thin border
+            float speedMultiplier = 1.0f;
+            if (track.arpeggiator.getMode() != ArpMode::OFF) {
+                speedMultiplier = track.arpeggiator.getSpeedMultiplier();
+            } else {
+                speedMultiplier = track.mClockMultiplier;
+            }
+            if (speedMultiplier < 0.01f) speedMultiplier = 1.0f;
+
+            float periodMs = 60000.0f / (bpm * speedMultiplier);
+            float phase = (2.0f * M_PI * tMs) / periodMs;
+            float pulseVal = (sinf(phase) + 1.0f) * 0.5f;
+
+            int borderOpa = (int)(40 + pulseVal * 215); // ranges from 40 to 255
+            lv_obj_set_style_border_width(mTrackButtons[i], 1, 0);
+            lv_obj_set_style_border_color(mTrackButtons[i], lv_color_hex(0xFFFFFF), 0);
+            lv_obj_set_style_border_opa(mTrackButtons[i], borderOpa, 0);
+            lv_obj_set_style_bg_opa(mTrackButtons[i], mTrackEnabled[i] ? LV_OPA_50 : LV_OPA_10, 0);
         } else {
             lv_obj_set_style_border_width(mTrackButtons[i], 0, 0);
             lv_obj_set_style_bg_opa(mTrackButtons[i], mTrackEnabled[i] ? LV_OPA_50 : LV_OPA_10, 0);
@@ -3461,67 +3531,6 @@ static void setBacklightPower(bool on) {
 }
 
 void UIManager::update() {
-    // Check screen sleep timeout (2 minutes of inactivity)
-    bool isAnythingPlaying = false;
-    if (mEngine.getIsPlaying()) {
-        isAnythingPlaying = true;
-    } else {
-        for (int i = 0; i < 8; ++i) {
-            if (mEngine.getActiveNoteMask(i) != 0) {
-                isAnythingPlaying = true;
-                break;
-            }
-            if (mEngine.getTracks()[i].isTrackEnabled) {
-                const auto& arp = mEngine.getTracks()[i].arpeggiator;
-                if (arp.getMode() != ArpMode::OFF && !arp.getNotes().empty()) {
-                    isAnythingPlaying = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (isAnythingPlaying) {
-        // Active playback resets the display inactive timer so it doesn't sleep during playback
-        lv_display_trigger_activity(nullptr);
-    }
-
-    if (mSleepOverlay == nullptr) {
-        // Check if we should enter sleep mode
-        if (lv_display_get_inactive_time(nullptr) > 120000) {
-            // Create full-screen black overlay covering everything
-            mSleepOverlay = lv_obj_create(lv_layer_sys());
-            lv_obj_set_size(mSleepOverlay, lv_pct(100), lv_pct(100));
-            lv_obj_set_pos(mSleepOverlay, 0, 0);
-            lv_obj_set_style_bg_color(mSleepOverlay, lv_color_hex(0x000000), 0);
-            lv_obj_set_style_bg_opa(mSleepOverlay, LV_OPA_COVER, 0);
-            lv_obj_set_style_border_width(mSleepOverlay, 0, 0);
-            lv_obj_set_style_radius(mSleepOverlay, 0, 0);
-            lv_obj_add_flag(mSleepOverlay, LV_OBJ_FLAG_FLOATING);
-            
-            // Turn off backlight & hide cursor
-            setBacklightPower(false);
-            SDL_ShowCursor(SDL_DISABLE);
-
-            // Touch anywhere to wake up
-            auto wakeUpCb = [](lv_event_t* e) {
-                UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-                if (ui && ui->mSleepOverlay) {
-                    lv_obj_delete(ui->mSleepOverlay);
-                    ui->mSleepOverlay = nullptr;
-                    setBacklightPower(true);
-                    SDL_ShowCursor(SDL_ENABLE);
-                    // Force cursor driver update under KMSDRM/X11
-                    int mx, my;
-                    SDL_GetMouseState(&mx, &my);
-                    SDL_WarpMouseInWindow(nullptr, mx, my);
-                    lv_display_trigger_activity(nullptr);
-                }
-            };
-            lv_obj_add_event_cb(mSleepOverlay, wakeUpCb, LV_EVENT_CLICKED, this);
-            lv_obj_add_event_cb(mSleepOverlay, wakeUpCb, LV_EVENT_PRESSED, this);
-        }
-    }
 
     if (mNeedsScreenRebuild) {
         mNeedsScreenRebuild = false;
@@ -5917,6 +5926,7 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
                 ui->mEngine.loadProject(fullPath);
                 ui->mSettingsFilePath = fullPath + ".settings";
                 ui->loadSettings(ui->mSettingsFilePath);
+                ui->mNeedsScreenRebuild = true;
                 std::cout << "Project loaded: " << fullPath << std::endl;
             }
         }
@@ -5969,13 +5979,20 @@ void UIManager::fileBrowserSaveBtnEventCb(lv_event_t* e) {
                 ui->mFileBrowserIsPresetSave = false;
             } else if (ui->mFileBrowserIsProject) {
                 std::string dirPath = homeStr + "/projects/";
-                std::string fullPath = dirPath + nameStr;
-                if (nameStr.find(".loom") == std::string::npos) {
+                std::string finalName = nameStr;
+                std::string lowerName = finalName;
+                std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+                if (lowerName == "init" || lowerName == "init.loom") {
+                    finalName = "Init.loom";
+                }
+                std::string fullPath = dirPath + finalName;
+                if (finalName.find(".loom") == std::string::npos) {
                     fullPath += ".loom";
                 }
                 if (ui->mFileBrowserIsSave) {
                     ui->mEngine.saveProject(fullPath);
-                    ui->saveSettings(fullPath + ".settings");
+                    ui->mSettingsFilePath = fullPath + ".settings";
+                    ui->saveSettings(ui->mSettingsFilePath);
                     std::cout << "Project saved to text input: " << fullPath << std::endl;
                 }
             } else {

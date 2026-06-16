@@ -110,6 +110,7 @@ private:
 
     // UI updating
     void updateHighlighting();
+    bool isTrackPlaying(int trackIdx);
     void populateArpScreen();
 
     // Event callbacks
