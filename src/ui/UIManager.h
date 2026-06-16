@@ -306,6 +306,7 @@ private:
     static void modDestCategoryClickEventCb(lv_event_t* e);
     static void modDestParamClickEventCb(lv_event_t* e);
     static void closeModDestModalEventCb(lv_event_t* e);
+    static void clearModDestModalEventCb(lv_event_t* e);
     static void populateModDestCategories(UIManager* ui, bool isFxMode, lv_obj_t* leftCol, lv_obj_t* rightCol, int initialCat = -1);
     static void modDestToggleClickEventCb(lv_event_t* e);
 

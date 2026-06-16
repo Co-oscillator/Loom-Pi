@@ -8563,8 +8563,19 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
     populateModDestCategories(ui, initialFxMode, leftCol, rightCol, initialCat);
     populateModDestParams(ui, initialCat, rightCol);
 
+    // Button Row (Cancel + Clear)
+    lv_obj_t* btnRow = lv_obj_create(ui->mModDestModal);
+    lv_obj_set_size(btnRow, 560, 46);
+    lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btnRow, 0, 0);
+    lv_obj_set_style_pad_all(btnRow, 0, 0);
+    lv_obj_remove_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(btnRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
     // Cancel Button
-    lv_obj_t* cancelBtn = lv_button_create(ui->mModDestModal);
+    lv_obj_t* cancelBtn = lv_button_create(btnRow);
     lv_obj_set_size(cancelBtn, 140, 36);
     lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_radius(cancelBtn, 8, 0);
@@ -8573,6 +8584,17 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
     lv_obj_set_style_text_font(cancelLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(cancelLbl);
     lv_obj_add_event_cb(cancelBtn, closeModDestModalEventCb, LV_EVENT_CLICKED, ui);
+
+    // Clear Button
+    lv_obj_t* clearBtn = lv_button_create(btnRow);
+    lv_obj_set_size(clearBtn, 140, 36);
+    lv_obj_set_style_bg_color(clearBtn, lv_color_hex(0xD9534F), 0); // Red
+    lv_obj_set_style_radius(clearBtn, 8, 0);
+    lv_obj_t* clearLbl = lv_label_create(clearBtn);
+    lv_label_set_text(clearLbl, "CLEAR");
+    lv_obj_set_style_text_font(clearLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(clearLbl);
+    lv_obj_add_event_cb(clearBtn, clearModDestModalEventCb, LV_EVENT_CLICKED, ui);
 }
 
 void UIManager::modDestCategoryClickEventCb(lv_event_t* e) {
@@ -8666,6 +8688,56 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
 void UIManager::closeModDestModalEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (ui && ui->mModDestModal) {
+        lv_obj_delete(ui->mModDestModal);
+        ui->mModDestModal = nullptr;
+    }
+}
+
+void UIManager::clearModDestModalEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+
+    if (ui->mModDestModalCallerType == 1) { // Macro
+        int m = ui->mModDestModalCallerIdx;
+        int d = ui->mModDestModalCallerSlot;
+        int prevParam = ui->mMacroDestParamId[m][d];
+        int prevTrack = ui->mMacroDestTrack[m][d];
+        if (prevParam != -1) {
+            ui->mEngine.setRouting(prevTrack, ui->mActiveTrack, 10 + m, 5, 0.0f, prevParam);
+        }
+        ui->mMacroDestParamId[m][d] = -1;
+        ui->mMacroDestTrack[m][d] = 0;
+        ui->mMacroDestType[m][d] = 5;
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "---");
+        }
+    } else if (ui->mModDestModalCallerType == 2) { // LFO
+        int l = ui->mModDestModalCallerIdx;
+        int prevParam = ui->mLfoDestParamId[l];
+        int prevTrack = ui->mLfoDestTrack[l];
+        if (prevParam != -1) {
+            ui->mEngine.setRouting(prevTrack, ui->mActiveTrack, 2 + l, 5, 0.0f, prevParam);
+        }
+        ui->mLfoDestParamId[l] = -1;
+        ui->mLfoDestTrack[l] = 0;
+        ui->mLfoDestType[l] = 5;
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "---");
+        }
+    } else if (ui->mModDestModalCallerType == 3) { // Aftertouch
+        int prevParam = ui->mAftertouchDestParamId[ui->mActiveTrack];
+        if (prevParam != -1) {
+            ui->mEngine.setRouting(ui->mActiveTrack, ui->mActiveTrack, 27, 5, 0.0f, prevParam);
+        }
+        ui->mAftertouchDestParamId[ui->mActiveTrack] = -1;
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "AFTERTOUCH DEST: NONE (TAP TO ASSIGN)");
+        }
+    }
+
+    ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
+
+    if (ui->mModDestModal) {
         lv_obj_delete(ui->mModDestModal);
         ui->mModDestModal = nullptr;
     }
