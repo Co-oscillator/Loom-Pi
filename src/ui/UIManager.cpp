@@ -467,7 +467,6 @@ void UIManager::updateHighlighting() {
             lv_obj_set_style_border_opa(mTrackButtons[i], LV_OPA_COVER, 0);
             lv_obj_set_style_bg_opa(mTrackButtons[i], LV_OPA_COVER, 0);
         } else if (isPlaying) {
-            // Pulse the thin border
             float speedMultiplier = 1.0f;
             if (track.arpeggiator.getMode() != ArpMode::OFF) {
                 speedMultiplier = track.arpeggiator.getSpeedMultiplier();
@@ -476,14 +475,18 @@ void UIManager::updateHighlighting() {
             }
             if (speedMultiplier < 0.01f) speedMultiplier = 1.0f;
 
-            float periodMs = 60000.0f / (bpm * speedMultiplier);
-            float phase = (2.0f * M_PI * tMs) / periodMs;
-            float pulseVal = (sinf(phase) + 1.0f) * 0.5f;
+            // 0.5x speed (pulse period is 2 beats)
+            float periodMs = 2.0f * (60000.0f / (bpm * speedMultiplier));
+            uint32_t cycleTime = tMs % (uint32_t)periodMs;
+            bool isOn = (cycleTime < (periodMs / 2.0f));
 
-            int borderOpa = (int)(40 + pulseVal * 215); // ranges from 40 to 255
-            lv_obj_set_style_border_width(mTrackButtons[i], 1, 0);
-            lv_obj_set_style_border_color(mTrackButtons[i], lv_color_hex(0xFFFFFF), 0);
-            lv_obj_set_style_border_opa(mTrackButtons[i], borderOpa, 0);
+            if (isOn) {
+                lv_obj_set_style_border_width(mTrackButtons[i], 1, 0);
+                lv_obj_set_style_border_color(mTrackButtons[i], lv_color_hex(0xFFFFFF), 0);
+                lv_obj_set_style_border_opa(mTrackButtons[i], LV_OPA_COVER, 0);
+            } else {
+                lv_obj_set_style_border_width(mTrackButtons[i], 0, 0);
+            }
             lv_obj_set_style_bg_opa(mTrackButtons[i], mTrackEnabled[i] ? LV_OPA_50 : LV_OPA_10, 0);
         } else {
             lv_obj_set_style_border_width(mTrackButtons[i], 0, 0);
@@ -3284,7 +3287,7 @@ void UIManager::openScalePickerModal() {
     lv_obj_set_style_border_width(gridContainer, 0, 0);
     lv_obj_set_layout(gridContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(gridContainer, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(gridContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(gridContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_style_pad_all(gridContainer, 4, 0);
     lv_obj_set_style_pad_row(gridContainer, 10, 0);
     lv_obj_set_style_pad_column(gridContainer, 10, 0);
