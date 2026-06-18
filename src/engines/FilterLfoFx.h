@@ -18,6 +18,8 @@ public:
   void setCutoff(float v) { mCutoff = v; }
   void setMode(int mode) { mMode = static_cast<FilterLfoMode>(mode); }
   void setResonance(float v) { mResonance = v; }
+  void setSync(bool s) { mSync = s; }
+  void setBpm(float b) { mBpm = b; }
 
   void syncFrom(const FilterLfoFx &other) {
     mPhase = other.mPhase;
@@ -42,6 +44,36 @@ public:
     if (mControlCounter++ % 16 == 0) {
       // 1. LFO Calculation (Control Rate)
       float rateHz = 0.02f + (mRate * mRate) * 29.98f; // 0.02Hz to 30Hz range
+      if (mSync) {
+        float beatFreq = mBpm / 60.0f;
+        int syncIdx = (int)(mRate * 22.99f);
+        switch (syncIdx) {
+        case 0:  rateHz = beatFreq / 128.0f; break; // 32/1
+        case 1:  rateHz = beatFreq / 96.0f; break; // 24/1
+        case 2:  rateHz = beatFreq / 64.0f; break; // 16/1
+        case 3:  rateHz = beatFreq / 48.0f; break; // 12/1
+        case 4:  rateHz = beatFreq / 32.0f; break; // 8/1
+        case 5:  rateHz = beatFreq / 24.0f; break; // 6/1
+        case 6:  rateHz = beatFreq / 16.0f; break; // 4/1
+        case 7:  rateHz = beatFreq / 12.0f; break; // 3/1
+        case 8:  rateHz = beatFreq / 8.0f; break; // 2/1
+        case 9:  rateHz = beatFreq / 4.0f; break; // 1/1
+        case 10: rateHz = beatFreq / 2.0f; break; // 1/2
+        case 11: rateHz = beatFreq * 0.75f; break; // 1/3
+        case 12: rateHz = beatFreq; break; // 1/4
+        case 13: rateHz = beatFreq * 1.5f; break; // 1/6
+        case 14: rateHz = beatFreq * 2.0f; break; // 1/8
+        case 15: rateHz = beatFreq * 3.0f; break; // 1/12
+        case 16: rateHz = beatFreq * 4.0f; break; // 1/16
+        case 17: rateHz = beatFreq * 6.0f; break; // 1/24
+        case 18: rateHz = beatFreq * 8.0f; break; // 1/32
+        case 19: rateHz = beatFreq * 12.0f; break; // 1/48
+        case 20: rateHz = beatFreq * 16.0f; break; // 1/64
+        case 21: rateHz = beatFreq * 18.0f; break; // 1/72
+        case 22: rateHz = beatFreq * 24.0f; break; // 1/96
+        default: rateHz = beatFreq;
+        }
+      }
       mPhase += (rateHz * 16.0f) / sampleRate;
       if (mPhase >= 1.0f) {
         mPhase -= floorf(mPhase);
@@ -109,6 +141,8 @@ private:
   float mShape = 0.0f;
   float mCutoff = 0.5f;
   float mResonance = 0.0f;
+  bool mSync = false;
+  float mBpm = 120.0f;
 
   float mPhase = 0.0f;
   unsigned int mNoiseSeed = 12345;

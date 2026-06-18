@@ -538,7 +538,9 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     } else if (cc == data->ui->mCcRecord) {
                         bool recState = (val >= 64);
                         data->engine->setIsRecording(recState);
-                        if (recState) data->engine->setPlaying(true);
+                        if (recState && !data->engine->getIsPlaying()) {
+                            data->engine->setPlaying(true);
+                        }
                     } else if (cc == data->ui->mCcClear) {
                         if (val >= 64) {
                             int activeTrack = data->ui->getActiveTrack();
@@ -848,6 +850,27 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             return;
         }
 
+        if (velocity > 0 && (data->ui->mEditingStepIdx != -1 || data->ui->mHeldStepIdx != -1)) {
+            int stepIdx = (data->ui->mEditingStepIdx != -1) ? data->ui->mEditingStepIdx : data->ui->mHeldStepIdx;
+            int activeTrack = data->ui->getActiveTrack();
+            auto& track = data->engine->getTracks()[activeTrack];
+            
+            bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
+                          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+            
+            auto& step = isDrum ? track.drumSequencers[data->ui->mActiveDrumIdx].getStepsMutable()[stepIdx]
+                                : track.sequencer.getStepsMutable()[stepIdx];
+            
+            if (data->ui->mStepMidiEntryCount == 0) {
+                step.notes.clear();
+                step.active = true;
+            }
+            step.addNote(note, velocity / 127.0f);
+            data->ui->mStepMidiEntryCount++;
+            data->ui->mNeedsScreenRebuild = true;
+            return;
+        }
+
         data->ui->addMidiLog(velocity > 0 ? "Note On" : "Note Off", channel + 1, note, velocity);
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
@@ -1105,7 +1128,9 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         } else if (cc == data->ui->mCcRecord) {
             bool recState = (val >= 64);
             data->engine->setIsRecording(recState);
-            if (recState) data->engine->setPlaying(true);
+            if (recState && !data->engine->getIsPlaying()) {
+                data->engine->setPlaying(true);
+            }
         } else if (cc == data->ui->mCcClear) {
             if (val >= 64) {
                 int activeTrack = data->ui->getActiveTrack();

@@ -140,6 +140,7 @@ private:
     
     // Arpeggiator pattern grid
     lv_obj_t* mArpButtons[4][16];
+    lv_obj_t* mArpColumns[16];
     static void arpButtonEventCb(lv_event_t* e);
     void randomizeRhythm();
     void randomizeNotes();
@@ -222,6 +223,8 @@ private:
 
     // Step option popup state
     int mEditingStepIdx = -1;
+    int mHeldStepIdx = -1;
+    int mStepMidiEntryCount = 0;
     lv_obj_t* mStepModal = nullptr;
     lv_obj_t* mStepModalActiveLocksList = nullptr;
     
@@ -249,6 +252,8 @@ private:
     static void seqGridToggleBtnEventCb(lv_event_t* e);
     static void seqPlayOrderBtnEventCb(lv_event_t* e);
     static void seqStepLongPressEventCb(lv_event_t* e);
+    static void seqStepPressEventCb(lv_event_t* e);
+    static void seqStepReleaseEventCb(lv_event_t* e);
     static void stepModalControlEventCb(lv_event_t* e);
     static void stepModalAddLockEventCb(lv_event_t* e);
     static void stepModalClearLocksEventCb(lv_event_t* e);

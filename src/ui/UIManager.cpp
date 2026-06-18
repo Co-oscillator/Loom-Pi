@@ -235,6 +235,13 @@ UIManager::UIManager(AudioEngine& engine) : mEngine(engine) {
         mLfoDestType[i] = 5;
         mLfoDestBtnLabel[i] = nullptr;
     }
+
+    for (int c = 0; c < 16; ++c) {
+        mArpColumns[c] = nullptr;
+        for (int r = 0; r < 4; ++r) {
+            mArpButtons[r][c] = nullptr;
+        }
+    }
 }
 
 UIManager::~UIManager() {}
@@ -645,6 +652,13 @@ void UIManager::createCenterContentArea() {
     if (mSettingsCreditsModal) { lv_obj_delete(mSettingsCreditsModal); mSettingsCreditsModal = nullptr; }
     if (mSettingsFxSelectModal) { lv_obj_delete(mSettingsFxSelectModal); mSettingsFxSelectModal = nullptr; }
     if (mSeqModal) { lv_obj_delete(mSeqModal); mSeqModal = nullptr; }
+
+    for (int c = 0; c < 16; ++c) {
+        mArpColumns[c] = nullptr;
+        for (int r = 0; r < 4; ++r) {
+            mArpButtons[r][c] = nullptr;
+        }
+    }
 
     // Clear existing center area
     lv_obj_clean(mCenterArea);
@@ -1127,6 +1141,7 @@ void UIManager::populateArpScreen() {
     // 2. Add the 16 step columns
     for (int c = 0; c < 16; ++c) {
         lv_obj_t* colCont = lv_obj_create(gridRow);
+        mArpColumns[c] = colCont;
         lv_obj_set_size(colCont, 38, 245);
         lv_obj_set_style_bg_opa(colCont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(colCont, 0, 0);
@@ -2806,6 +2821,11 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(ipAddressLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(ipAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
+    lv_obj_t* versionLbl = lv_label_create(perfCard);
+    lv_label_set_text(versionLbl, "Version: v2.3.0");
+    lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
+
     // Separator line
     lv_obj_t* sepLine = lv_obj_create(perfCard);
     lv_obj_set_size(sepLine, 210, 1);
@@ -3641,6 +3661,34 @@ static void setBacklightPower(bool on) {
 }
 
 void UIManager::update() {
+    if (mStepModal && mEditingStepIdx >= 0) {
+        int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+        bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+        bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+        
+        std::vector<Step> currentSteps = isDrum ? mEngine.getDrumSequencerSteps(mActiveTrack, mActiveDrumIdx)
+                                                : mEngine.getSequencerSteps(mActiveTrack);
+        
+        if (mEditingStepIdx < (int)currentSteps.size()) {
+            const Step& stepObj = currentSteps[mEditingStepIdx];
+            if (!stepObj.notes.empty()) {
+                int noteVal = stepObj.notes[0].note;
+                if (mStepModalNoteSlider && lv_slider_get_value(mStepModalNoteSlider) != noteVal) {
+                    lv_slider_set_value(mStepModalNoteSlider, noteVal, LV_ANIM_OFF);
+                    
+                    lv_obj_t* parent = lv_obj_get_parent(mStepModalNoteSlider);
+                    if (parent) {
+                        lv_obj_t* label = lv_obj_get_child(parent, 0);
+                        if (label) {
+                            static const char* noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+                            int octave = (noteVal / 12) - 1;
+                            lv_label_set_text_fmt(label, "Note: %s%d (%d)", noteNames[noteVal % 12], octave, noteVal);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     if (mNeedsScreenRebuild) {
         mNeedsScreenRebuild = false;
@@ -4008,6 +4056,27 @@ void UIManager::update() {
             updateSamplerWaveformPreview();
         } else if (mEngine.getTracks()[mActiveTrack].engineType == 3) {
             updateGranularWaveformPreview();
+        }
+    } else if (mActiveNav == 3) {
+        // Highlight active playing step (Arpeggiator Playhead Tracking)
+        const auto& arp = mEngine.getTracks()[mActiveTrack].arpeggiator;
+        int activeStep = (mEngine.getIsPlaying() && arp.getMode() != ArpMode::OFF) ? (arp.getStep() % 16) : -1;
+        bool isRecording = mEngine.getIsRecording();
+        lv_color_t playheadColor = isRecording ? lv_color_hex(0xEF4444) : lv_color_hex(0xFFFFFF);
+        
+        for (int c = 0; c < 16; ++c) {
+            if (mArpColumns[c]) {
+                if (c == activeStep) {
+                    lv_obj_set_style_bg_color(mArpColumns[c], playheadColor, 0);
+                    lv_obj_set_style_bg_opa(mArpColumns[c], 38, 0); // ~15% opacity
+                    lv_obj_set_style_border_width(mArpColumns[c], 1, 0);
+                    lv_obj_set_style_border_color(mArpColumns[c], playheadColor, 0);
+                    lv_obj_set_style_border_opa(mArpColumns[c], LV_OPA_COVER, 0);
+                } else {
+                    lv_obj_set_style_bg_opa(mArpColumns[c], LV_OPA_TRANSP, 0);
+                    lv_obj_set_style_border_width(mArpColumns[c], 0, 0);
+                }
+            }
         }
     }
 
@@ -4650,6 +4719,9 @@ void UIManager::rebuildSeqGrid() {
         lv_obj_set_user_data(btn, (void*)(uintptr_t)i);
         lv_obj_add_event_cb(btn, seqGridBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
         lv_obj_add_event_cb(btn, seqStepLongPressEventCb, LV_EVENT_LONG_PRESSED, this);
+        lv_obj_add_event_cb(btn, seqStepPressEventCb, LV_EVENT_PRESSED, this);
+        lv_obj_add_event_cb(btn, seqStepReleaseEventCb, LV_EVENT_RELEASED, this);
+        lv_obj_add_event_cb(btn, seqStepReleaseEventCb, LV_EVENT_PRESS_LOST, this);
         mSeqStepButtons[i] = btn;
     }
     // Clear remaining slots beyond totalSteps
@@ -5171,6 +5243,23 @@ void UIManager::seqStepLongPressEventCb(lv_event_t* e) {
     int stepIdx = (int)(uintptr_t)lv_obj_get_user_data(btn);
     if (stepIdx >= 0 && stepIdx < 64) {
         ui->openSeqStepModal(stepIdx);
+    }
+}
+
+void UIManager::seqStepPressEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int stepIdx = (int)(uintptr_t)lv_obj_get_user_data(btn);
+    ui->mHeldStepIdx = stepIdx;
+    ui->mStepMidiEntryCount = 0;
+}
+
+void UIManager::seqStepReleaseEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int stepIdx = (int)(uintptr_t)lv_obj_get_user_data(btn);
+    if (ui->mHeldStepIdx == stepIdx) {
+        ui->mHeldStepIdx = -1;
     }
 }
 
@@ -6220,25 +6309,29 @@ const char* getDestLabel(int dest) {
 
 const char* getLfoSyncLabel(int syncIdx) {
     switch (syncIdx) {
-        case 0: return "8/1";
-        case 1: return "6/1";
-        case 2: return "4/1";
-        case 3: return "3/1";
-        case 4: return "2/1";
-        case 5: return "1/1";
-        case 6: return "1/2";
-        case 7: return "1/3";
-        case 8: return "1/4";
-        case 9: return "1/6";
-        case 10: return "1/8";
-        case 11: return "1/12";
-        case 12: return "1/16";
-        case 13: return "1/24";
-        case 14: return "1/32";
-        case 15: return "1/48";
-        case 16: return "1/64";
-        case 17: return "1/72";
-        case 18: return "1/96";
+        case 0: return "32/1";
+        case 1: return "24/1";
+        case 2: return "16/1";
+        case 3: return "12/1";
+        case 4: return "8/1";
+        case 5: return "6/1";
+        case 6: return "4/1";
+        case 7: return "3/1";
+        case 8: return "2/1";
+        case 9: return "1/1";
+        case 10: return "1/2";
+        case 11: return "1/3";
+        case 12: return "1/4";
+        case 13: return "1/6";
+        case 14: return "1/8";
+        case 15: return "1/12";
+        case 16: return "1/16";
+        case 17: return "1/24";
+        case 18: return "1/32";
+        case 19: return "1/48";
+        case 20: return "1/64";
+        case 21: return "1/72";
+        case 22: return "1/96";
         default: return "1/4";
     }
 }
@@ -6271,6 +6364,7 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
     std::string prefix = "Track " + std::to_string(trackIdx + 1) + " ";
     if (paramId == 0) return prefix + "Volume";
     if (paramId == 9) return prefix + "Pan";
+    if (paramId == 2400) return prefix + "Ratchet";
     
     int engineType = 0; // Default: Subtractive
     if (engine && trackIdx >= 0 && trackIdx < 8) {
@@ -7050,7 +7144,7 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* rVal = lv_label_create(rArc);
         if (lfo.getSync()) {
-            int syncIdx = (int)(lfo.getUiRate() * 18.99f);
+            int syncIdx = (int)(lfo.getUiRate() * 22.99f);
             lv_label_set_text(rVal, getLfoSyncLabel(syncIdx));
         } else {
             float hz = 0.01f * powf(10.0f, lfo.getUiRate() * 3.47712f);
@@ -7831,7 +7925,7 @@ void UIManager::lfoRateArcEventCb(lv_event_t* e) {
     bool sync = lv_obj_has_state(data->syncBtn, LV_STATE_CHECKED);
 
     if (sync) {
-        int syncIdx = (int)(raw * 18.99f);
+        int syncIdx = (int)(raw * 22.99f);
         lv_label_set_text(data->valLbl, getLfoSyncLabel(syncIdx));
     } else {
         float hz = 0.01f * powf(10.0f, raw * 3.47712f);
@@ -7873,7 +7967,7 @@ void UIManager::lfoSyncBtnEventCb(lv_event_t* e) {
     int rawVal = lv_arc_get_value(data->rateArc);
     float raw = rawVal / 100.0f;
     if (sync) {
-        int syncIdx = (int)(raw * 18.99f);
+        int syncIdx = (int)(raw * 22.99f);
         lv_label_set_text(data->rateValLbl, getLfoSyncLabel(syncIdx));
     } else {
         float hz = 0.01f * powf(10.0f, raw * 3.47712f);
@@ -9058,6 +9152,10 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         {0, "Volume"}, {9, "Pan"}
     };
 
+    if (mModDestModalCallerType == 3) {
+        params.push_back({2400, "Ratchet"});
+    }
+
     if (engineType != 4 && engineType != 5 && engineType != 6) {
         params.push_back({1, "Cutoff"});
         params.push_back({2, "Resonance"});
@@ -9327,18 +9425,18 @@ void UIManager::populateFxScreen() {
         addPedalKnob(cho, "Send", 2020, 0.0f, 1.0f);
 
         lv_obj_t* pha = createPedalCard(tab2, "PHASER", lv_color_hex(0xEC4899)); // Pink
-        addPedalKnob(pha, "Rate", 550, 0.1f, 10.0f);
+        addPedalKnob(pha, "Rate", 550, 0.0f, 1.0f);
         addPedalKnob(pha, "Depth", 551, 0.0f, 1.0f);
         addPedalKnob(pha, "Feedback", 553, 0.0f, 0.95f);
-        addPedalSpacer(pha, 15);
+        addPedalToggle(pha, "Sync", 554);
         addPedalKnob(pha, "Mix", 552, 0.0f, 1.0f);
         addPedalKnob(pha, "Send", 2030, 0.0f, 1.0f);
 
         lv_obj_t* fla = createPedalCard(tab2, "FLANGER", lv_color_hex(0x06B6D4)); // Cyan
-        addPedalKnob(fla, "Rate", 1500, 0.05f, 5.0f);
+        addPedalKnob(fla, "Rate", 1500, 0.0f, 1.0f);
         addPedalKnob(fla, "Depth", 1501, 0.0f, 1.0f);
         addPedalKnob(fla, "Feedback", 1503, 0.0f, 0.95f);
-        addPedalSpacer(fla, 15);
+        addPedalToggle(fla, "Sync", 1505);
         addPedalKnob(fla, "Delay", 1504, 0.0f, 1.0f);
         addPedalKnob(fla, "Mix", 1502, 0.0f, 1.0f);
         addPedalKnob(fla, "Send", 2110, 0.0f, 1.0f);
@@ -9347,21 +9445,23 @@ void UIManager::populateFxScreen() {
     // Tab 3: Time & Space
     {
         lv_obj_t* echo = createPedalCard(tab3, "TAPE ECHO", lv_color_hex(0xF97316)); // Warm Orange
-        addPedalKnob(echo, "Time", 1510, 0.01f, 2.0f);
+        addPedalKnob(echo, "Time", 1510, 0.0f, 1.0f);
         addPedalKnob(echo, "Feedback", 1511, 0.0f, 0.99f);
         addPedalKnob(echo, "Drive", 1513, 0.0f, 2.0f);
         addPedalKnob(echo, "Wow", 1514, 0.0f, 1.0f);
         addPedalKnob(echo, "Flutter", 1515, 0.0f, 1.0f);
+        addPedalToggle(echo, "Sync", 1516);
         addPedalKnob(echo, "Mix", 1512, 0.0f, 1.0f);
         addPedalKnob(echo, "Send", 2130, 0.0f, 1.0f);
 
         lv_obj_t* del = createPedalCard(tab3, "DELAY", lv_color_hex(0xE0F2FE)); // Light Blue
-        addPedalKnob(del, "Time", 520, 0.01f, 2.0f);
+        addPedalKnob(del, "Time", 520, 0.0f, 1.0f);
         addPedalKnob(del, "Feedback", 521, 0.0f, 0.99f);
         addPedalDropdown(del, "Type", 525, "Digital\nAnalog\nTape\nPingPong");
         addPedalKnob(del, "Cutoff", 523, 0.0f, 1.0f);
         addPedalKnob(del, "Filt Res", 524, 0.0f, 0.95f);
         addPedalDropdown(del, "Filt Mode", 526, "LP\nHP\nBP");
+        addPedalToggle(del, "Sync", 527);
         addPedalKnob(del, "Mix", 522, 0.0f, 1.0f);
         addPedalKnob(del, "Send", 2050, 0.0f, 1.0f);
 
@@ -9400,19 +9500,21 @@ void UIManager::populateFxScreen() {
     // Tab 5: Mod Filters
     {
         lv_obj_t* lplfo = createPedalCard(tab5, "LP LFO FILTER", lv_color_hex(0xFB7185)); // Soft Rose
-        addPedalKnob(lplfo, "Rate", 490, 0.05f, 20.0f);
+        addPedalKnob(lplfo, "Rate", 490, 0.0f, 1.0f);
         addPedalKnob(lplfo, "Depth", 491, 0.0f, 1.0f);
         addPedalDropdown(lplfo, "Shape", 492, "Sine\nTri\nSaw\nSquare\nS&H");
         addPedalKnob(lplfo, "Cutoff", 493, 20.0f, 20000.0f, 0);
         addPedalKnob(lplfo, "Reson", 494, 0.0f, 0.95f);
+        addPedalToggle(lplfo, "Sync", 495);
         addPedalKnob(lplfo, "Send", 2100, 0.0f, 1.0f);
 
         lv_obj_t* hplfo = createPedalCard(tab5, "HP LFO FILTER", lv_color_hex(0xF43F5E)); // Vivid Rose
-        addPedalKnob(hplfo, "Rate", 1590, 0.05f, 20.0f);
+        addPedalKnob(hplfo, "Rate", 1590, 0.0f, 1.0f);
         addPedalKnob(hplfo, "Depth", 1591, 0.0f, 1.0f);
         addPedalDropdown(hplfo, "Shape", 1592, "Sine\nTri\nSaw\nSquare\nS&H");
         addPedalKnob(hplfo, "Cutoff", 1593, 20.0f, 20000.0f, 0);
         addPedalKnob(hplfo, "Reson", 1594, 0.0f, 0.95f);
+        addPedalToggle(hplfo, "Sync", 1595);
         addPedalKnob(hplfo, "Send", 2090, 0.0f, 1.0f);
 
         lv_obj_t* slicer = createPedalCard(tab5, "SLICER", lv_color_hex(0x10B981)); // Emerald
@@ -9614,8 +9716,8 @@ lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_colo
     lv_obj_set_layout(body, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(body, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(body, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(body, 12, 0);
-    lv_obj_set_style_pad_row(body, 12, 0);
+    lv_obj_set_style_pad_column(body, 8, 0);
+    lv_obj_set_style_pad_row(body, 8, 0);
     lv_obj_remove_flag(body, LV_OBJ_FLAG_SCROLLABLE);
 
     return body;
@@ -9623,7 +9725,7 @@ lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_colo
 
 void UIManager::addPedalKnob(lv_obj_t* pedal, const char* labelText, int paramId, float minVal, float maxVal, int decimals) {
     lv_obj_t* container = lv_obj_create(pedal);
-    lv_obj_set_size(container, 68, 95);
+    lv_obj_set_size(container, 64, 95);
     lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(container, 0, 0);
     lv_obj_set_style_pad_all(container, 0, 0);
@@ -9781,7 +9883,7 @@ void UIManager::addPedalSlider(lv_obj_t* pedal, const char* labelText, int param
 
 void UIManager::addPedalToggle(lv_obj_t* pedal, const char* labelText, int paramId) {
     lv_obj_t* container = lv_obj_create(pedal);
-    lv_obj_set_size(container, 68, 55);
+    lv_obj_set_size(container, 64, 55);
     lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(container, 0, 0);
     lv_obj_set_style_pad_all(container, 0, 0);
@@ -9836,7 +9938,7 @@ void UIManager::addPedalToggle(lv_obj_t* pedal, const char* labelText, int param
 
 void UIManager::addPedalDropdown(lv_obj_t* pedal, const char* labelText, int paramId, const char* options) {
     lv_obj_t* container = lv_obj_create(pedal);
-    lv_obj_set_size(container, 95, 58);
+    lv_obj_set_size(container, 88, 58);
     lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(container, 0, 0);
     lv_obj_set_style_pad_all(container, 0, 0);
@@ -9848,7 +9950,7 @@ void UIManager::addPedalDropdown(lv_obj_t* pedal, const char* labelText, int par
 
     // Dropdown
     lv_obj_t* dd = lv_dropdown_create(container);
-    lv_obj_set_size(dd, 90, 30);
+    lv_obj_set_size(dd, 84, 30);
     lv_dropdown_set_options(dd, options);
     lv_obj_set_style_text_font(dd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_pad_all(dd, 3, 0);
@@ -9939,17 +10041,63 @@ void UIManager::fxControlEventCb(lv_event_t* e) {
     // Update the AudioEngine parameter via setParameter to support track-specific routing
     d->ui->mEngine.setParameter(d->ui->mActiveTrack, d->paramId, rawVal);
 
+    if (d->paramId == 527 || d->paramId == 1516 || d->paramId == 1505 || d->paramId == 554 || d->paramId == 495 || d->paramId == 1595) {
+        d->ui->mNeedsScreenRebuild = true;
+    }
+
     // Update UI labels if needed
     if (d->valLbl) {
-        if (d->decimals == -1) {
-            float db = (rawVal - 0.5f) * 48.0f;
-            lv_label_set_text_fmt(d->valLbl, "%d", (int)db);
-        } else if (d->decimals == 0) {
-            lv_label_set_text_fmt(d->valLbl, "%d", (int)rawVal);
-        } else if (d->decimals == 1) {
-            lv_label_set_text_fmt(d->valLbl, "%.1f", rawVal);
+        bool isSynced = false;
+        int syncIdx = -1;
+        if (d->paramId == 520) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[527] >= 0.5f;
+            syncIdx = (int)(rawVal * 11.99f);
+        } else if (d->paramId == 1510) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[1516] >= 0.5f;
+            syncIdx = (int)(rawVal * 11.99f);
+        } else if (d->paramId == 1500) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[1505] >= 0.5f;
+            syncIdx = (int)(rawVal * 11.99f);
+        } else if (d->paramId == 550) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[554] >= 0.5f;
+            syncIdx = (int)(rawVal * 11.99f);
+        } else if (d->paramId == 490) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[495] >= 0.5f;
+            syncIdx = (int)(rawVal * 22.99f);
+        } else if (d->paramId == 1590) {
+            isSynced = d->ui->mEngine.getTracks()[0].parameters[1595] >= 0.5f;
+            syncIdx = (int)(rawVal * 22.99f);
+        }
+
+        if (isSynced) {
+            if (d->paramId == 490 || d->paramId == 1590) {
+                lv_label_set_text(d->valLbl, getLfoSyncLabel(syncIdx));
+            } else {
+                const char* delaySyncLabels[] = {"1/32", "1/16", "1/8T", "1/16D", "1/8", "1/4T", "1/8D", "1/4", "1/2T", "1/4D", "1/2", "1/1"};
+                lv_label_set_text(d->valLbl, delaySyncLabels[syncIdx % 12]);
+            }
         } else {
-            lv_label_set_text_fmt(d->valLbl, "%.2f", rawVal);
+            float dispVal = rawVal;
+            if (d->paramId == 520 || d->paramId == 1510) {
+                dispVal = 0.01f + rawVal * 1.99f;
+            } else if (d->paramId == 1500) {
+                dispVal = 0.05f + rawVal * 4.95f;
+            } else if (d->paramId == 550) {
+                dispVal = 0.1f + rawVal * 9.9f;
+            } else if (d->paramId == 490 || d->paramId == 1590) {
+                dispVal = 0.05f + rawVal * 19.95f;
+            }
+
+            if (d->decimals == -1) {
+                float db = (rawVal - 0.5f) * 48.0f;
+                lv_label_set_text_fmt(d->valLbl, "%d", (int)db);
+            } else if (d->decimals == 0) {
+                lv_label_set_text_fmt(d->valLbl, "%d", (int)dispVal);
+            } else if (d->decimals == 1) {
+                lv_label_set_text_fmt(d->valLbl, "%.1f", dispVal);
+            } else {
+                lv_label_set_text_fmt(d->valLbl, "%.2f", dispVal);
+            }
         }
     }
 }
@@ -15940,6 +16088,8 @@ void UIManager::addMidiLog(const std::string& type, int channel, int d1, int d2)
     }
 }
 
+static std::vector<std::string> runCommandAndGetLines(const std::string& cmd);
+
 void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui) return;
@@ -15953,8 +16103,24 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
     std::thread updateThread([ui]() {
         int ret = std::system("git fetch origin main");
         ui->mUpdateInstallProgressPercent = 25;
-        ui->mUpdateInstallStatusStr = "Pulling updates...";
         
+        // Compare local HEAD against origin/main
+        std::string localHash = "";
+        std::string remoteHash = "";
+        auto localLines = runCommandAndGetLines("git rev-parse HEAD");
+        if (!localLines.empty()) localHash = localLines[0];
+        auto remoteLines = runCommandAndGetLines("git rev-parse origin/main");
+        if (!remoteLines.empty()) remoteHash = remoteLines[0];
+
+        if (!localHash.empty() && !remoteHash.empty() && localHash == remoteHash) {
+            ui->mUpdateInstallStatusStr = "Loom is already up to date.";
+            ui->mUpdateInstallProgressPercent = 100;
+            ui->mUpdateInstallFinished = true;
+            ui->mUpdateInstallActive = false;
+            return;
+        }
+
+        ui->mUpdateInstallStatusStr = "Pulling updates...";
         ret = std::system("git pull origin main");
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "Git pull failed.";

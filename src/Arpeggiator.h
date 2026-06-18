@@ -114,6 +114,7 @@ public:
     int maxSteps = mIsLatched ? 16 : 8;
     return mGateLengths[mStep % maxSteps];
   }
+  int getStep() const { return mStep; }
   void setIsMutated(bool mutated) { mIsMutated = mutated; }
 
   bool isLatched() const { return mIsLatched; }

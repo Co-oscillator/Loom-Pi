@@ -691,8 +691,11 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
       }
     }
 
-    if (!isSequencerTrigger) {
+    if (!isSequencerTrigger && !isArpTrigger) {
       track.mPhysicallyHeldNoteCount++;
+      if (std::find(track.mLiveHeldNotes.begin(), track.mLiveHeldNotes.end(), note) == track.mLiveHeldNotes.end()) {
+        track.mLiveHeldNotes.push_back(note);
+      }
       if (track.arpeggiator.getMode() != ArpMode::OFF) {
         if (track.mPhysicallyHeldNoteCount == 1) {
           track.mArpCountdown = 0; // Immediate trigger for new gesture
@@ -1456,6 +1459,10 @@ void AudioEngine::processCommands() {
       break;
     case AudioCommand::SET_TEMPO:
       mBpm = cmd.value;
+      mLpLfoL.setBpm(mBpm);
+      mLpLfoR.setBpm(mBpm);
+      mHpLfoL.setBpm(mBpm);
+      mHpLfoR.setBpm(mBpm);
       for (auto &track : mTracks) {
         track.samplerEngine.setProjectBpm(mBpm);
       }
@@ -1651,6 +1658,13 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
     } else if (subId == 4) {
       mLpLfoL.setResonance(value);
       mLpLfoR.setResonance(value);
+    } else if (subId == 5) {
+      mLpLfoL.setSync(value >= 0.5f);
+      mLpLfoR.setSync(value >= 0.5f);
+      mLpLfoL.setBpm(mBpm);
+      mLpLfoR.setBpm(mBpm);
+      float currentVal = mTracks[0].parameters[490];
+      updateGlobalParameter(490, currentVal);
     }
   }
   // Handle Global Effects & Arp (500-599)
@@ -1692,9 +1706,30 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
       }
       break;
     case 2: // Delay (Slot 5)
-      if (subId == 0)
-        mDelayFx.setDelayTime(value);
-      else if (subId == 1)
+      if (subId == 0) {
+        if (mDelaySync) {
+          float beatLen = 60.0f / std::max(1.0f, mBpm);
+          int idx = (int)(value * 11.99f);
+          float div = 0.25f;
+          switch (idx) {
+            case 0: div = 0.125f; break; // 1/32
+            case 1: div = 0.25f; break;  // 1/16
+            case 2: div = 0.33333f; break; // 1/8T
+            case 3: div = 0.375f; break; // 1/16D
+            case 4: div = 0.5f; break;   // 1/8
+            case 5: div = 0.66667f; break; // 1/4T
+            case 6: div = 0.75f; break;  // 1/8D
+            case 7: div = 1.0f; break;   // 1/4
+            case 8: div = 1.33333f; break; // 1/2T
+            case 9: div = 1.5f; break;   // 1/4D
+            case 10: div = 2.0f; break;  // 1/2
+            case 11: div = 4.0f; break;  // 1/1
+          }
+          mDelayFx.setDelayTime(beatLen * div);
+        } else {
+          mDelayFx.setDelayTime(0.01f + value * 1.99f);
+        }
+      } else if (subId == 1)
         mDelayFx.setFeedback(value);
       else if (subId == 2) { // MIX
         mDelayFx.setMix(value);
@@ -1707,6 +1742,33 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         mDelayFx.setType(static_cast<int>(value * 3.9f));
       else if (subId == 6)
         mDelayFx.setFilterMode(static_cast<int>(value * 2.9f));
+      else if (subId == 7) {
+        mDelaySync = (value >= 0.5f);
+        float currentVal = mTracks[0].parameters[520];
+        // Force refresh time with sync state applied
+        float beatLen = 60.0f / std::max(1.0f, mBpm);
+        if (mDelaySync) {
+          int idx = (int)(currentVal * 11.99f);
+          float div = 0.25f;
+          switch (idx) {
+            case 0: div = 0.125f; break;
+            case 1: div = 0.25f; break;
+            case 2: div = 0.33333f; break;
+            case 3: div = 0.375f; break;
+            case 4: div = 0.5f; break;
+            case 5: div = 0.66667f; break;
+            case 6: div = 0.75f; break;
+            case 7: div = 1.0f; break;
+            case 8: div = 1.33333f; break;
+            case 9: div = 1.5f; break;
+            case 10: div = 2.0f; break;
+            case 11: div = 4.0f; break;
+          }
+          mDelayFx.setDelayTime(beatLen * div);
+        } else {
+          mDelayFx.setDelayTime(0.01f + currentVal * 1.99f);
+        }
+      }
       break;
     case 3: // Bitcrusher (Slot 1)
       if (subId == 0) {
@@ -1744,8 +1806,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
       break;
     case 5: // Phaser (Slot 3)
       if (subId == 0) {
-        mPhaserFxL.setRate(value);
-        mPhaserFxR.setRate(value);
+        float rateHz = 0.1f + value * 9.9f;
+        if (mPhaserSync) {
+          float beatLen = 60.0f / std::max(1.0f, mBpm);
+          int idx = (int)(value * 11.99f);
+          float div = 1.0f;
+          switch (idx) {
+            case 0: div = 0.125f; break; // 1/32
+            case 1: div = 0.25f; break;  // 1/16
+            case 2: div = 0.33333f; break; // 1/8T
+            case 3: div = 0.375f; break; // 1/16D
+            case 4: div = 0.5f; break;   // 1/8
+            case 5: div = 0.66667f; break; // 1/4T
+            case 6: div = 0.75f; break;  // 1/8D
+            case 7: div = 1.0f; break;   // 1/4
+            case 8: div = 1.33333f; break; // 1/2T
+            case 9: div = 1.5f; break;   // 1/4D
+            case 10: div = 2.0f; break;  // 1/2
+            case 11: div = 4.0f; break;  // 1/1
+          }
+          rateHz = 1.0f / (beatLen * div);
+        }
+        mPhaserFxL.setRate(rateHz);
+        mPhaserFxR.setRate(rateHz);
       } else if (subId == 1) {
         mPhaserFxL.setDepth(value);
         mPhaserFxR.setDepth(value);
@@ -1753,10 +1836,13 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         mPhaserFxL.setMix(value);
         mPhaserFxR.setMix(value);
         mFxMixLevels[3] = 1.0f;
-        // REMOVED FORCE SEND: Let users control per-track sends
       } else if (subId == 3) {
         mPhaserFxL.setIntensity(value);
         mPhaserFxR.setIntensity(value);
+      } else if (subId == 4) {
+        mPhaserSync = (value >= 0.5f);
+        float currentVal = mTracks[0].parameters[550];
+        updateGlobalParameter(550, currentVal);
       }
       break;
     case 6: // Tape Wobble (Slot 4)
@@ -1849,8 +1935,13 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
       } else if (subId == 4) {
         mHpLfoL.setResonance(value);
         mHpLfoR.setResonance(value);
-      } else if (subId == 5) { // ADDED MIX for HP LFO
-        // Removed coupling
+      } else if (subId == 5) { // 1595: HP LFO Sync
+        mHpLfoL.setSync(value >= 0.5f);
+        mHpLfoR.setSync(value >= 0.5f);
+        mHpLfoL.setBpm(mBpm);
+        mHpLfoR.setBpm(mBpm);
+        float currentVal = mTracks[0].parameters[1590];
+        updateGlobalParameter(1590, currentVal);
       }
       break;
     }
@@ -1862,8 +1953,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
     switch (fxId) {
     case 0: // Flanger (Slot 11) - Insert Style
       if (subId == 0) {
-        mFlangerFxL.setRate(value);
-        mFlangerFxR.setRate(value);
+        float rateHz = 0.05f + value * 4.95f;
+        if (mFlangerSync) {
+          float beatLen = 60.0f / std::max(1.0f, mBpm);
+          int idx = (int)(value * 11.99f);
+          float div = 1.0f;
+          switch (idx) {
+            case 0: div = 0.125f; break; // 1/32
+            case 1: div = 0.25f; break;  // 1/16
+            case 2: div = 0.33333f; break; // 1/8T
+            case 3: div = 0.375f; break; // 1/16D
+            case 4: div = 0.5f; break;   // 1/8
+            case 5: div = 0.66667f; break; // 1/4T
+            case 6: div = 0.75f; break;  // 1/8D
+            case 7: div = 1.0f; break;   // 1/4
+            case 8: div = 1.33333f; break; // 1/2T
+            case 9: div = 1.5f; break;   // 1/4D
+            case 10: div = 2.0f; break;  // 1/2
+            case 11: div = 4.0f; break;  // 1/1
+          }
+          rateHz = 1.0f / (beatLen * div);
+        }
+        mFlangerFxL.setRate(rateHz);
+        mFlangerFxR.setRate(rateHz);
       } else if (subId == 1) {
         mFlangerFxL.setDepth(value);
         mFlangerFxR.setDepth(value);
@@ -1871,7 +1983,6 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         mFlangerFxL.setMix(value);
         mFlangerFxR.setMix(value);
         mFxMixLevels[11] = 1.0f;
-        // REMOVED FORCE SEND: Let users control per-track sends
       } else if (subId == 3) {
         mFlangerFxL.setFeedback(value);
         mFlangerFxR.setFeedback(value);
@@ -1879,12 +1990,37 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         float d = value * 0.02f;
         mFlangerFxL.setDelay(d);
         mFlangerFxR.setDelay(d);
+      } else if (subId == 5) {
+        mFlangerSync = (value >= 0.5f);
+        float currentVal = mTracks[0].parameters[1500];
+        updateGlobalParameter(1500, currentVal);
       }
       break;
     case 1: // Echo (Slot 13)
       if (subId == 0) {
-        mTapeEchoFxL.setDelayTime(value);
-        mTapeEchoFxR.setDelayTime(value);
+        float delaySecs = 0.01f + value * 1.99f;
+        if (mTapeEchoSync) {
+          float beatLen = 60.0f / std::max(1.0f, mBpm);
+          int idx = (int)(value * 11.99f);
+          float div = 0.25f;
+          switch (idx) {
+            case 0: div = 0.125f; break;
+            case 1: div = 0.25f; break;
+            case 2: div = 0.33333f; break;
+            case 3: div = 0.375f; break;
+            case 4: div = 0.5f; break;
+            case 5: div = 0.66667f; break;
+            case 6: div = 0.75f; break;
+            case 7: div = 1.0f; break;
+            case 8: div = 1.33333f; break;
+            case 9: div = 1.5f; break;
+            case 10: div = 2.0f; break;
+            case 11: div = 4.0f; break;
+          }
+          delaySecs = beatLen * div;
+        }
+        mTapeEchoFxL.setDelayTime(delaySecs);
+        mTapeEchoFxR.setDelayTime(delaySecs);
       } else if (subId == 1) {
         mTapeEchoFxL.setFeedback(value);
         mTapeEchoFxR.setFeedback(value);
@@ -1901,6 +2037,10 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
       } else if (subId == 5) { // FLUTTER
         mTapeEchoFxL.setFlutter(value);
         mTapeEchoFxR.setFlutter(value);
+      } else if (subId == 6) {
+        mTapeEchoSync = (value >= 0.5f);
+        float currentVal = mTracks[0].parameters[1510];
+        updateGlobalParameter(1510, currentVal);
       }
       break;
     case 2: // Octaver (Slot 14)
@@ -1991,6 +2131,10 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
     } else {
       if (!isSequencerTrigger) {
         track.mPhysicallyHeldNoteCount--;
+        auto it = std::find(track.mLiveHeldNotes.begin(), track.mLiveHeldNotes.end(), note);
+        if (it != track.mLiveHeldNotes.end()) {
+          track.mLiveHeldNotes.erase(it);
+        }
         if (track.mPhysicallyHeldNoteCount <= 0) {
           track.mPhysicallyHeldNoteCount = 0;
           track.arpeggiator.onAllPhysicallyReleased();
@@ -2519,6 +2663,39 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
             track.mArpCountdown = arpSamplesPerStep;
         }
 
+        // Ratchet Roll (Aftertouch Roll) Clock
+        if (track.mAftertouchDestParamId == 2400) {
+          if (track.padModValue > 0.05f && !track.mLiveHeldNotes.empty()) {
+            float rollSamplesPerStep = samplesPerStep * std::max(0.125f, track.mArpRate);
+            rollSamplesPerStep /= track.arpeggiator.getRateMultiplier();
+            rollSamplesPerStep /= track.arpeggiator.getSpeedMultiplier();
+
+            if (track.mArpDivisionMode == 1)
+              rollSamplesPerStep *= 1.5f;
+            else if (track.mArpDivisionMode == 2)
+              rollSamplesPerStep *= 0.66667f;
+
+            track.mAftertouchRatchetCountdown -= framesToDo;
+            int rsafety = 0;
+            while (track.mAftertouchRatchetCountdown <= 0 && rsafety < 8) {
+              rsafety++;
+              track.mAftertouchRatchetCountdown += rollSamplesPerStep;
+
+              int vel = static_cast<int>(track.padModValue * 127.0f);
+              if (vel < 1) vel = 1;
+              if (vel > 127) vel = 127;
+
+              for (int note : track.mLiveHeldNotes) {
+                triggerNoteLocked(t, note, vel, false, 0.8f, false, true);
+              }
+            }
+            if (track.mAftertouchRatchetCountdown <= 0)
+              track.mAftertouchRatchetCountdown = rollSamplesPerStep;
+          } else {
+            track.mAftertouchRatchetCountdown = 0.0f;
+          }
+        }
+
         // Process Pending Parameters (v2.2.1 Rushing Fix)
         for (auto it = track.mPendingParams.begin();
              it != track.mPendingParams.end();) {
@@ -2760,6 +2937,7 @@ void AudioEngine::setPlaying(bool playing) {
       mBpm = 80.0f;
   }
 
+  bool wasPlaying = mIsPlaying;
   mIsPlaying = playing;
   if (!playing) {
     mSampleCount = 0;
@@ -2789,7 +2967,7 @@ void AudioEngine::setPlaying(bool playing) {
       track.analogDrumEngine.allNotesOff();
       track.soundFontEngine.allNotesOff();
     }
-  } else {
+  } else if (!wasPlaying) {
     // FIX: reset startup frames so we don't skip the first step on play
     mStartupFrames = 0;
 
@@ -2951,6 +3129,9 @@ void AudioEngine::setRouting(int destTrack, int sourceTrack, int source,
   if (source == 27) {
     source = 18; // Map UI Aftertouch (27) to ModSource::Aftertouch (18)
   }
+  if (source == 18 && sourceTrack >= 0 && sourceTrack < (int)mTracks.size()) {
+    mTracks[sourceTrack].mAftertouchDestParamId = (std::abs(amount) < 0.001f) ? -1 : destParamId;
+  }
   RoutingEntry entry = {sourceTrack, static_cast<ModSource>(source),
                         static_cast<ModDestination>(dest), destParamId, amount};
   mRoutingMatrix.addConnection(destTrack, entry);
@@ -3037,7 +3218,12 @@ void AudioEngine::applyModulations() {
       if (mod.destination == ModDestination::Parameter &&
           mod.destParamId >= 0 && mod.destParamId < 2500) {
         float baseVal = track.parameters[mod.destParamId];
-        float effectiveVal = baseVal + (srcValue * mod.amount);
+        float scale = 1.0f;
+        if ((mod.destParamId >= 490 && mod.destParamId < 600) ||
+            (mod.destParamId >= 1500 && mod.destParamId < 1600)) {
+          scale = 0.5f;
+        }
+        float effectiveVal = baseVal + (srcValue * mod.amount * scale);
         track.appliedParameters[mod.destParamId] = effectiveVal;
         currentModulated.set(mod.destParamId);
 

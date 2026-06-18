@@ -38,63 +38,75 @@ public:
     float effectiveFreq = mFrequency;
     if (mSync) {
       float beatFreq = mBpm / 60.0f;
-      int syncIdx = (int)(mUiRate * 18.99f);
+      int syncIdx = (int)(mUiRate * 22.99f);
       switch (syncIdx) {
       case 0:
+        effectiveFreq = beatFreq / 128.0f;
+        break; // 32/1
+      case 1:
+        effectiveFreq = beatFreq / 96.0f;
+        break; // 24/1
+      case 2:
+        effectiveFreq = beatFreq / 64.0f;
+        break; // 16/1
+      case 3:
+        effectiveFreq = beatFreq / 48.0f;
+        break; // 12/1
+      case 4:
         effectiveFreq = beatFreq / 32.0f;
         break; // 8/1
-      case 1:
+      case 5:
         effectiveFreq = beatFreq / 24.0f;
         break; // 6/1
-      case 2:
+      case 6:
         effectiveFreq = beatFreq / 16.0f;
         break; // 4/1
-      case 3:
+      case 7:
         effectiveFreq = beatFreq / 12.0f;
         break; // 3/1
-      case 4:
+      case 8:
         effectiveFreq = beatFreq / 8.0f;
         break; // 2/1
-      case 5:
+      case 9:
         effectiveFreq = beatFreq / 4.0f;
         break; // 1/1
-      case 6:
+      case 10:
         effectiveFreq = beatFreq / 2.0f;
         break; // 1/2
-      case 7:
+      case 11:
         effectiveFreq = beatFreq * 0.75f;
         break; // 1/3
-      case 8:
+      case 12:
         effectiveFreq = beatFreq;
         break; // 1/4
-      case 9:
+      case 13:
         effectiveFreq = beatFreq * 1.5f;
         break; // 1/6
-      case 10:
+      case 14:
         effectiveFreq = beatFreq * 2.0f;
         break; // 1/8
-      case 11:
+      case 15:
         effectiveFreq = beatFreq * 3.0f;
         break; // 1/12
-      case 12:
+      case 16:
         effectiveFreq = beatFreq * 4.0f;
         break; // 1/16
-      case 13:
+      case 17:
         effectiveFreq = beatFreq * 6.0f;
         break; // 1/24
-      case 14:
+      case 18:
         effectiveFreq = beatFreq * 8.0f;
         break; // 1/32
-      case 15:
+      case 19:
         effectiveFreq = beatFreq * 12.0f;
         break; // 1/48
-      case 16:
+      case 20:
         effectiveFreq = beatFreq * 16.0f;
         break; // 1/64
-      case 17:
+      case 21:
         effectiveFreq = beatFreq * 18.0f;
         break; // 1/72
-      case 18:
+      case 22:
         effectiveFreq = beatFreq * 24.0f;
         break; // 1/96
       default:
@@ -134,63 +146,75 @@ public:
     float effectiveFreq = mFrequency;
     if (mSync) {
       float beatFreq = mBpm / 60.0f;
-      int syncIdx = (int)(mUiRate * 18.99f);
+      int syncIdx = (int)(mUiRate * 22.99f);
       switch (syncIdx) {
       case 0:
+        effectiveFreq = beatFreq / 128.0f;
+        break; // 32/1
+      case 1:
+        effectiveFreq = beatFreq / 96.0f;
+        break; // 24/1
+      case 2:
+        effectiveFreq = beatFreq / 64.0f;
+        break; // 16/1
+      case 3:
+        effectiveFreq = beatFreq / 48.0f;
+        break; // 12/1
+      case 4:
         effectiveFreq = beatFreq / 32.0f;
         break; // 8/1
-      case 1:
+      case 5:
         effectiveFreq = beatFreq / 24.0f;
         break; // 6/1
-      case 2:
+      case 6:
         effectiveFreq = beatFreq / 16.0f;
         break; // 4/1
-      case 3:
+      case 7:
         effectiveFreq = beatFreq / 12.0f;
         break; // 3/1
-      case 4:
+      case 8:
         effectiveFreq = beatFreq / 8.0f;
         break; // 2/1
-      case 5:
+      case 9:
         effectiveFreq = beatFreq / 4.0f;
         break; // 1/1
-      case 6:
+      case 10:
         effectiveFreq = beatFreq / 2.0f;
         break; // 1/2
-      case 7:
+      case 11:
         effectiveFreq = beatFreq * 0.75f;
         break; // 1/3
-      case 8:
+      case 12:
         effectiveFreq = beatFreq;
         break; // 1/4
-      case 9:
+      case 13:
         effectiveFreq = beatFreq * 1.5f;
         break; // 1/6
-      case 10:
+      case 14:
         effectiveFreq = beatFreq * 2.0f;
         break; // 1/8
-      case 11:
+      case 15:
         effectiveFreq = beatFreq * 3.0f;
         break; // 1/12
-      case 12:
+      case 16:
         effectiveFreq = beatFreq * 4.0f;
         break; // 1/16
-      case 13:
+      case 17:
         effectiveFreq = beatFreq * 6.0f;
         break; // 1/24
-      case 14:
+      case 18:
         effectiveFreq = beatFreq * 8.0f;
         break; // 1/32
-      case 15:
+      case 19:
         effectiveFreq = beatFreq * 12.0f;
         break; // 1/48
-      case 16:
+      case 20:
         effectiveFreq = beatFreq * 16.0f;
         break; // 1/64
-      case 17:
+      case 21:
         effectiveFreq = beatFreq * 18.0f;
         break; // 1/72
-      case 18:
+      case 22:
         effectiveFreq = beatFreq * 24.0f;
         break; // 1/96
       default:

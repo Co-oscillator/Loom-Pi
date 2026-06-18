@@ -355,6 +355,9 @@ public:
 
     bool isActive = false;
     bool isTrackEnabled = true;
+    int mAftertouchDestParamId = -1;
+    float mAftertouchRatchetCountdown = 0.0f;
+    std::vector<int> mLiveHeldNotes;
     float currentFrequency = 440.0f;
     float lastOutput = 0.0f;
     float gainReduction = 1.0f;
@@ -473,6 +476,10 @@ public:
   TapeEchoFx mTapeEchoFxL, mTapeEchoFxR;
   OctaverFx mOctaverFxL, mOctaverFxR;
   Eq5BandFx mEq5BandFxL, mEq5BandFxR;
+  bool mDelaySync = false;
+  bool mTapeEchoSync = false;
+  bool mFlangerSync = false;
+  bool mPhaserSync = false;
 
   // Generic LFOs for Routing
   LfoEngine mLfos[6];
