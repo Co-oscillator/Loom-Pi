@@ -2686,6 +2686,9 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
               if (vel > 127) vel = 127;
 
               for (int note : track.mLiveHeldNotes) {
+                if (track.engineType != 5 && track.engineType != 6) {
+                  releaseNoteLocked(t, note, true);
+                }
                 triggerNoteLocked(t, note, vel, false, 0.8f, false, true);
               }
             }
