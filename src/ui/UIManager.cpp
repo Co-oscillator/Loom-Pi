@@ -177,7 +177,9 @@ UIManager::UIManager(AudioEngine& engine) : mEngine(engine) {
     mSettingsOctaveOffset = 0;
     mSettingsFxPadMomentary = false;
     mSettingsKeyboardMode = false;
-    mSettingsAudioDevice = "";
+    mSettingsAudioDevice = "Default";
+    mSettingsAudioMicDevice = "Default";
+    mSettingsAudioLineInDevice = "Default";
     
     mSettingsKnobCount = 12;
     mSettingsSliderCount = 4;
@@ -307,6 +309,15 @@ void UIManager::init() {
         mEngine.loadProject(initLoomPath);
         loadSettings(mSettingsFilePath);
     }
+
+    // Switch to correct physical device depending on initial recording source
+    int activeSrc = mEngine.mRecordingSource.load();
+    if (activeSrc == 0) { // MIC
+        switchCaptureDevice(mSettingsAudioMicDevice);
+    } else if (activeSrc == 1) { // LINE_IN
+        switchCaptureDevice(mSettingsAudioLineInDevice);
+    }
+
     mNeedsScreenRebuild = true;
 
     // Load custom FM presets persistently
@@ -2656,60 +2667,99 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
 
-    // Audio Input Device (Capture) Dropdown
-    lv_obj_t* inputDeviceLbl = lv_label_create(audioCard);
-    lv_label_set_text(inputDeviceLbl, "Active Input/Mic Device:");
-    lv_obj_set_style_text_font(inputDeviceLbl, &lv_font_montserrat_10, 0);
+    // 1. Mic Device Dropdown
+    lv_obj_t* micDeviceLbl = lv_label_create(audioCard);
+    lv_label_set_text(micDeviceLbl, "Active Mic Device:");
+    lv_obj_set_style_text_font(micDeviceLbl, &lv_font_montserrat_10, 0);
 
-    std::string inputDeviceOptions = "Default\n";
+    std::string micDeviceOptions = "Default\n";
     int numInputDevs = SDL_GetNumAudioDevices(1);
     std::vector<std::string> inputDevNames;
     inputDevNames.push_back("Default");
-    int activeInputIdx = 0;
+    int activeMicIdx = 0;
+    int activeLineInIdx = 0;
     
     for (int i = 0; i < numInputDevs; ++i) {
         const char* name = SDL_GetAudioDeviceName(i, 1);
         if (name) {
-            inputDeviceOptions += std::string(name) + "\n";
+            micDeviceOptions += std::string(name) + "\n";
             inputDevNames.push_back(name);
-            if (gCurrentCaptureDevice == name) {
-                activeInputIdx = inputDevNames.size() - 1;
+            if (mSettingsAudioMicDevice == name) {
+                activeMicIdx = inputDevNames.size() - 1;
+            }
+            if (mSettingsAudioLineInDevice == name) {
+                activeLineInIdx = inputDevNames.size() - 1;
             }
         }
     }
-    if (!inputDeviceOptions.empty() && inputDeviceOptions.back() == '\n') {
-        inputDeviceOptions.pop_back();
+    if (!micDeviceOptions.empty() && micDeviceOptions.back() == '\n') {
+        micDeviceOptions.pop_back();
     }
 
-    lv_obj_t* inputDeviceDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(inputDeviceDd, 200, 36);
-    lv_dropdown_set_options(inputDeviceDd, inputDeviceOptions.c_str());
-    lv_obj_set_style_bg_color(inputDeviceDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(inputDeviceDd, &lv_font_montserrat_12, 0);
-    lv_dropdown_set_selected(inputDeviceDd, activeInputIdx);
+    lv_obj_t* micDeviceDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(micDeviceDd, 200, 36);
+    lv_dropdown_set_options(micDeviceDd, micDeviceOptions.c_str());
+    lv_obj_set_style_bg_color(micDeviceDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(micDeviceDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(micDeviceDd, activeMicIdx);
 
-    DeviceChangeData* inputDevData = new DeviceChangeData{this, inputDevNames};
+    DeviceChangeData* micDevData = new DeviceChangeData{this, inputDevNames};
 
-    auto inputDevCb = [](lv_event_t* e) {
+    auto micDevCb = [](lv_event_t* e) {
         DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
         lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
         int selected = lv_dropdown_get_selected(dd);
         if (selected >= 0 && selected < (int)d->names.size()) {
             std::string selectedName = d->names[selected];
-            bool success = switchCaptureDevice(selectedName);
-            if (success) {
-                d->ui->mSettingsAudioInputDevice = selectedName;
-                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            d->ui->mSettingsAudioMicDevice = selectedName;
+            if (d->ui->mEngine.mRecordingSource.load() == 0) {
+                switchCaptureDevice(selectedName);
             }
+            d->ui->saveSettings(d->ui->mSettingsFilePath);
         }
     };
-    lv_obj_add_event_cb(inputDeviceDd, inputDevCb, LV_EVENT_VALUE_CHANGED, inputDevData);
+    lv_obj_add_event_cb(micDeviceDd, micDevCb, LV_EVENT_VALUE_CHANGED, micDevData);
 
-    auto inputDevFreeCb = [](lv_event_t* e) {
+    auto micDevFreeCb = [](lv_event_t* e) {
         DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
         delete d;
     };
-    lv_obj_add_event_cb(inputDeviceDd, inputDevFreeCb, LV_EVENT_DELETE, inputDevData);
+    lv_obj_add_event_cb(micDeviceDd, micDevFreeCb, LV_EVENT_DELETE, micDevData);
+
+    // 2. Line In Device Dropdown
+    lv_obj_t* lineInDeviceLbl = lv_label_create(audioCard);
+    lv_label_set_text(lineInDeviceLbl, "Active Line-In Device:");
+    lv_obj_set_style_text_font(lineInDeviceLbl, &lv_font_montserrat_10, 0);
+
+    lv_obj_t* lineInDeviceDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(lineInDeviceDd, 200, 36);
+    lv_dropdown_set_options(lineInDeviceDd, micDeviceOptions.c_str());
+    lv_obj_set_style_bg_color(lineInDeviceDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(lineInDeviceDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(lineInDeviceDd, activeLineInIdx);
+
+    DeviceChangeData* lineInDevData = new DeviceChangeData{this, inputDevNames};
+
+    auto lineInDevCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            d->ui->mSettingsAudioLineInDevice = selectedName;
+            if (d->ui->mEngine.mRecordingSource.load() == 1) {
+                switchCaptureDevice(selectedName);
+            }
+            d->ui->saveSettings(d->ui->mSettingsFilePath);
+        }
+    };
+    lv_obj_add_event_cb(lineInDeviceDd, lineInDevCb, LV_EVENT_VALUE_CHANGED, lineInDevData);
+
+    auto lineInDevFreeCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        delete d;
+    };
+    lv_obj_add_event_cb(lineInDeviceDd, lineInDevFreeCb, LV_EVENT_DELETE, lineInDevData);
 
     // Panic Button and Reset MIDI
     lv_obj_t* actionLbl = lv_label_create(audioCard);
@@ -15120,6 +15170,11 @@ void UIManager::audioInSourceDropdownEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     int sel = lv_dropdown_get_selected(dd);
     ui->mEngine.setRecordingSource(sel); // 0 = MIC, 1 = LINE_IN, 2 = RESAMPLE
+    if (sel == 0) {
+        switchCaptureDevice(ui->mSettingsAudioMicDevice);
+    } else if (sel == 1) {
+        switchCaptureDevice(ui->mSettingsAudioLineInDevice);
+    }
     const char* srcNames[] = {"MIC", "LINE-IN", "RESAMPLE"};
     std::cout << "Audio Input Source changed to: " << srcNames[sel % 3] << std::endl;
 }
@@ -15644,7 +15699,8 @@ void UIManager::saveSettings(const std::string& path) {
     file << "FAST_GRANULAR:" << (mEngine.getFastGranularEnabled() ? 1 : 0) << "\n";
     file << "AUDIO_OUTPUT_MODE:" << mEngine.getAudioOutputMode() << "\n";
     file << "AUDIO_DEVICE:" << mSettingsAudioDevice << "\n";
-    file << "AUDIO_INPUT_DEVICE:" << mSettingsAudioInputDevice << "\n";
+    file << "AUDIO_MIC_DEVICE:" << mSettingsAudioMicDevice << "\n";
+    file << "AUDIO_LINE_IN_DEVICE:" << mSettingsAudioLineInDevice << "\n";
 
     // Transport & custom configurations
     file << "PLAY_CC:" << mCcPlay << "\n";
@@ -15730,10 +15786,19 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
             else if (key == "AUDIO_DEVICE") mSettingsAudioDevice = val;
-            else if (key == "AUDIO_INPUT_DEVICE") {
-                mSettingsAudioInputDevice = val;
-                gCurrentCaptureDevice = val;
-                switchCaptureDevice(val);
+            else if (key == "AUDIO_MIC_DEVICE") {
+                mSettingsAudioMicDevice = val;
+                if (mEngine.mRecordingSource.load() == 0) {
+                    gCurrentCaptureDevice = val;
+                    switchCaptureDevice(val);
+                }
+            }
+            else if (key == "AUDIO_LINE_IN_DEVICE") {
+                mSettingsAudioLineInDevice = val;
+                if (mEngine.mRecordingSource.load() == 1) {
+                    gCurrentCaptureDevice = val;
+                    switchCaptureDevice(val);
+                }
             }
             else if (key == "PLAY_CC") mCcPlay = std::stoi(val);
             else if (key == "STOP_CC") mCcStop = std::stoi(val);
