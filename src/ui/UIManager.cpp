@@ -40,6 +40,8 @@ static std::string getLocalIPAddress() {
 
 extern std::string gCurrentAudioDevice;
 extern bool switchAudioDevice(const std::string& deviceName);
+extern std::string gCurrentCaptureDevice;
+extern bool switchCaptureDevice(const std::string& deviceName);
 
 static int s_activeFmPreset[18] = {0};
 
@@ -2653,6 +2655,61 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
         delete d;
     };
     lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
+
+    // Audio Input Device (Capture) Dropdown
+    lv_obj_t* inputDeviceLbl = lv_label_create(audioCard);
+    lv_label_set_text(inputDeviceLbl, "Active Input/Mic Device:");
+    lv_obj_set_style_text_font(inputDeviceLbl, &lv_font_montserrat_10, 0);
+
+    std::string inputDeviceOptions = "Default\n";
+    int numInputDevs = SDL_GetNumAudioDevices(1);
+    std::vector<std::string> inputDevNames;
+    inputDevNames.push_back("Default");
+    int activeInputIdx = 0;
+    
+    for (int i = 0; i < numInputDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 1);
+        if (name) {
+            inputDeviceOptions += std::string(name) + "\n";
+            inputDevNames.push_back(name);
+            if (gCurrentCaptureDevice == name) {
+                activeInputIdx = inputDevNames.size() - 1;
+            }
+        }
+    }
+    if (!inputDeviceOptions.empty() && inputDeviceOptions.back() == '\n') {
+        inputDeviceOptions.pop_back();
+    }
+
+    lv_obj_t* inputDeviceDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(inputDeviceDd, 200, 36);
+    lv_dropdown_set_options(inputDeviceDd, inputDeviceOptions.c_str());
+    lv_obj_set_style_bg_color(inputDeviceDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(inputDeviceDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(inputDeviceDd, activeInputIdx);
+
+    DeviceChangeData* inputDevData = new DeviceChangeData{this, inputDevNames};
+
+    auto inputDevCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            bool success = switchCaptureDevice(selectedName);
+            if (success) {
+                d->ui->mSettingsAudioInputDevice = selectedName;
+                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            }
+        }
+    };
+    lv_obj_add_event_cb(inputDeviceDd, inputDevCb, LV_EVENT_VALUE_CHANGED, inputDevData);
+
+    auto inputDevFreeCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        delete d;
+    };
+    lv_obj_add_event_cb(inputDeviceDd, inputDevFreeCb, LV_EVENT_DELETE, inputDevData);
 
     // Panic Button and Reset MIDI
     lv_obj_t* actionLbl = lv_label_create(audioCard);
@@ -15587,6 +15644,7 @@ void UIManager::saveSettings(const std::string& path) {
     file << "FAST_GRANULAR:" << (mEngine.getFastGranularEnabled() ? 1 : 0) << "\n";
     file << "AUDIO_OUTPUT_MODE:" << mEngine.getAudioOutputMode() << "\n";
     file << "AUDIO_DEVICE:" << mSettingsAudioDevice << "\n";
+    file << "AUDIO_INPUT_DEVICE:" << mSettingsAudioInputDevice << "\n";
 
     // Transport & custom configurations
     file << "PLAY_CC:" << mCcPlay << "\n";
@@ -15672,6 +15730,11 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
             else if (key == "AUDIO_DEVICE") mSettingsAudioDevice = val;
+            else if (key == "AUDIO_INPUT_DEVICE") {
+                mSettingsAudioInputDevice = val;
+                gCurrentCaptureDevice = val;
+                switchCaptureDevice(val);
+            }
             else if (key == "PLAY_CC") mCcPlay = std::stoi(val);
             else if (key == "STOP_CC") mCcStop = std::stoi(val);
             else if (key == "RECORD_CC") mCcRecord = std::stoi(val);

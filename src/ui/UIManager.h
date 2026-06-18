@@ -586,6 +586,7 @@ public:
     // Settings – Keyboard mode
     bool mSettingsKeyboardMode = true;
     std::string mSettingsAudioDevice = "Default";
+    std::string mSettingsAudioInputDevice = "Default";
     std::string mSettingsFilePath;
     
     // Settings callbacks (General tab)

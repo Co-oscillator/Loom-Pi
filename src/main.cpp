@@ -62,6 +62,41 @@ bool switchAudioDevice(const std::string& deviceName) {
     return false;
 }
 
+SDL_AudioDeviceID gCaptureDeviceID = 0;
+std::string gCurrentCaptureDevice = "Default";
+
+bool switchCaptureDevice(const std::string& deviceName) {
+    if (gCaptureDeviceID != 0) {
+        SDL_CloseAudioDevice(gCaptureDeviceID);
+        gCaptureDeviceID = 0;
+    }
+    
+    SDL_AudioSpec wantCapture, haveCapture;
+    SDL_zero(wantCapture);
+    wantCapture.freq = 48000;
+    wantCapture.format = AUDIO_F32SYS;
+    wantCapture.channels = 2;
+    wantCapture.samples = 256;
+    wantCapture.callback = audioCaptureCallback;
+    
+    const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
+    gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, 0);
+    if (gCaptureDeviceID == 0) {
+        std::cerr << "switchCaptureDevice failed: " << SDL_GetError() << std::endl;
+        gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, 0);
+        gCurrentCaptureDevice = "Default";
+    } else {
+        gCurrentCaptureDevice = deviceName;
+    }
+    
+    if (gCaptureDeviceID != 0) {
+        SDL_PauseAudioDevice(gCaptureDeviceID, 0);
+        std::cout << "SDL Capture Device switched to: " << gCurrentCaptureDevice << std::endl;
+        return true;
+    }
+    return false;
+}
+
 int main() {
     std::cout << "Starting Loom Pi Audio Engine + UI..." << std::endl;
     
@@ -80,20 +115,8 @@ int main() {
     }
     
     // Open SDL Audio Capture (recording) device
-    SDL_AudioSpec wantCapture, haveCapture;
-    SDL_zero(wantCapture);
-    wantCapture.freq = 48000;
-    wantCapture.format = AUDIO_F32SYS;
-    wantCapture.channels = 2;
-    wantCapture.samples = 256;
-    wantCapture.callback = audioCaptureCallback;
-
-    SDL_AudioDeviceID capDev = SDL_OpenAudioDevice(NULL, 1, &wantCapture, &haveCapture, 0);
-    if (capDev != 0) {
-        SDL_PauseAudioDevice(capDev, 0); // Start capturing microphone input
-        std::cout << "SDL Capture Device opened and started successfully." << std::endl;
-    } else {
-        std::cerr << "SDL_OpenAudioDevice (Capture) failed: " << SDL_GetError() << std::endl;
+    if (!switchCaptureDevice(gCurrentCaptureDevice)) {
+        std::cerr << "Failed to open default SDL Capture Device." << std::endl;
     }
     
     // 3. Init LVGL
@@ -205,8 +228,8 @@ int main() {
         // Check for quit
         SDL_Event quitEvent;
         if (SDL_PeepEvents(&quitEvent, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
-            if (capDev != 0) {
-                SDL_CloseAudioDevice(capDev);
+            if (gCaptureDeviceID != 0) {
+                SDL_CloseAudioDevice(gCaptureDeviceID);
             }
             SDL_CloseAudioDevice(gAudioDeviceID);
             SDL_Quit();
@@ -273,8 +296,8 @@ int main() {
         SDL_Delay(time_till_next);
     }
 
-    if (capDev != 0) {
-        SDL_CloseAudioDevice(capDev);
+    if (gCaptureDeviceID != 0) {
+        SDL_CloseAudioDevice(gCaptureDeviceID);
     }
     SDL_CloseAudioDevice(gAudioDeviceID);
     SDL_Quit();
