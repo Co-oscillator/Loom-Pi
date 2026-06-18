@@ -10,7 +10,7 @@
 #include <mutex>
 
 struct MidiCallbackData;
-void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data);
+static void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data);
 
 class UIManager {
 public:
