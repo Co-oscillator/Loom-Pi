@@ -573,17 +573,23 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                             bool isKnob = true;
                             for (int k = 0; k < data->ui->mSettingsKnobCount; ++k) {
                                 if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
-                                    foundIdx = k;
-                                    isKnob = true;
-                                    break;
+                                    int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
+                                    if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                        foundIdx = k;
+                                        isKnob = true;
+                                        break;
+                                    }
                                 }
                             }
                             if (foundIdx == -1) {
                                 for (int f = 0; f < data->ui->mSettingsSliderCount; ++f) {
                                     if (data->ui->mSeqMidiFaderCC[activeTrack][f] == cc) {
-                                        foundIdx = f;
-                                        isKnob = false;
-                                        break;
+                                        int mappedCh = data->ui->mSeqMidiFaderChannel[activeTrack][f];
+                                        if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                            foundIdx = f;
+                                            isKnob = false;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -594,7 +600,10 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                     if (data->ui->mSeqMidiKnobParam[activeTrack][k] == -1) {
                                         foundIdx = k;
                                         isKnob = true;
-                                        data->ui->mSeqMidiKnobCC[activeTrack][k] = cc;
+                                        for (int t = 0; t < 8; ++t) {
+                                            data->ui->mSeqMidiKnobCC[t][k] = cc;
+                                            data->ui->mSeqMidiKnobChannel[t][k] = channel + 1;
+                                        }
                                         break;
                                     }
                                 }
@@ -604,7 +613,10 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                     if (data->ui->mSeqMidiFaderParam[activeTrack][f] == -1) {
                                         foundIdx = f;
                                         isKnob = false;
-                                        data->ui->mSeqMidiFaderCC[activeTrack][f] = cc;
+                                        for (int t = 0; t < 8; ++t) {
+                                            data->ui->mSeqMidiFaderCC[t][f] = cc;
+                                            data->ui->mSeqMidiFaderChannel[t][f] = channel + 1;
+                                        }
                                         break;
                                     }
                                 }
@@ -614,7 +626,10 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                             if (foundIdx == -1) {
                                 foundIdx = 0;
                                 isKnob = true;
-                                data->ui->mSeqMidiKnobCC[activeTrack][0] = cc;
+                                for (int t = 0; t < 8; ++t) {
+                                    data->ui->mSeqMidiKnobCC[t][0] = cc;
+                                    data->ui->mSeqMidiKnobChannel[t][0] = channel + 1;
+                                }
                             }
 
                             // Perform the assignment
@@ -640,66 +655,69 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                             // Check knobs CCs
                             for (int k = 0; k < data->ui->mSettingsKnobCount; ++k) {
                                 if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
-                                    int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
-                                    if (paramId >= 0) {
-                                        uint32_t now = lv_tick_get();
-                                        uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
-                                        uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
-                                        bool isInit = data->ui->mKnobInitialized[activeTrack][k];
+                                    int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
+                                    if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                        int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
+                                        if (paramId >= 0) {
+                                            uint32_t now = lv_tick_get();
+                                            uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
+                                            uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
+                                            bool isInit = data->ui->mKnobInitialized[activeTrack][k];
 
-                                        data->ui->mLastKnobCcVal[activeTrack][k] = val;
-                                        data->ui->mLastKnobMs[activeTrack][k] = now;
-                                        data->ui->mKnobInitialized[activeTrack][k] = true;
+                                            data->ui->mLastKnobCcVal[activeTrack][k] = val;
+                                            data->ui->mLastKnobMs[activeTrack][k] = now;
+                                            data->ui->mKnobInitialized[activeTrack][k] = true;
 
-                                        float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
+                                            float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
 
-                                        if (isInit) {
-                                            float normVal = data->ui->normalizeParamValue(paramId, paramVal);
+                                            if (isInit) {
+                                                float normVal = data->ui->normalizeParamValue(paramId, paramVal);
 
-                                            // Calculate CC value delta
-                                            int rawDelta = (int)val - (int)lastCcVal;
-                                            
-                                            // Handle wrap-arounds for endless encoders
-                                            if (rawDelta > 64) rawDelta -= 128;
-                                            else if (rawDelta < -64) rawDelta += 128;
+                                                // Calculate CC value delta
+                                                int rawDelta = (int)val - (int)lastCcVal;
+                                                
+                                                // Handle wrap-arounds for endless encoders
+                                                if (rawDelta > 64) rawDelta -= 128;
+                                                else if (rawDelta < -64) rawDelta += 128;
 
-                                            float delta = (float)rawDelta / 127.0f;
+                                                float delta = (float)rawDelta / 127.0f;
 
-                                            // Calculate time delta and velocity-based acceleration
-                                            uint32_t dt = now - lastTime;
-                                            if (dt == 0) dt = 1; // prevent division by zero
+                                                // Calculate time delta and velocity-based acceleration
+                                                uint32_t dt = now - lastTime;
+                                                if (dt == 0) dt = 1; // prevent division by zero
 
-                                            float multiplier = 1.0f;
-                                            if (dt < 100) {
-                                                // High-speed quadratic spin acceleration (half as aggressive)
-                                                float speedFactor = 100.0f / (float)dt;
-                                                multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
-                                                if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
-                                            } else if (dt > 300) {
-                                                // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
-                                                multiplier = 0.8f;
+                                                float multiplier = 1.0f;
+                                                if (dt < 100) {
+                                                    // High-speed quadratic spin acceleration (half as aggressive)
+                                                    float speedFactor = 100.0f / (float)dt;
+                                                    multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
+                                                    if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
+                                                } else if (dt > 300) {
+                                                    // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
+                                                    multiplier = 0.8f;
+                                                }
+
+                                                float paramDelta = delta * multiplier;
+                                                if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
+                                                    paramDelta = -paramDelta;
+                                                }
+
+                                                float newNormVal = normVal + paramDelta;
+                                                if (newNormVal < 0.0f) newNormVal = 0.0f;
+                                                if (newNormVal > 1.0f) newNormVal = 1.0f;
+
+                                                float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
+
+                                                data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                                data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+                                            } else {
+                                                // First knob move: synchronize visual state to current soft param
+                                                data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
                                             }
-
-                                            float paramDelta = delta * multiplier;
-                                            if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
-                                                paramDelta = -paramDelta;
-                                            }
-
-                                            float newNormVal = normVal + paramDelta;
-                                            if (newNormVal < 0.0f) newNormVal = 0.0f;
-                                            if (newNormVal > 1.0f) newNormVal = 1.0f;
-
-                                            float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
-
-                                            data->engine->setParameter(activeTrack, paramId, scaledVal);
-                                            data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
-                                        } else {
-                                            // First knob move: synchronize visual state to current soft param
-                                            data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
                                         }
+                                        ccMatched = true;
+                                        break;
                                     }
-                                    ccMatched = true;
-                                    break;
                                 }
                             }
                             
@@ -707,14 +725,17 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                             if (!ccMatched) {
                                 for (int f = 0; f < data->ui->mSettingsSliderCount; ++f) {
                                     if (data->ui->mSeqMidiFaderCC[activeTrack][f] == cc) {
-                                        data->ui->mSeqMidiFaderValue[activeTrack][f] = floatVal;
-                                        int paramId = data->ui->mSeqMidiFaderParam[activeTrack][f];
-                                        if (paramId >= 0) {
-                                            float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
-                                            float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
-                                            data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                        int mappedCh = data->ui->mSeqMidiFaderChannel[activeTrack][f];
+                                        if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                            data->ui->mSeqMidiFaderValue[activeTrack][f] = floatVal;
+                                            int paramId = data->ui->mSeqMidiFaderParam[activeTrack][f];
+                                            if (paramId >= 0) {
+                                                float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
+                                                float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
+                                                data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                            }
+                                            break;
                                         }
-                                        break;
                                     }
                                 }
                             }
@@ -1163,17 +1184,23 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 bool isKnob = true;
                 for (int k = 0; k < data->ui->mSettingsKnobCount; ++k) {
                     if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
-                        foundIdx = k;
-                        isKnob = true;
-                        break;
+                        int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
+                        if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                            foundIdx = k;
+                            isKnob = true;
+                            break;
+                        }
                     }
                 }
                 if (foundIdx == -1) {
                     for (int f = 0; f < data->ui->mSettingsSliderCount; ++f) {
                         if (data->ui->mSeqMidiFaderCC[activeTrack][f] == cc) {
-                            foundIdx = f;
-                            isKnob = false;
-                            break;
+                            int mappedCh = data->ui->mSeqMidiFaderChannel[activeTrack][f];
+                            if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                foundIdx = f;
+                                isKnob = false;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1184,7 +1211,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                         if (data->ui->mSeqMidiKnobParam[activeTrack][k] == -1) {
                             foundIdx = k;
                             isKnob = true;
-                            data->ui->mSeqMidiKnobCC[activeTrack][k] = cc;
+                            for (int t = 0; t < 8; ++t) {
+                                data->ui->mSeqMidiKnobCC[t][k] = cc;
+                                data->ui->mSeqMidiKnobChannel[t][k] = channel + 1;
+                            }
                             break;
                         }
                     }
@@ -1194,7 +1224,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                         if (data->ui->mSeqMidiFaderParam[activeTrack][f] == -1) {
                             foundIdx = f;
                             isKnob = false;
-                            data->ui->mSeqMidiFaderCC[activeTrack][f] = cc;
+                            for (int t = 0; t < 8; ++t) {
+                                data->ui->mSeqMidiFaderCC[t][f] = cc;
+                                data->ui->mSeqMidiFaderChannel[t][f] = channel + 1;
+                            }
                             break;
                         }
                     }
@@ -1204,7 +1237,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 if (foundIdx == -1) {
                     foundIdx = 0;
                     isKnob = true;
-                    data->ui->mSeqMidiKnobCC[activeTrack][0] = cc;
+                    for (int t = 0; t < 8; ++t) {
+                        data->ui->mSeqMidiKnobCC[t][0] = cc;
+                        data->ui->mSeqMidiKnobChannel[t][0] = channel + 1;
+                    }
                 }
 
                 // Perform the assignment
@@ -1230,66 +1266,69 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 // Check knobs CCs
                 for (int k = 0; k < data->ui->mSettingsKnobCount; ++k) {
                     if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
-                        int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
-                        if (paramId >= 0) {
-                            uint32_t now = lv_tick_get();
-                            uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
-                            uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
-                            bool isInit = data->ui->mKnobInitialized[activeTrack][k];
+                        int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
+                        if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                            int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
+                            if (paramId >= 0) {
+                                uint32_t now = lv_tick_get();
+                                uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
+                                uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
+                                bool isInit = data->ui->mKnobInitialized[activeTrack][k];
 
-                            data->ui->mLastKnobCcVal[activeTrack][k] = val;
-                            data->ui->mLastKnobMs[activeTrack][k] = now;
-                            data->ui->mKnobInitialized[activeTrack][k] = true;
+                                data->ui->mLastKnobCcVal[activeTrack][k] = val;
+                                data->ui->mLastKnobMs[activeTrack][k] = now;
+                                data->ui->mKnobInitialized[activeTrack][k] = true;
 
-                            float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
+                                float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
 
-                            if (isInit) {
-                                float normVal = data->ui->normalizeParamValue(paramId, paramVal);
+                                if (isInit) {
+                                    float normVal = data->ui->normalizeParamValue(paramId, paramVal);
 
-                                // Calculate CC value delta
-                                int rawDelta = (int)val - (int)lastCcVal;
-                                
-                                // Handle wrap-arounds for endless encoders
-                                if (rawDelta > 64) rawDelta -= 128;
-                                else if (rawDelta < -64) rawDelta += 128;
+                                    // Calculate CC value delta
+                                    int rawDelta = (int)val - (int)lastCcVal;
+                                    
+                                    // Handle wrap-arounds for endless encoders
+                                    if (rawDelta > 64) rawDelta -= 128;
+                                    else if (rawDelta < -64) rawDelta += 128;
 
-                                float delta = (float)rawDelta / 127.0f;
+                                    float delta = (float)rawDelta / 127.0f;
 
-                                // Calculate time delta and velocity-based acceleration
-                                uint32_t dt = now - lastTime;
-                                if (dt == 0) dt = 1; // prevent division by zero
+                                    // Calculate time delta and velocity-based acceleration
+                                    uint32_t dt = now - lastTime;
+                                    if (dt == 0) dt = 1; // prevent division by zero
 
-                                float multiplier = 1.0f;
-                                if (dt < 100) {
-                                    // High-speed quadratic spin acceleration (half as aggressive)
-                                    float speedFactor = 100.0f / (float)dt;
-                                    multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
-                                    if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
-                                } else if (dt > 300) {
-                                    // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
-                                    multiplier = 0.8f;
+                                    float multiplier = 1.0f;
+                                    if (dt < 100) {
+                                        // High-speed quadratic spin acceleration (half as aggressive)
+                                        float speedFactor = 100.0f / (float)dt;
+                                        multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
+                                        if (multiplier > 4.0f) multiplier = 4.0f; // cap max acceleration at 4.0f (half of 8.0)
+                                    } else if (dt > 300) {
+                                        // Slow turn fine resolution adjustment (0.8x for less sluggish feel)
+                                        multiplier = 0.8f;
+                                    }
+
+                                    float paramDelta = delta * multiplier;
+                                    if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
+                                        paramDelta = -paramDelta;
+                                    }
+
+                                    float newNormVal = normVal + paramDelta;
+                                    if (newNormVal < 0.0f) newNormVal = 0.0f;
+                                    if (newNormVal > 1.0f) newNormVal = 1.0f;
+
+                                    float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
+
+                                    data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                    data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+                                } else {
+                                    // First knob move: synchronize visual state to current soft param
+                                    data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
                                 }
-
-                                float paramDelta = delta * multiplier;
-                                if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
-                                    paramDelta = -paramDelta;
-                                }
-
-                                float newNormVal = normVal + paramDelta;
-                                if (newNormVal < 0.0f) newNormVal = 0.0f;
-                                if (newNormVal > 1.0f) newNormVal = 1.0f;
-
-                                float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
-
-                                data->engine->setParameter(activeTrack, paramId, scaledVal);
-                                data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
-                            } else {
-                                // First knob move: synchronize visual state to current soft param
-                                data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
                             }
+                            ccMatched = true;
+                            break;
                         }
-                        ccMatched = true;
-                        break;
                     }
                 }
                 
@@ -1297,14 +1336,17 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 if (!ccMatched) {
                     for (int f = 0; f < data->ui->mSettingsSliderCount; ++f) {
                         if (data->ui->mSeqMidiFaderCC[activeTrack][f] == cc) {
-                            data->ui->mSeqMidiFaderValue[activeTrack][f] = floatVal;
-                            int paramId = data->ui->mSeqMidiFaderParam[activeTrack][f];
-                            if (paramId >= 0) {
-                                float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
-                                float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
-                                data->engine->setParameter(activeTrack, paramId, scaledVal);
+                            int mappedCh = data->ui->mSeqMidiFaderChannel[activeTrack][f];
+                            if (mappedCh == 0 || mappedCh == (channel + 1)) {
+                                data->ui->mSeqMidiFaderValue[activeTrack][f] = floatVal;
+                                int paramId = data->ui->mSeqMidiFaderParam[activeTrack][f];
+                                if (paramId >= 0) {
+                                    float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
+                                    float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
+                                    data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                }
+                                break;
                             }
-                            break;
                         }
                     }
                 }

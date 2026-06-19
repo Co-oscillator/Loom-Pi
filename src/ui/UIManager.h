@@ -32,6 +32,7 @@ public:
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
     int mSeqMidiKnobCC[8][24];
+    int mSeqMidiKnobChannel[8][24]; // 0=ALL, 1-16
     int mSeqMidiKnobParam[8][24]; // mapped param IDs
     float mSeqMidiKnobValue[8][24];
     bool mSeqMidiKnobInverted[8][24];
@@ -39,6 +40,7 @@ public:
     uint8_t mLastKnobCcVal[8][24] = {0};
     bool mKnobInitialized[8][24] = {false};
     int mSeqMidiFaderCC[8][24];
+    int mSeqMidiFaderChannel[8][24]; // 0=ALL, 1-16
     int mSeqMidiFaderParam[8][24]; // mapped param IDs
     float mSeqMidiFaderValue[8][24];
     bool mSeqMidiFaderInverted[8][24];
@@ -349,6 +351,7 @@ private:
     lv_obj_t* mRemapModal = nullptr;
     int mRemapTargetIndex = 0; // 0-7 for knobs, 8-15 for faders
     lv_obj_t* mRemapCcSpinner = nullptr;
+    lv_obj_t* mRemapChannelDd = nullptr;
     lv_obj_t* mModDestModal = nullptr;
     lv_obj_t* mModDestBtnLabel = nullptr;
     lv_obj_t* mPedalPickerModal = nullptr;

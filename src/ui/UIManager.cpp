@@ -6642,6 +6642,11 @@ void UIManager::populateAssignScreen() {
         lv_obj_set_flex_flow(kCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(kCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
+        lv_obj_t* identLbl = lv_label_create(kCard);
+        lv_label_set_text_fmt(identLbl, "K%d", k + 1);
+        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(identLbl, lv_color_hex(0xFFB300), 0);
+
         lv_obj_t* paramLbl = lv_label_create(kCard);
         if (paramId == -1) {
             lv_label_set_text(paramLbl, "None");
@@ -6658,7 +6663,7 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* arc = lv_arc_create(kCard);
         mAssignKnobArcs[k] = arc;
-        lv_obj_set_size(arc, 62, 62);
+        lv_obj_set_size(arc, 60, 60);
         lv_arc_set_range(arc, 0, 100);
         lv_arc_set_value(arc, (int)(mSeqMidiKnobValue[mActiveTrack][k] * 100));
         lv_obj_set_style_arc_color(arc, trackColor, LV_PART_INDICATOR);
@@ -6671,7 +6676,12 @@ void UIManager::populateAssignScreen() {
         lv_obj_center(valLbl);
 
         lv_obj_t* ccLbl = lv_label_create(kCard);
-        lv_label_set_text_fmt(ccLbl, "CC %d", mSeqMidiKnobCC[mActiveTrack][k]);
+        int ch = mSeqMidiKnobChannel[mActiveTrack][k];
+        if (ch == 0) {
+            lv_label_set_text_fmt(ccLbl, "CC %d", mSeqMidiKnobCC[mActiveTrack][k]);
+        } else {
+            lv_label_set_text_fmt(ccLbl, "CC %d [CH%d]", mSeqMidiKnobCC[mActiveTrack][k], ch);
+        }
         lv_obj_set_style_text_font(ccLbl, &lv_font_montserrat_10, 0);
         lv_obj_set_style_text_color(ccLbl, trackColor, 0);
 
@@ -6734,6 +6744,11 @@ void UIManager::populateAssignScreen() {
         lv_obj_set_flex_flow(fCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(fCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
+        lv_obj_t* identLbl = lv_label_create(fCard);
+        lv_label_set_text_fmt(identLbl, "F%d", f + 1);
+        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(identLbl, lv_color_hex(0xFFB300), 0);
+
         lv_obj_t* paramLbl = lv_label_create(fCard);
         if (paramId == -1) {
             lv_label_set_text(paramLbl, "None");
@@ -6763,7 +6778,12 @@ void UIManager::populateAssignScreen() {
         lv_obj_set_style_text_font(valLbl, &lv_font_montserrat_10, 0);
 
         lv_obj_t* ccLbl = lv_label_create(fCard);
-        lv_label_set_text_fmt(ccLbl, "CC %d", mSeqMidiFaderCC[mActiveTrack][f]);
+        int ch = mSeqMidiFaderChannel[mActiveTrack][f];
+        if (ch == 0) {
+            lv_label_set_text_fmt(ccLbl, "CC %d", mSeqMidiFaderCC[mActiveTrack][f]);
+        } else {
+            lv_label_set_text_fmt(ccLbl, "CC %d [CH%d]", mSeqMidiFaderCC[mActiveTrack][f], ch);
+        }
         lv_obj_set_style_text_font(ccLbl, &lv_font_montserrat_10, 0);
         lv_obj_set_style_text_color(ccLbl, trackColor, 0);
 
@@ -6771,9 +6791,9 @@ void UIManager::populateAssignScreen() {
         lv_obj_add_flag(fCard, LV_OBJ_FLAG_CLICKABLE);
         struct RemapEventData {
             UIManager* ui;
-            int targetIdx; // 12-23 for faders
+            int targetIdx; // 24-47 for faders
         };
-        RemapEventData* remapData = new RemapEventData{this, f + 12};
+        RemapEventData* remapData = new RemapEventData{this, f + 24};
         lv_obj_add_event_cb(fCard, openRemapModalEventCb, LV_EVENT_CLICKED, remapData);
 
         struct FaderEventData {
@@ -8085,7 +8105,7 @@ void UIManager::paramSelectorClickEventCb(lv_event_t* e) {
 void UIManager::openRemapModalEventCb(lv_event_t* e) {
     struct RemapEventData {
         UIManager* ui;
-        int targetIdx; // 0-7 knobs, 8-15 faders
+        int targetIdx;
     };
     RemapEventData* data = (RemapEventData*)lv_event_get_user_data(e);
     UIManager* ui = data->ui;
@@ -8095,8 +8115,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     if (ui->mControllerSetupActive) {
         ui->mControllerSetupTargetIndex = data->targetIdx;
         if (ui->mControllerSetupBtnLabel) {
-            bool isKnob = (data->targetIdx < 12);
-            int idx = isKnob ? data->targetIdx : (data->targetIdx - 12);
+            bool isKnob = (data->targetIdx < 24);
+            int idx = isKnob ? data->targetIdx : (data->targetIdx - 24);
             lv_label_set_text_fmt(ui->mControllerSetupBtnLabel, "WIGGLE HARDWARE CONTROLLER TO ASSIGN TO %s %d", 
                                   isKnob ? "KNOB" : "SLIDER", idx + 1);
         }
@@ -8105,7 +8125,7 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
 
     // Renders custom remapping modal
     ui->mRemapModal = lv_obj_create(ui->mMainScreen);
-    lv_obj_set_size(ui->mRemapModal, 420, 460);
+    lv_obj_set_size(ui->mRemapModal, 420, 500);
     lv_obj_center(ui->mRemapModal);
     lv_obj_set_style_bg_color(ui->mRemapModal, lv_color_hex(0x1F1F1F), 0);
     lv_obj_set_style_border_color(ui->mRemapModal, lv_color_hex(0x3D3D3D), 0);
@@ -8119,10 +8139,10 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
 
     lv_obj_t* title = lv_label_create(ui->mRemapModal);
-    if (ui->mRemapTargetIndex < 12) {
+    if (ui->mRemapTargetIndex < 24) {
         lv_label_set_text_fmt(title, "REMAP KNOB %d", ui->mRemapTargetIndex + 1);
     } else {
-        lv_label_set_text_fmt(title, "REMAP FADER %d", ui->mRemapTargetIndex - 11);
+        lv_label_set_text_fmt(title, "REMAP FADER %d", ui->mRemapTargetIndex - 23);
     }
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(title, trackColor, 0);
@@ -8168,8 +8188,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_size(ui->mRemapCcSpinner, 90, 10);
     lv_slider_set_range(ui->mRemapCcSpinner, 0, 127);
     
-    int currentCc = (ui->mRemapTargetIndex < 12) ? ui->mSeqMidiKnobCC[ui->mActiveTrack][ui->mRemapTargetIndex]
-                                               : ui->mSeqMidiFaderCC[ui->mActiveTrack][ui->mRemapTargetIndex - 12];
+    int currentCc = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobCC[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                               : ui->mSeqMidiFaderCC[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
     lv_slider_set_value(ui->mRemapCcSpinner, currentCc, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(ui->mRemapCcSpinner, trackColor, LV_PART_INDICATOR);
 
@@ -8223,6 +8243,30 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_add_event_cb(decBtn, freeDecCb, LV_EVENT_DELETE, decData);
     lv_obj_add_event_cb(incBtn, freeDecCb, LV_EVENT_DELETE, incData);
 
+    // Channel selection row
+    lv_obj_t* chRow = lv_obj_create(ui->mRemapModal);
+    lv_obj_set_size(chRow, 380, 45);
+    lv_obj_set_style_bg_opa(chRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(chRow, 0, 0);
+    lv_obj_set_style_pad_all(chRow, 0, 0);
+    lv_obj_set_layout(chRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(chRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(chRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* chLbl = lv_label_create(chRow);
+    lv_label_set_text(chLbl, "MIDI Channel");
+    lv_obj_set_style_text_font(chLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(chLbl, lv_color_hex(0x888888), 0);
+
+    ui->mRemapChannelDd = lv_dropdown_create(chRow);
+    lv_obj_set_size(ui->mRemapChannelDd, 120, 32);
+    lv_dropdown_set_options(ui->mRemapChannelDd, "All\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16");
+    int currentChannel = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobChannel[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                                     : ui->mSeqMidiFaderChannel[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
+    lv_dropdown_set_selected(ui->mRemapChannelDd, currentChannel);
+    lv_obj_set_style_bg_color(ui->mRemapChannelDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(ui->mRemapChannelDd, &lv_font_montserrat_12, 0);
+
     // Mapped parameter scrolling list instead of dropdown
     lv_obj_t* paramTitleRow = lv_obj_create(ui->mRemapModal);
     lv_obj_set_size(paramTitleRow, 380, 24);
@@ -8235,7 +8279,7 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_style_text_color(paramTitleLbl, lv_color_hex(0x888888), 0);
 
     lv_obj_t* listContainer = lv_obj_create(ui->mRemapModal);
-    lv_obj_set_size(listContainer, 380, 200);
+    lv_obj_set_size(listContainer, 380, 150);
     lv_obj_set_style_bg_color(listContainer, lv_color_hex(0x151515), 0);
     lv_obj_set_style_border_color(listContainer, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(listContainer, 1, 0);
@@ -8248,8 +8292,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_style_pad_row(listContainer, 8, 0);
     lv_obj_add_flag(listContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-    int currentParam = (ui->mRemapTargetIndex < 12) ? ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex]
-                                                  : ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 12];
+    int currentParam = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                                  : ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
     ui->mRemapSelectedParamId = currentParam;
 
     auto options = ui->getTrackParamOptions(ui->mActiveTrack);
@@ -8323,18 +8367,21 @@ void UIManager::saveRemapModalEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     
     int newCc = lv_slider_get_value(ui->mRemapCcSpinner);
+    int newCh = lv_dropdown_get_selected(ui->mRemapChannelDd);
     int paramId = ui->mRemapSelectedParamId;
 
-    if (ui->mRemapTargetIndex < 12) {
+    if (ui->mRemapTargetIndex < 24) {
         for (int t = 0; t < 8; ++t) {
             ui->mSeqMidiKnobCC[t][ui->mRemapTargetIndex] = newCc;
+            ui->mSeqMidiKnobChannel[t][ui->mRemapTargetIndex] = newCh;
         }
         ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex] = paramId;
     } else {
         for (int t = 0; t < 8; ++t) {
-            ui->mSeqMidiFaderCC[t][ui->mRemapTargetIndex - 12] = newCc;
+            ui->mSeqMidiFaderCC[t][ui->mRemapTargetIndex - 24] = newCc;
+            ui->mSeqMidiFaderChannel[t][ui->mRemapTargetIndex - 24] = newCh;
         }
-        ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 12] = paramId;
+        ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 24] = paramId;
     }
 
     // Refresh center screen
@@ -8349,6 +8396,7 @@ void UIManager::closeRemapModalEventCb(lv_event_t* e) {
     if (ui && ui->mRemapModal) {
         lv_obj_delete(ui->mRemapModal);
         ui->mRemapModal = nullptr;
+        ui->mRemapChannelDd = nullptr;
     }
 }
 
@@ -15759,12 +15807,14 @@ void UIManager::applyDefaultMidiMappings(int trackIdx, int engineType) {
     // Apply default CC IDs: Knobs 70-93, Faders 12-35
     for (int k = 0; k < 24; ++k) {
         mSeqMidiKnobCC[trackIdx][k] = 70 + k;
+        mSeqMidiKnobChannel[trackIdx][k] = 0;
         mSeqMidiKnobParam[trackIdx][k] = -1;
         mSeqMidiKnobValue[trackIdx][k] = 0.5f;
         mSeqMidiKnobInverted[trackIdx][k] = false;
     }
     for (int f = 0; f < 24; ++f) {
         mSeqMidiFaderCC[trackIdx][f] = 12 + f;
+        mSeqMidiFaderChannel[trackIdx][f] = 0;
         mSeqMidiFaderParam[trackIdx][f] = -1;
         mSeqMidiFaderValue[trackIdx][f] = 0.8f;
         mSeqMidiFaderInverted[trackIdx][f] = false;
@@ -15906,10 +15956,10 @@ void UIManager::saveSettings(const std::string& path) {
 
     for (int t = 0; t < 8; ++t) {
         for (int k = 0; k < 24; ++k) {
-            file << "KNOB_MAP:" << t << ":" << k << ":" << mSeqMidiKnobCC[t][k] << ":" << mSeqMidiKnobParam[t][k] << ":" << mSeqMidiKnobValue[t][k] << ":" << (mSeqMidiKnobInverted[t][k] ? 1 : 0) << "\n";
+            file << "KNOB_MAP:" << t << ":" << k << ":" << mSeqMidiKnobCC[t][k] << ":" << mSeqMidiKnobParam[t][k] << ":" << mSeqMidiKnobValue[t][k] << ":" << (mSeqMidiKnobInverted[t][k] ? 1 : 0) << ":" << mSeqMidiKnobChannel[t][k] << "\n";
         }
         for (int f = 0; f < 24; ++f) {
-            file << "FADER_MAP:" << t << ":" << f << ":" << mSeqMidiFaderCC[t][f] << ":" << mSeqMidiFaderParam[t][f] << ":" << mSeqMidiFaderValue[t][f] << ":" << (mSeqMidiFaderInverted[t][f] ? 1 : 0) << "\n";
+            file << "FADER_MAP:" << t << ":" << f << ":" << mSeqMidiFaderCC[t][f] << ":" << mSeqMidiFaderParam[t][f] << ":" << mSeqMidiFaderValue[t][f] << ":" << (mSeqMidiFaderInverted[t][f] ? 1 : 0) << ":" << mSeqMidiFaderChannel[t][f] << "\n";
         }
         file << "AFTERTOUCH_MAP:" << t << ":" << mAftertouchDestParamId[t] << "\n";
     }
@@ -16015,13 +16065,18 @@ void UIManager::loadSettings(const std::string& path) {
                 int t, k, cc, p;
                 float v;
                 int inv = 0;
+                int ch = 0;
                 char colon;
                 ss >> t >> colon >> k >> colon >> cc >> colon >> p >> colon >> v;
                 if (ss.peek() == ':') {
                     ss >> colon >> inv;
+                    if (ss.peek() == ':') {
+                        ss >> colon >> ch;
+                    }
                 }
                 if (t >= 0 && t < 8 && k >= 0 && k < 24) {
                     mSeqMidiKnobCC[t][k] = cc;
+                    mSeqMidiKnobChannel[t][k] = ch;
                     int engineType = mEngine.getTracks()[t].engineType;
                     if (engineType == 2 && p >= 100 && p <= 103) {
                         p = 310 + (p - 100);
@@ -16039,13 +16094,18 @@ void UIManager::loadSettings(const std::string& path) {
                 int t, f, cc, p;
                 float v;
                 int inv = 0;
+                int ch = 0;
                 char colon;
                 ss >> t >> colon >> f >> colon >> cc >> colon >> p >> colon >> v;
                 if (ss.peek() == ':') {
                     ss >> colon >> inv;
+                    if (ss.peek() == ':') {
+                        ss >> colon >> ch;
+                    }
                 }
                 if (t >= 0 && t < 8 && f >= 0 && f < 24) {
                     mSeqMidiFaderCC[t][f] = cc;
+                    mSeqMidiFaderChannel[t][f] = ch;
                     int engineType = mEngine.getTracks()[t].engineType;
                     if (engineType == 2 && p >= 100 && p <= 103) {
                         p = 310 + (p - 100);
