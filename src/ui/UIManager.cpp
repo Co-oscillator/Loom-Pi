@@ -306,15 +306,30 @@ void UIManager::init() {
     // Auto-load Init project if it exists at startup
     const char* browseDir = getenv("HOME");
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
-    std::string initLoomPath = homeStr + "/projects/Init.loom";
+    std::vector<std::string> searchPaths;
+    searchPaths.push_back(homeStr + "/projects/Init.loom");
+    searchPaths.push_back("/home/loom/Loom/projects/Init.loom");
+    searchPaths.push_back("/home/pi/Loom/projects/Init.loom");
+    searchPaths.push_back("./Loom/projects/Init.loom");
+
+    std::string initLoomPath = "";
+    for (const auto& path : searchPaths) {
+        std::ifstream f(path);
+        if (f.good()) {
+            f.close();
+            initLoomPath = path;
+            break;
+        }
+    }
+
     mSettingsPadCount = 16;
-    mSettingsFilePath = initLoomPath + ".settings";
-    std::ifstream f(initLoomPath);
-    if (f.good()) {
-        f.close();
+    if (!initLoomPath.empty()) {
+        mSettingsFilePath = initLoomPath + ".settings";
         std::cout << "Auto-loading Init project: " << initLoomPath << std::endl;
         mEngine.loadProject(initLoomPath);
         loadSettings(mSettingsFilePath);
+    } else {
+        mSettingsFilePath = homeStr + "/projects/Init.loom.settings";
     }
 
     // Switch to correct physical device depending on initial recording source
@@ -2447,9 +2462,13 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
             lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
             int selected = lv_dropdown_get_selected(dd);
             if (d->isKnob) {
-                d->ui->mSeqMidiKnobCC[d->ui->mActiveTrack][d->idx] = selected;
+                for (int t = 0; t < 8; ++t) {
+                    d->ui->mSeqMidiKnobCC[t][d->idx] = selected;
+                }
             } else {
-                d->ui->mSeqMidiFaderCC[d->ui->mActiveTrack][d->idx] = selected;
+                for (int t = 0; t < 8; ++t) {
+                    d->ui->mSeqMidiFaderCC[t][d->idx] = selected;
+                }
             }
         };
         lv_obj_add_event_cb(ccDd, mappingClickCb, LV_EVENT_VALUE_CHANGED, data);
@@ -2490,9 +2509,13 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
             lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
             int selected = lv_dropdown_get_selected(dd);
             if (d->isKnob) {
-                d->ui->mSeqMidiKnobCC[d->ui->mActiveTrack][d->idx] = selected;
+                for (int t = 0; t < 8; ++t) {
+                    d->ui->mSeqMidiKnobCC[t][d->idx] = selected;
+                }
             } else {
-                d->ui->mSeqMidiFaderCC[d->ui->mActiveTrack][d->idx] = selected;
+                for (int t = 0; t < 8; ++t) {
+                    d->ui->mSeqMidiFaderCC[t][d->idx] = selected;
+                }
             }
         };
         lv_obj_add_event_cb(ccDd, mappingClickCb, LV_EVENT_VALUE_CHANGED, data);
@@ -8303,10 +8326,14 @@ void UIManager::saveRemapModalEventCb(lv_event_t* e) {
     int paramId = ui->mRemapSelectedParamId;
 
     if (ui->mRemapTargetIndex < 12) {
-        ui->mSeqMidiKnobCC[ui->mActiveTrack][ui->mRemapTargetIndex] = newCc;
+        for (int t = 0; t < 8; ++t) {
+            ui->mSeqMidiKnobCC[t][ui->mRemapTargetIndex] = newCc;
+        }
         ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex] = paramId;
     } else {
-        ui->mSeqMidiFaderCC[ui->mActiveTrack][ui->mRemapTargetIndex - 12] = newCc;
+        for (int t = 0; t < 8; ++t) {
+            ui->mSeqMidiFaderCC[t][ui->mRemapTargetIndex - 12] = newCc;
+        }
         ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 12] = paramId;
     }
 
