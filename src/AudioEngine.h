@@ -356,6 +356,7 @@ public:
     bool isActive = false;
     bool isTrackEnabled = true;
     int mAftertouchDestParamId = -1;
+    int mLastEditedRatchetVal = 1;
     float mAftertouchRatchetCountdown = 0.0f;
     std::vector<int> mLiveHeldNotes;
     float currentFrequency = 440.0f;
