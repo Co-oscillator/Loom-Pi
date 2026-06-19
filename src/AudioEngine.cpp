@@ -1015,6 +1015,40 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
     return;
   Track &track = mTracks[trackIndex];
 
+  if (track.engineType == 0) {
+    if (parameterId == 290) { // Morphx3
+      track.parameters[190] = value;
+      track.parameters[191] = value;
+      track.parameters[192] = value;
+      track.appliedParameters[190] = value;
+      track.appliedParameters[191] = value;
+      track.appliedParameters[192] = value;
+      track.subtractiveEngine.setParameter(190, value);
+      track.subtractiveEngine.setParameter(191, value);
+      track.subtractiveEngine.setParameter(192, value);
+    } else if (parameterId == 291) { // Foldx3
+      track.parameters[180] = value;
+      track.parameters[181] = value;
+      track.parameters[182] = value;
+      track.appliedParameters[180] = value;
+      track.appliedParameters[181] = value;
+      track.appliedParameters[182] = value;
+      track.subtractiveEngine.setParameter(180, value);
+      track.subtractiveEngine.setParameter(181, value);
+      track.subtractiveEngine.setParameter(182, value);
+    } else if (parameterId == 292) { // Drivex3
+      track.parameters[170] = value;
+      track.parameters[171] = value;
+      track.parameters[172] = value;
+      track.appliedParameters[170] = value;
+      track.appliedParameters[171] = value;
+      track.appliedParameters[172] = value;
+      track.subtractiveEngine.setParameter(170, value);
+      track.subtractiveEngine.setParameter(171, value);
+      track.subtractiveEngine.setParameter(172, value);
+    }
+  }
+
   // Specific Logic for Global / Sends
   if (parameterId >= 2000 &&
       parameterId <
@@ -4472,7 +4506,19 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
     if (distance < 128 || distance > 8000) {
       mInputReadPtr = writePos - 2048; // Resync if definitely out of bounds
     }
-    float inputSample = mInputRingBuffer[mInputReadPtr % 8192];
+    
+    float inputSample = 0.0f;
+    static uint32_t lastProcessedWritePos = 0;
+    static uint32_t inactiveSamples = 0;
+    if (writePos == lastProcessedWritePos) {
+      inactiveSamples++;
+    } else {
+      inactiveSamples = 0;
+      lastProcessedWritePos = writePos;
+    }
+    if (inactiveSamples < 24000) {
+      inputSample = mInputRingBuffer[mInputReadPtr % 8192];
+    }
     mInputReadPtr++;
 
     float mixedSampleL = 0.0f;

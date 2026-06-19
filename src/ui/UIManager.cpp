@@ -308,9 +308,13 @@ void UIManager::init() {
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
     std::vector<std::string> searchPaths;
     searchPaths.push_back(homeStr + "/projects/Init.loom");
+    searchPaths.push_back(homeStr + "/projects/init.loom");
     searchPaths.push_back("/home/loom/Loom/projects/Init.loom");
+    searchPaths.push_back("/home/loom/Loom/projects/init.loom");
     searchPaths.push_back("/home/pi/Loom/projects/Init.loom");
+    searchPaths.push_back("/home/pi/Loom/projects/init.loom");
     searchPaths.push_back("./Loom/projects/Init.loom");
+    searchPaths.push_back("./Loom/projects/init.loom");
 
     std::string initLoomPath = "";
     for (const auto& path : searchPaths) {
@@ -369,6 +373,53 @@ void UIManager::init() {
             }
         }
     }
+
+    // 2-second vector/text-based splash screen overlay
+    lv_obj_t* splash = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(splash, 1024, 600);
+    lv_obj_set_pos(splash, 0, 0);
+    lv_obj_set_style_bg_color(splash, lv_color_hex(0x0a0a0a), 0);
+    lv_obj_set_style_bg_opa(splash, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(splash, 0, 0);
+    lv_obj_remove_flag(splash, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(splash, LV_OBJ_FLAG_FLOATING);
+    
+    // Abstract modern container
+    lv_obj_t* logoCont = lv_obj_create(splash);
+    lv_obj_set_size(logoCont, 400, 250);
+    lv_obj_center(logoCont);
+    lv_obj_set_style_bg_opa(logoCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(logoCont, 0, 0);
+    lv_obj_remove_flag(logoCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(logoCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(logoCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(logoCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Glowing Loom Orange line accent
+    lv_obj_t* bar = lv_obj_create(logoCont);
+    lv_obj_set_size(bar, 140, 4);
+    lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4500), 0); // Loom Orange
+    lv_obj_set_style_border_width(bar, 0, 0);
+    lv_obj_set_style_radius(bar, 2, 0);
+    lv_obj_set_style_pad_all(bar, 0, 0);
+
+    lv_obj_t* title = lv_label_create(logoCont);
+    lv_label_set_text(title, "LOOM");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_letter_space(title, 10, 0);
+
+    lv_obj_t* subtitle = lv_label_create(logoCont);
+    lv_label_set_text(subtitle, "G R O O V E B O X");
+    lv_obj_set_style_text_font(subtitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(subtitle, lv_color_hex(0x888888), 0);
+
+    // LVGL timer to auto-delete splash screen after 2 seconds
+    lv_timer_create([](lv_timer_t* timer) {
+        lv_obj_t* splashObj = (lv_obj_t*)timer->user_data;
+        lv_obj_delete(splashObj);
+        lv_timer_delete(timer);
+    }, 2000, splash);
 }
 
 lv_color_t UIManager::getTrackColor(int trackIndex) {
@@ -2142,6 +2193,24 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(padLearnBtn, padLearnCb, LV_EVENT_CLICKED, this);
 
+    // Floating Pads Wizard Button in the bottom right
+    lv_obj_t* padsWizardBtn = lv_button_create(tab);
+    lv_obj_set_size(padsWizardBtn, 150, 40);
+    lv_obj_add_flag(padsWizardBtn, LV_OBJ_FLAG_FLOATING);
+    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_RIGHT, -180, -10);
+    lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_radius(padsWizardBtn, 6, 0);
+    lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
+    lv_label_set_text(padsWizardLbl, "PADS WIZARD");
+    lv_obj_set_style_text_font(padsWizardLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(padsWizardLbl);
+    
+    auto padsWizardClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openWizard(1); // 1 = MIDI Pads
+    };
+    lv_obj_add_event_cb(padsWizardBtn, padsWizardClickCb, LV_EVENT_CLICKED, this);
+
     rebuildPadGrid();
 }
 
@@ -2593,6 +2662,24 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
         };
         lv_obj_add_event_cb(ccDd, transFreeCb, LV_EVENT_DELETE, tData);
     }
+
+    // Floating Hardware Wizard Button in the bottom right
+    lv_obj_t* wizardBtn = lv_button_create(tab);
+    lv_obj_set_size(wizardBtn, 150, 40);
+    lv_obj_add_flag(wizardBtn, LV_OBJ_FLAG_FLOATING);
+    lv_obj_align(wizardBtn, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
+    lv_obj_set_style_bg_color(wizardBtn, trackColor, 0);
+    lv_obj_set_style_radius(wizardBtn, 6, 0);
+    lv_obj_t* wizardLbl = lv_label_create(wizardBtn);
+    lv_label_set_text(wizardLbl, "HARDWARE WIZARD");
+    lv_obj_set_style_text_font(wizardLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(wizardLbl);
+    
+    auto wizardClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openWizard(0); // 0 = Knobs/Sliders
+    };
+    lv_obj_add_event_cb(wizardBtn, wizardClickCb, LV_EVENT_CLICKED, this);
 }
 
 void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
@@ -3708,6 +3795,57 @@ void UIManager::update() {
                             lv_label_set_text_fmt(label, "Note: %s%d (%d)", noteNames[noteVal % 12], octave, noteVal);
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Poll parameter 477 (Wavetable selection) for all 8 tracks
+    for (int t = 0; t < 8; ++t) {
+        float currentVal = mEngine.getTracks()[t].parameters[477];
+        if (currentVal != mLastWtSelectVal[t]) {
+            mLastWtSelectVal[t] = currentVal;
+            
+            const char* home = getenv("HOME");
+            std::string dirPath = home ? std::string(home) + "/Loom/wavetables" : "./Loom/wavetables";
+            
+            std::vector<std::string> wtFiles;
+            DIR* dir = opendir(dirPath.c_str());
+            if (dir) {
+                struct dirent* entry;
+                while ((entry = readdir(dir)) != nullptr) {
+                    std::string name(entry->d_name);
+                    if (name.rfind(".", 0) == 0) continue; // skip hidden files
+                    
+                    std::string lowerName = name;
+                    for (char &c : lowerName) c = std::tolower((unsigned char)c);
+                    bool isWavetable = false;
+                    if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".wav") isWavetable = true;
+                    else if (lowerName.length() >= 3 && lowerName.substr(lowerName.length() - 3) == ".wt") isWavetable = true;
+                    
+                    if (isWavetable) {
+                        wtFiles.push_back(name);
+                    }
+                }
+                closedir(dir);
+            }
+            
+            if (!wtFiles.empty()) {
+                std::sort(wtFiles.begin(), wtFiles.end());
+                int idx = (int)(currentVal * (wtFiles.size() - 0.0001f));
+                if (idx < 0) idx = 0;
+                if (idx >= (int)wtFiles.size()) idx = (int)wtFiles.size() - 1;
+                
+                std::string chosenFile = wtFiles[idx];
+                std::string fullPath = dirPath + "/" + chosenFile;
+                
+                if (mEngine.getTracks()[t].lastSamplePath != chosenFile) {
+                    mEngine.loadWavetable(t, fullPath);
+                    mEngine.getTracks()[t].lastSamplePath = chosenFile;
+                    if (t == mActiveTrack && mWtActiveNameLbl) {
+                        lv_label_set_text_fmt(mWtActiveNameLbl, "ACTIVE: %s", chosenFile.c_str());
+                    }
+                    std::cout << "WT Select loaded file: " << chosenFile << " for track " << t << std::endl;
                 }
             }
         }
@@ -6414,6 +6552,9 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 101) return prefix + "Decay";
         if (paramId == 102) return prefix + "Sustain";
         if (paramId == 103) return prefix + "Release";
+        if (paramId == 290) return prefix + "Morphx3";
+        if (paramId == 291) return prefix + "Foldx3";
+        if (paramId == 292) return prefix + "Drivex3";
     }
 
     // Sampler Engine envelope parameters
@@ -6443,6 +6584,7 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 472) return prefix + "Filt D";
         if (paramId == 473) return prefix + "Filt S";
         if (paramId == 474) return prefix + "Filt R";
+        if (paramId == 477) return prefix + "WT Select";
     }
 
     // Default fallback naming for standard parameter slots
@@ -9275,6 +9417,9 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({115, "Filt D"});
         params.push_back({116, "Filt S"});
         params.push_back({117, "Filt R"});
+        params.push_back({290, "Morphx3"});
+        params.push_back({291, "Foldx3"});
+        params.push_back({292, "Drivex3"});
     } else if (engineType == 1) { // FM (52 parameters total)
         params.push_back({151, "Cutoff"});
         params.push_back({152, "Resonance"});
@@ -9346,6 +9491,7 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({472, "Filt D"});
         params.push_back({473, "Filt S"});
         params.push_back({474, "Filt R"});
+        params.push_back({477, "WT Select"});
     } else if (engineType == 5) { // FM Drum (32 synthesis parameters)
         const char* DRUM_NAMES[8] = {"BD", "SD", "TOM", "CH", "OH", "CYMB", "PERC", "NOISE"};
         for (int i = 0; i < 8; ++i) {
@@ -9437,6 +9583,7 @@ void UIManager::updateAudioEngineFxChains() {
 
 void UIManager::populateFxScreen() {
     lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+    mParamTabview = tabview;
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
     lv_tabview_set_tab_bar_size(tabview, 40);
     
@@ -9718,6 +9865,10 @@ void UIManager::populateFxScreen() {
         ui->createCenterContentArea(); // Rebuild center content area to update colors and state
     };
     lv_obj_add_event_cb(learnBtn, learnClickCb, LV_EVENT_CLICKED, this);
+
+    if (mParamTabview && mParamActiveTabIdx >= 0 && mParamActiveTabIdx < 6) {
+        lv_tabview_set_active(mParamTabview, mParamActiveTabIdx, LV_ANIM_OFF);
+    }
 }
 
 lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_color_t accentColor) {
@@ -11580,6 +11731,13 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
         return grid;
     };
 
+    // --- MACROS ---
+    lv_obj_t* macroCard = createSynthCard(tab, "MACROS", 90);
+    lv_obj_set_style_pad_all(macroCard, 4, 0);
+    addSynthKnob(macroCard, "MORPHX3", 290, 0.0f, 1.0f, 2, true);
+    addSynthKnob(macroCard, "FOLDX3", 291, 0.0f, 1.0f, 2, true);
+    addSynthKnob(macroCard, "DRIVEX3", 292, 0.0f, 1.0f, 2, true);
+
     // --- OSC 1 ---
     lv_obj_t* card1 = createSynthCard(tab, "OSCILLATOR 1", 182);
     lv_obj_t* grid1 = createKnobGrid(card1);
@@ -12806,17 +12964,28 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_set_style_pad_all(selectCard, 12, 0);
     lv_obj_remove_flag(selectCard, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(selectCard, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(selectCard, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_flow(selectCard, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(selectCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_t* selectTitle = lv_label_create(selectCard);
+    // Left container: Title, Active label box, Button row
+    lv_obj_t* selectLeft = lv_obj_create(selectCard);
+    lv_obj_set_size(selectLeft, 610, 201);
+    lv_obj_set_style_bg_opa(selectLeft, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(selectLeft, 0, 0);
+    lv_obj_set_style_pad_all(selectLeft, 0, 0);
+    lv_obj_remove_flag(selectLeft, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(selectLeft, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(selectLeft, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(selectLeft, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* selectTitle = lv_label_create(selectLeft);
     lv_label_set_text(selectTitle, "WAVETABLE SELECTION");
     lv_obj_set_style_text_font(selectTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(selectTitle, trackColor, 0);
 
     // Active wavetable text box
-    lv_obj_t* activeBox = lv_obj_create(selectCard);
-    lv_obj_set_size(activeBox, 720, 50);
+    lv_obj_t* activeBox = lv_obj_create(selectLeft);
+    lv_obj_set_size(activeBox, 590, 50);
     lv_obj_set_style_bg_color(activeBox, lv_color_hex(0x0F0F0F), 0);
     lv_obj_set_style_border_color(activeBox, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(activeBox, 1, 0);
@@ -12835,26 +13004,26 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_align(mWtActiveNameLbl, LV_ALIGN_CENTER, 0, 0);
 
     // Action buttons row
-    lv_obj_t* btnRow = lv_obj_create(selectCard);
-    lv_obj_set_size(btnRow, 720, 56);
+    lv_obj_t* btnRow = lv_obj_create(selectLeft);
+    lv_obj_set_size(btnRow, 590, 56);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
     lv_obj_set_style_pad_all(btnRow, 0, 0);
     lv_obj_remove_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(btnRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     auto addActionButton = [this, trackColor](lv_obj_t* parent, const char* labelText, lv_event_cb_t cb) {
         lv_obj_t* btn = lv_button_create(parent);
-        lv_obj_set_size(btn, 210, 44);
+        lv_obj_set_size(btn, 185, 44);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_color(btn, trackColor, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
         lv_obj_set_style_radius(btn, 6, 0);
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, labelText);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_10, 0);
         lv_obj_center(lbl);
         lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, this);
     };
@@ -12872,6 +13041,19 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
         std::cout << "Restored default sine wavetable." << std::endl;
     };
     addActionButton(btnRow, "RESTORE DEFAULT", defaultCb);
+
+    // Right container: SELECT WT Knob
+    lv_obj_t* selectRight = lv_obj_create(selectCard);
+    lv_obj_set_size(selectRight, 100, 201);
+    lv_obj_set_style_bg_opa(selectRight, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(selectRight, 0, 0);
+    lv_obj_set_style_pad_all(selectRight, 0, 0);
+    lv_obj_remove_flag(selectRight, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(selectRight, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(selectRight, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(selectRight, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    addSynthKnob(selectRight, "SELECT WT", 477, 0.0f, 1.0f, 2, true);
 }
 
 void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
@@ -15920,6 +16102,8 @@ void UIManager::saveSettings(const std::string& path) {
     file << "OCTAVE_OFFSET:" << mSettingsOctaveOffset << "\n";
     file << "MOMENTARY:" << (mSettingsFxPadMomentary ? 1 : 0) << "\n";
     file << "KEYBOARD_MODE:" << (mSettingsKeyboardMode ? 1 : 0) << "\n";
+    file << "KNOB_COUNT:" << mSettingsKnobCount << "\n";
+    file << "SLIDER_COUNT:" << mSettingsSliderCount << "\n";
     file << "VELOCITY_SENSITIVITY:" << (mEngine.getVelocitySensitivityEnabled() ? 1 : 0) << "\n";
     file << "FAST_GRANULAR:" << (mEngine.getFastGranularEnabled() ? 1 : 0) << "\n";
     file << "AUDIO_OUTPUT_MODE:" << mEngine.getAudioOutputMode() << "\n";
@@ -16007,6 +16191,8 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "OCTAVE_OFFSET") mSettingsOctaveOffset = std::stoi(val);
             else if (key == "MOMENTARY") mSettingsFxPadMomentary = std::stoi(val) != 0;
             else if (key == "KEYBOARD_MODE") mSettingsKeyboardMode = std::stoi(val) != 0;
+            else if (key == "KNOB_COUNT") mSettingsKnobCount = std::stoi(val);
+            else if (key == "SLIDER_COUNT") mSettingsSliderCount = std::stoi(val);
             else if (key == "VELOCITY_SENSITIVITY") mEngine.setVelocitySensitivityEnabled(std::stoi(val) != 0);
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
@@ -16543,4 +16729,180 @@ void UIManager::connectBluetoothDevice(const std::string& mac) {
     connThread.detach();
 }
 
+void UIManager::openWizard(int type) {
+    closeWizard(); // safety
+    
+    mWizardActive = true;
+    mWizardType = type;
+    mWizardStep = 0;
 
+    // Full screen dimmed background
+    mWizardModal = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(mWizardModal, 1024, 600);
+    lv_obj_set_pos(mWizardModal, 0, 0);
+    lv_obj_set_style_bg_color(mWizardModal, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(mWizardModal, LV_OPA_80, 0);
+    lv_obj_set_style_border_width(mWizardModal, 0, 0);
+    lv_obj_add_flag(mWizardModal, LV_OBJ_FLAG_FLOATING);
+
+    // Card container
+    lv_obj_t* card = lv_obj_create(mWizardModal);
+    lv_obj_set_size(card, 500, 320);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(card, getTrackColor(mActiveTrack), 0);
+    lv_obj_set_style_border_width(card, 2, 0);
+    lv_obj_set_style_radius(card, 12, 0);
+    lv_obj_set_style_pad_all(card, 20, 0);
+    lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_set_layout(card, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Title
+    lv_obj_t* title = lv_label_create(card);
+    lv_label_set_text(title, type == 0 ? "HARDWARE MAPPING WIZARD" : "MIDI PADS MAPPING WIZARD");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(title, getTrackColor(mActiveTrack), 0);
+
+    // Step indicator
+    mWizardStepLbl = lv_label_create(card);
+    lv_obj_set_style_text_font(mWizardStepLbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(mWizardStepLbl, lv_color_hex(0xFFFFFF), 0);
+
+    // Description/instructions
+    mWizardDescLbl = lv_label_create(card);
+    lv_obj_set_style_text_font(mWizardDescLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mWizardDescLbl, lv_color_hex(0xAAAAAA), 0);
+    lv_label_set_long_mode(mWizardDescLbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(mWizardDescLbl, 400);
+    lv_obj_set_style_text_align(mWizardDescLbl, LV_TEXT_ALIGN_CENTER, 0);
+
+    // Skip and Cancel button row
+    lv_obj_t* btnRow = lv_obj_create(card);
+    lv_obj_set_size(btnRow, 440, 50);
+    lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btnRow, 0, 0);
+    lv_obj_set_style_pad_all(btnRow, 0, 0);
+    lv_obj_remove_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(btnRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* skipBtn = lv_button_create(btnRow);
+    lv_obj_set_size(skipBtn, 120, 36);
+    lv_obj_set_style_bg_color(skipBtn, lv_color_hex(0x3A3A3A), 0);
+    lv_obj_t* skipLbl = lv_label_create(skipBtn);
+    lv_label_set_text(skipLbl, "SKIP STEP");
+    lv_obj_set_style_text_font(skipLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(skipLbl);
+    
+    auto skipClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->advanceWizard(-1); // -1 triggers a skip
+    };
+    lv_obj_add_event_cb(skipBtn, skipClickCb, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* cancelBtn = lv_button_create(btnRow);
+    lv_obj_set_size(cancelBtn, 120, 36);
+    lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0xE06C75), 0);
+    lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
+    lv_label_set_text(cancelLbl, "CANCEL");
+    lv_obj_set_style_text_font(cancelLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(cancelLbl);
+    
+    auto cancelClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->closeWizard();
+    };
+    lv_obj_add_event_cb(cancelBtn, cancelClickCb, LV_EVENT_CLICKED, this);
+
+    advanceWizard(-2); // Initialize UI labels
+}
+
+void UIManager::closeWizard() {
+    mWizardActive = false;
+    if (mWizardModal) {
+        lv_obj_delete(mWizardModal);
+        mWizardModal = nullptr;
+        mWizardStepLbl = nullptr;
+        mWizardDescLbl = nullptr;
+    }
+    createCenterContentArea(); // Refresh UI
+}
+
+void UIManager::advanceWizard(int incomingVal, int incomingChannel) {
+    if (!mWizardActive) return;
+
+    int totalSteps = 0;
+    if (mWizardType == 0) {
+        totalSteps = mSettingsKnobCount + mSettingsSliderCount + 6;
+    } else {
+        totalSteps = mSettingsPadCount;
+    }
+
+    // Process assignment if not initialization or skip
+    if (incomingVal >= 0 && mWizardStep >= 0 && mWizardStep < totalSteps) {
+        if (mWizardType == 0) {
+            if (mWizardStep < mSettingsKnobCount) {
+                // Map knob CC and Channel globally across all tracks
+                for (int t = 0; t < 8; ++t) {
+                    mSeqMidiKnobCC[t][mWizardStep] = incomingVal;
+                    mSeqMidiKnobChannel[t][mWizardStep] = incomingChannel;
+                }
+                std::cout << "Wizard: Mapped KNOB " << (mWizardStep + 1) << " to CC " << incomingVal << " [CH " << incomingChannel << "]" << std::endl;
+            } else if (mWizardStep < mSettingsKnobCount + mSettingsSliderCount) {
+                int sIdx = mWizardStep - mSettingsKnobCount;
+                for (int t = 0; t < 8; ++t) {
+                    mSeqMidiFaderCC[t][sIdx] = incomingVal;
+                    mSeqMidiFaderChannel[t][sIdx] = incomingChannel;
+                }
+                std::cout << "Wizard: Mapped SLIDER " << (sIdx + 1) << " to CC " << incomingVal << " [CH " << incomingChannel << "]" << std::endl;
+            } else {
+                int transIdx = mWizardStep - (mSettingsKnobCount + mSettingsSliderCount);
+                if (transIdx == 0) mCcPlay = incomingVal;
+                else if (transIdx == 1) mCcStop = incomingVal;
+                else if (transIdx == 2) mCcRecord = incomingVal;
+                else if (transIdx == 3) mCcClear = incomingVal;
+                else if (transIdx == 4) mCcPrevTrack = incomingVal;
+                else if (transIdx == 5) mCcNextTrack = incomingVal;
+                std::cout << "Wizard: Mapped Transport/Track button " << transIdx << " to CC " << incomingVal << std::endl;
+            }
+        } else {
+            // Map Pad Note
+            mSettingsPadNoteMap[mWizardStep] = incomingVal;
+            std::cout << "Wizard: Mapped PAD " << (mWizardStep + 1) << " to Note " << incomingVal << std::endl;
+        }
+        
+        mWizardStep++;
+        saveSettings(mSettingsFilePath);
+    } else if (incomingVal == -1) {
+        // Skip step
+        mWizardStep++;
+    }
+
+    if (mWizardStep >= totalSteps) {
+        closeWizard();
+        return;
+    }
+
+    // Update UI step labels
+    if (mWizardStepLbl && mWizardDescLbl) {
+        if (mWizardType == 0) {
+            lv_label_set_text_fmt(mWizardStepLbl, "STEP %d / %d", mWizardStep + 1, totalSteps);
+            if (mWizardStep < mSettingsKnobCount) {
+                lv_label_set_text_fmt(mWizardDescLbl, "Please turn KNOB %d\non your hardware controller.", mWizardStep + 1);
+            } else if (mWizardStep < mSettingsKnobCount + mSettingsSliderCount) {
+                lv_label_set_text_fmt(mWizardDescLbl, "Please move SLIDER %d\non your hardware controller.", mWizardStep - mSettingsKnobCount + 1);
+            } else {
+                int transIdx = mWizardStep - (mSettingsKnobCount + mSettingsSliderCount);
+                const char* transNames[6] = {"PLAY", "STOP", "RECORD", "CLEAR", "PREVIOUS TRACK", "NEXT TRACK"};
+                lv_label_set_text_fmt(mWizardDescLbl, "Please press the %s button\non your hardware controller.", transNames[transIdx]);
+            }
+        } else {
+            lv_label_set_text_fmt(mWizardStepLbl, "PAD %d / %d", mWizardStep + 1, totalSteps);
+            lv_label_set_text_fmt(mWizardDescLbl, "Please tap PAD %d\non your pad controller.", mWizardStep + 1);
+        }
+    }
+}

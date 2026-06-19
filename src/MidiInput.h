@@ -841,6 +841,22 @@ static MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
 
 static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data) {
     if (!data || !data->engine || !data->ui) return;
+
+    if (data->ui->mWizardActive) {
+        uint8_t messageType = status & 0xF0;
+        uint8_t channel = status & 0x0F;
+        if (data->ui->mWizardType == 0) { // Knobs/Sliders/Transport
+            if (messageType == 0xB0) { // CC
+                data->ui->advanceWizard(d1, channel + 1);
+                return;
+            }
+        } else if (data->ui->mWizardType == 1) { // MIDI Pads
+            if (messageType == 0x90 && d2 > 0) { // Note On
+                data->ui->advanceWizard(d1, channel + 1);
+                return;
+            }
+        }
+    }
     
     // Check for MIDI Real-Time messages
     if (status == 0xFA) { // Start / Play

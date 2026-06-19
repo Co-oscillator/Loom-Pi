@@ -19,11 +19,17 @@ void audioCallback(void* userdata, Uint8* stream, int len) {
     gEngine.renderOutput(out, numFrames, 2);
 }
 
-// Audio Capture Callback
 void audioCaptureCallback(void* userdata, Uint8* stream, int len) {
-    float* in = reinterpret_cast<float*>(stream);
-    int numFrames = len / (sizeof(float) * 2); // Stereo float capture
-    gEngine.renderInput(in, numFrames, 2);
+    int16_t* in = reinterpret_cast<int16_t*>(stream);
+    int numFrames = len / (sizeof(int16_t) * 2); // Stereo 16-bit capture
+    
+    float floatBuffer[4096];
+    int framesToDo = std::min(numFrames, 2048);
+    for (int i = 0; i < framesToDo; ++i) {
+        floatBuffer[i * 2] = (float)in[i * 2] / 32768.0f;
+        floatBuffer[i * 2 + 1] = (float)in[i * 2 + 1] / 32768.0f;
+    }
+    gEngine.renderInput(floatBuffer, framesToDo, 2);
 }
 
 SDL_AudioDeviceID gAudioDeviceID = 0;
@@ -74,7 +80,7 @@ bool switchCaptureDevice(const std::string& deviceName) {
     SDL_AudioSpec wantCapture, haveCapture;
     SDL_zero(wantCapture);
     wantCapture.freq = 48000;
-    wantCapture.format = AUDIO_F32SYS;
+    wantCapture.format = AUDIO_S16SYS;
     wantCapture.channels = 2;
     wantCapture.samples = 256;
     wantCapture.callback = audioCaptureCallback;

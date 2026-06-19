@@ -348,6 +348,7 @@ private:
     int mLastActiveNav = 0;
     int mLastEngineType = -1;
     int mActiveDrumIdx = 0;
+    float mLastWtSelectVal[8] = {-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
     lv_obj_t* mRemapModal = nullptr;
     int mRemapTargetIndex = 0; // 0-7 for knobs, 8-15 for faders
     lv_obj_t* mRemapCcSpinner = nullptr;
@@ -589,11 +590,22 @@ public:
     int mSettingsMidiTrackSelect = 0;
     int mSettingsActiveTabIdx = 0;
 
-    // Pad learn state
     int mSettingsPadNoteMap[24] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43};
     bool mPadLearnActive = false;
     int mPadLearnTarget = -1;
     lv_obj_t* mPadLearnBtnLabel = nullptr;
+
+    // Hardware MIDI Mapping Wizard state
+    bool mWizardActive = false;
+    int mWizardType = 0; // 0 = Knobs/Sliders/Transport, 1 = MIDI Pads
+    int mWizardStep = 0;
+    lv_obj_t* mWizardModal = nullptr;
+    lv_obj_t* mWizardStepLbl = nullptr;
+    lv_obj_t* mWizardDescLbl = nullptr;
+
+    void openWizard(int type);
+    void closeWizard();
+    void advanceWizard(int incomingVal, int incomingChannel = 0);
     
     // Settings – Keyboard mode
     bool mSettingsKeyboardMode = true;
