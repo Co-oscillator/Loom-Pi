@@ -16735,6 +16735,7 @@ void UIManager::openWizard(int type) {
     mWizardActive = true;
     mWizardType = type;
     mWizardStep = 0;
+    mLastWizardActionTimeMs = 0;
 
     // Full screen dimmed background
     mWizardModal = lv_obj_create(lv_screen_active());
@@ -16844,6 +16845,12 @@ void UIManager::advanceWizard(int incomingVal, int incomingChannel) {
 
     // Process assignment if not initialization or skip
     if (incomingVal >= 0 && mWizardStep >= 0 && mWizardStep < totalSteps) {
+        uint32_t now = SDL_GetTicks();
+        if (mLastWizardActionTimeMs > 0 && (now - mLastWizardActionTimeMs < 400)) {
+            return;
+        }
+        mLastWizardActionTimeMs = now;
+
         if (mWizardType == 0) {
             if (mWizardStep < mSettingsKnobCount) {
                 // Map knob CC and Channel globally across all tracks

@@ -602,6 +602,7 @@ public:
     lv_obj_t* mWizardModal = nullptr;
     lv_obj_t* mWizardStepLbl = nullptr;
     lv_obj_t* mWizardDescLbl = nullptr;
+    uint32_t mLastWizardActionTimeMs = 0;
 
     void openWizard(int type);
     void closeWizard();
