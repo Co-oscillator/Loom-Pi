@@ -400,18 +400,20 @@ void UIManager::init() {
         lv_color_hex(0xFF3300)  // Orange/Red
     };
 
-    // Center coords for grid (centered at x=512, y=200)
-    int gridX = 422;
+    // Center coords for grid (centered at x=512, y=200, stretched 3x horizontally)
+    int gridX = 242;
     int gridY = 110;
-    int gridSize = 180;
-    int stepSize = 36;
+    int gridSizeX = 540;
+    int gridSizeY = 180;
+    int stepSizeX = 108;
+    int stepSizeY = 36;
     int numPts = 10;
 
     // Draw the 6 horizontal grid lines with a nice gradient
     for (int i = 0; i < 6; ++i) {
         lv_obj_t* hLine = lv_obj_create(splash);
-        lv_obj_set_size(hLine, gridSize, 2);
-        lv_obj_set_pos(hLine, gridX, gridY + i * stepSize);
+        lv_obj_set_size(hLine, gridSizeX, 2);
+        lv_obj_set_pos(hLine, gridX, gridY + i * stepSizeY);
         lv_obj_set_style_bg_color(hLine, colors[0], 0);
         lv_obj_set_style_bg_grad_color(hLine, colors[5], 0);
         lv_obj_set_style_bg_grad_dir(hLine, LV_GRAD_DIR_HOR, 0);
@@ -421,8 +423,8 @@ void UIManager::init() {
     // Draw the 6 vertical grid lines
     for (int i = 0; i < 6; ++i) {
         lv_obj_t* vLine = lv_obj_create(splash);
-        lv_obj_set_size(vLine, 2, gridSize);
-        lv_obj_set_pos(vLine, gridX + i * stepSize, gridY);
+        lv_obj_set_size(vLine, 2, gridSizeY);
+        lv_obj_set_pos(vLine, gridX + i * stepSizeX, gridY);
         lv_obj_set_style_bg_color(vLine, colors[i], 0);
         lv_obj_set_style_bg_opa(vLine, LV_OPA_COVER, 0);
         lv_obj_set_style_border_width(vLine, 0, 0);
@@ -430,8 +432,8 @@ void UIManager::init() {
 
     // Draw squiggly lines extending from the edges (top, bottom, left, right)
     for (int i = 0; i < 6; ++i) {
-        int x_val = gridX + i * stepSize;
-        int y_val = gridY + i * stepSize;
+        int x_val = gridX + i * stepSizeX;
+        int y_val = gridY + i * stepSizeY;
 
         // 1. Top curves (extend upwards from gridY)
         {
@@ -450,7 +452,7 @@ void UIManager::init() {
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
 
-        // 2. Bottom curves (extend downwards from gridY + gridSize)
+        // 2. Bottom curves (extend downwards from gridY + gridSizeY)
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
@@ -458,7 +460,7 @@ void UIManager::init() {
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
                 pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
-                pts[p].y = (gridY + gridSize) + (int)(t * 55.0f);
+                pts[p].y = (gridY + gridSizeY) + (int)(t * 55.0f);
             }
             lv_obj_t* line = lv_line_create(splash);
             lv_line_set_points(line, pts, numPts);
@@ -484,14 +486,14 @@ void UIManager::init() {
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
 
-        // 4. Right curves (extend rightwards from gridX + gridSize)
+        // 4. Right curves (extend rightwards from gridX + gridSizeX)
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
             float amp = 15.0f + (5 - i) * 5.0f;
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
-                pts[p].x = (gridX + gridSize) + (int)(t * 55.0f);
+                pts[p].x = (gridX + gridSizeX) + (int)(t * 55.0f);
                 pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
             }
             lv_obj_t* line = lv_line_create(splash);
@@ -845,6 +847,7 @@ void UIManager::createCenterContentArea() {
 
     // Clear existing center area
     lv_obj_clean(mCenterArea);
+    mIpAddressLbl = nullptr;
 
     mSettingsTabview = nullptr;
     mAssignTabview = nullptr;
@@ -3048,11 +3051,11 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(bufferSizeLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(bufferSizeLbl, lv_color_hex(0xAAAAAA), 0);
 
-    lv_obj_t* ipAddressLbl = lv_label_create(perfCard);
+    mIpAddressLbl = lv_label_create(perfCard);
     std::string ip = getLocalIPAddress();
-    lv_label_set_text_fmt(ipAddressLbl, "IP Address: %s", ip.c_str());
-    lv_obj_set_style_text_font(ipAddressLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(ipAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
+    lv_label_set_text_fmt(mIpAddressLbl, "IP Address: %s", ip.c_str());
+    lv_obj_set_style_text_font(mIpAddressLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
     lv_label_set_text(versionLbl, "Version: v2.3.0");
@@ -4225,6 +4228,15 @@ void UIManager::update() {
                 lv_label_set_text_fmt(mSettingsUpdateStatus, "Status: Finished\n%s", mUpdateInstallStatusStr.c_str());
             } else {
                 lv_label_set_text(mSettingsUpdateStatus, "Status: Idle\nReady to update.");
+            }
+        }
+
+        // Periodically update IP address label if visible (every ~2 seconds)
+        if (mIpAddressLbl != nullptr) {
+            static uint32_t ipCheckCounter = 0;
+            if (ipCheckCounter++ % 120 == 0) {
+                std::string ip = getLocalIPAddress();
+                lv_label_set_text_fmt(mIpAddressLbl, "IP Address: %s", ip.c_str());
             }
         }
 
