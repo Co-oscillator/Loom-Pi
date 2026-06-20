@@ -383,33 +383,150 @@ void UIManager::init() {
     lv_obj_set_style_border_width(splash, 0, 0);
     lv_obj_remove_flag(splash, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(splash, LV_OBJ_FLAG_FLOATING);
-    
-    // Abstract modern container
-    lv_obj_t* logoCont = lv_obj_create(splash);
-    lv_obj_set_size(logoCont, 400, 250);
-    lv_obj_center(logoCont);
-    lv_obj_set_style_bg_opa(logoCont, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(logoCont, 0, 0);
-    lv_obj_remove_flag(logoCont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(logoCont, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(logoCont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(logoCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Glowing Loom Orange line accent
-    lv_obj_t* bar = lv_obj_create(logoCont);
-    lv_obj_set_size(bar, 140, 4);
+    // Event callback to free dynamically allocated point arrays
+    auto lineDeleteCb = [](lv_event_t* e) {
+        lv_point_t* pts = (lv_point_t*)lv_event_get_user_data(e);
+        delete[] pts;
+    };
+
+    // Color palette for the grid (cyan to red spectrum)
+    lv_color_t colors[6] = {
+        lv_color_hex(0x00E5FF), // Cyan
+        lv_color_hex(0xBD00FF), // Purple
+        lv_color_hex(0xFF007F), // Pink/Magenta
+        lv_color_hex(0x39FF14), // Lime Green
+        lv_color_hex(0xFFD700), // Yellow/Gold
+        lv_color_hex(0xFF3300)  // Orange/Red
+    };
+
+    // Center coords for grid (centered at x=512, y=200)
+    int gridX = 422;
+    int gridY = 110;
+    int gridSize = 180;
+    int stepSize = 36;
+    int numPts = 10;
+
+    // Draw the 6 horizontal grid lines with a nice gradient
+    for (int i = 0; i < 6; ++i) {
+        lv_obj_t* hLine = lv_obj_create(splash);
+        lv_obj_set_size(hLine, gridSize, 2);
+        lv_obj_set_pos(hLine, gridX, gridY + i * stepSize);
+        lv_obj_set_style_bg_color(hLine, colors[0], 0);
+        lv_obj_set_style_bg_grad_color(hLine, colors[5], 0);
+        lv_obj_set_style_bg_grad_dir(hLine, LV_GRAD_DIR_HOR, 0);
+        lv_obj_set_style_border_width(hLine, 0, 0);
+    }
+
+    // Draw the 6 vertical grid lines
+    for (int i = 0; i < 6; ++i) {
+        lv_obj_t* vLine = lv_obj_create(splash);
+        lv_obj_set_size(vLine, 2, gridSize);
+        lv_obj_set_pos(vLine, gridX + i * stepSize, gridY);
+        lv_obj_set_style_bg_color(vLine, colors[i], 0);
+        lv_obj_set_style_bg_opa(vLine, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(vLine, 0, 0);
+    }
+
+    // Draw squiggly lines extending from the edges (top, bottom, left, right)
+    for (int i = 0; i < 6; ++i) {
+        int x_val = gridX + i * stepSize;
+        int y_val = gridY + i * stepSize;
+
+        // 1. Top curves (extend upwards from gridY)
+        {
+            lv_point_precise_t* pts = new lv_point_precise_t[numPts];
+            float direction = (i < 3) ? -1.0f : 1.0f;
+            float amp = 15.0f + i * 5.0f;
+            for (int p = 0; p < numPts; ++p) {
+                float t = (float)p / (numPts - 1);
+                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+                pts[p].y = gridY - (int)(t * 55.0f);
+            }
+            lv_obj_t* line = lv_line_create(splash);
+            lv_line_set_points(line, pts, numPts);
+            lv_obj_set_style_line_color(line, colors[i], 0);
+            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
+        }
+
+        // 2. Bottom curves (extend downwards from gridY + gridSize)
+        {
+            lv_point_precise_t* pts = new lv_point_precise_t[numPts];
+            float direction = (i < 3) ? -1.0f : 1.0f;
+            float amp = 15.0f + (5 - i) * 5.0f;
+            for (int p = 0; p < numPts; ++p) {
+                float t = (float)p / (numPts - 1);
+                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+                pts[p].y = (gridY + gridSize) + (int)(t * 55.0f);
+            }
+            lv_obj_t* line = lv_line_create(splash);
+            lv_line_set_points(line, pts, numPts);
+            lv_obj_set_style_line_color(line, colors[i], 0);
+            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
+        }
+
+        // 3. Left curves (extend leftwards from gridX)
+        {
+            lv_point_precise_t* pts = new lv_point_precise_t[numPts];
+            float direction = (i < 3) ? -1.0f : 1.0f;
+            float amp = 15.0f + i * 5.0f;
+            for (int p = 0; p < numPts; ++p) {
+                float t = (float)p / (numPts - 1);
+                pts[p].x = gridX - (int)(t * 55.0f);
+                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+            }
+            lv_obj_t* line = lv_line_create(splash);
+            lv_line_set_points(line, pts, numPts);
+            lv_obj_set_style_line_color(line, colors[i], 0);
+            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
+        }
+
+        // 4. Right curves (extend rightwards from gridX + gridSize)
+        {
+            lv_point_precise_t* pts = new lv_point_precise_t[numPts];
+            float direction = (i < 3) ? -1.0f : 1.0f;
+            float amp = 15.0f + (5 - i) * 5.0f;
+            for (int p = 0; p < numPts; ++p) {
+                float t = (float)p / (numPts - 1);
+                pts[p].x = (gridX + gridSize) + (int)(t * 55.0f);
+                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+            }
+            lv_obj_t* line = lv_line_create(splash);
+            lv_line_set_points(line, pts, numPts);
+            lv_obj_set_style_line_color(line, colors[i], 0);
+            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
+        }
+    }
+
+    // Text labels container below the graphic (y = 370)
+    lv_obj_t* textCont = lv_obj_create(splash);
+    lv_obj_set_size(textCont, 500, 150);
+    lv_obj_align(textCont, LV_ALIGN_TOP_MID, 0, 370);
+    lv_obj_set_style_bg_opa(textCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(textCont, 0, 0);
+    lv_obj_remove_flag(textCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(textCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(textCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(textCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Glowing orange accent line under text
+    lv_obj_t* bar = lv_obj_create(textCont);
+    lv_obj_set_size(bar, 100, 3);
     lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4500), 0); // Loom Orange
     lv_obj_set_style_border_width(bar, 0, 0);
     lv_obj_set_style_radius(bar, 2, 0);
-    lv_obj_set_style_pad_all(bar, 0, 0);
 
-    lv_obj_t* title = lv_label_create(logoCont);
+    lv_obj_t* title = lv_label_create(textCont);
     lv_label_set_text(title, "LOOM");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_letter_space(title, 10, 0);
+    lv_obj_set_style_text_letter_space(title, 12, 0);
 
-    lv_obj_t* subtitle = lv_label_create(logoCont);
+    lv_obj_t* subtitle = lv_label_create(textCont);
     lv_label_set_text(subtitle, "G R O O V E B O X");
     lv_obj_set_style_text_font(subtitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(subtitle, lv_color_hex(0x888888), 0);
