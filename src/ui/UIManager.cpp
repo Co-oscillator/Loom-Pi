@@ -1394,7 +1394,7 @@ void UIManager::populateArpScreen() {
             lv_obj_set_style_border_width(sep, 0, 0);
             lv_obj_set_style_radius(sep, 0, 0);
             lv_obj_set_style_pad_all(sep, 0, 0);
-            lv_obj_align(sep, LV_ALIGN_BOTTOM_RIGHT, 3, 0);
+            lv_obj_align(sep, LV_ALIGN_BOTTOM_RIGHT, 13, 10);
         }
     }
 
