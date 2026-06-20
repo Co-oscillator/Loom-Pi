@@ -1744,26 +1744,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
       if (subId == 0) {
         if (mDelaySync) {
           float beatLen = 60.0f / std::max(1.0f, mBpm);
-          int idx = (int)(value * 16.99f);
+          int idx = (int)(value * 19.99f);
           float div = 0.25f;
           switch (idx) {
             case 0: div = 0.125f; break;     // 1/32
             case 1: div = 0.16667f; break;   // 1/24
-            case 2: div = 0.25f; break;      // 1/16
-            case 3: div = 0.33333f; break;   // 1/12
-            case 4: div = 0.33333f; break;   // 1/8T
+            case 2: div = 0.2f; break;       // 1/5
+            case 3: div = 0.25f; break;      // 1/16
+            case 4: div = 0.33333f; break;   // 1/12
             case 5: div = 0.375f; break;     // 1/16D
             case 6: div = 0.5f; break;       // 1/8
-            case 7: div = 0.8f; break;       // 1/5
-            case 8: div = 0.66667f; break;   // 1/4T
-            case 9: div = 0.75f; break;      // 1/8D
+            case 7: div = 0.66667f; break;   // 1/4T
+            case 8: div = 0.75f; break;      // 1/8D
+            case 9: div = 0.8f; break;       // 4/5
             case 10: div = 1.0f; break;      // 1/4
-            case 11: div = 1.33333f; break;  // 1/3
-            case 12: div = 1.33333f; break;  // 1/2T
+            case 11: div = 1.33333f; break;  // 1/2T
+            case 12: div = 1.33333f; break;  // 4/3
             case 13: div = 1.5f; break;      // 3/8
-            case 14: div = 1.5f; break;      // 1/4D
-            case 15: div = 2.0f; break;      // 1/2
-            case 16: div = 4.0f; break;      // 1/1
+            case 14: div = 2.0f; break;      // 1/2
+            case 15: div = 2.5f; break;      // 5/8
+            case 16: div = 3.5f; break;      // 7/8
+            case 17: div = 4.0f; break;      // 1/1
+            case 18: div = 5.0f; break;      // 5/4
+            case 19: div = 6.0f; break;      // 3/2
           }
           mDelayFx.setDelayTime(beatLen * div);
         } else {
@@ -1788,26 +1791,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         // Force refresh time with sync state applied
         float beatLen = 60.0f / std::max(1.0f, mBpm);
         if (mDelaySync) {
-          int idx = (int)(currentVal * 16.99f);
+          int idx = (int)(currentVal * 19.99f);
           float div = 0.25f;
           switch (idx) {
             case 0: div = 0.125f; break;
             case 1: div = 0.16667f; break;
-            case 2: div = 0.25f; break;
-            case 3: div = 0.33333f; break;
+            case 2: div = 0.2f; break;
+            case 3: div = 0.25f; break;
             case 4: div = 0.33333f; break;
             case 5: div = 0.375f; break;
             case 6: div = 0.5f; break;
-            case 7: div = 0.8f; break;
-            case 8: div = 0.66667f; break;
-            case 9: div = 0.75f; break;
+            case 7: div = 0.66667f; break;
+            case 8: div = 0.75f; break;
+            case 9: div = 0.8f; break;
             case 10: div = 1.0f; break;
             case 11: div = 1.33333f; break;
             case 12: div = 1.33333f; break;
             case 13: div = 1.5f; break;
-            case 14: div = 1.5f; break;
-            case 15: div = 2.0f; break;
-            case 16: div = 4.0f; break;
+            case 14: div = 2.0f; break;
+            case 15: div = 2.5f; break;
+            case 16: div = 3.5f; break;
+            case 17: div = 4.0f; break;
+            case 18: div = 5.0f; break;
+            case 19: div = 6.0f; break;
           }
           mDelayFx.setDelayTime(beatLen * div);
         } else {
@@ -1854,26 +1860,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         float rateHz = 0.1f + value * 9.9f;
         if (mPhaserSync) {
           float beatLen = 60.0f / std::max(1.0f, mBpm);
-          int idx = (int)(value * 16.99f);
+          int idx = (int)(value * 19.99f);
           float div = 1.0f;
           switch (idx) {
             case 0: div = 0.125f; break;
             case 1: div = 0.16667f; break;
-            case 2: div = 0.25f; break;
-            case 3: div = 0.33333f; break;
+            case 2: div = 0.2f; break;
+            case 3: div = 0.25f; break;
             case 4: div = 0.33333f; break;
             case 5: div = 0.375f; break;
             case 6: div = 0.5f; break;
-            case 7: div = 0.8f; break;
-            case 8: div = 0.66667f; break;
-            case 9: div = 0.75f; break;
+            case 7: div = 0.66667f; break;
+            case 8: div = 0.75f; break;
+            case 9: div = 0.8f; break;
             case 10: div = 1.0f; break;
             case 11: div = 1.33333f; break;
             case 12: div = 1.33333f; break;
             case 13: div = 1.5f; break;
-            case 14: div = 1.5f; break;
-            case 15: div = 2.0f; break;
-            case 16: div = 4.0f; break;
+            case 14: div = 2.0f; break;
+            case 15: div = 2.5f; break;
+            case 16: div = 3.5f; break;
+            case 17: div = 4.0f; break;
+            case 18: div = 5.0f; break;
+            case 19: div = 6.0f; break;
           }
           rateHz = 1.0f / (beatLen * div);
         }
@@ -2006,26 +2015,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         float rateHz = 0.05f + value * 4.95f;
         if (mFlangerSync) {
           float beatLen = 60.0f / std::max(1.0f, mBpm);
-          int idx = (int)(value * 16.99f);
+          int idx = (int)(value * 19.99f);
           float div = 1.0f;
           switch (idx) {
             case 0: div = 0.125f; break;
             case 1: div = 0.16667f; break;
-            case 2: div = 0.25f; break;
-            case 3: div = 0.33333f; break;
+            case 2: div = 0.2f; break;
+            case 3: div = 0.25f; break;
             case 4: div = 0.33333f; break;
             case 5: div = 0.375f; break;
             case 6: div = 0.5f; break;
-            case 7: div = 0.8f; break;
-            case 8: div = 0.66667f; break;
-            case 9: div = 0.75f; break;
+            case 7: div = 0.66667f; break;
+            case 8: div = 0.75f; break;
+            case 9: div = 0.8f; break;
             case 10: div = 1.0f; break;
             case 11: div = 1.33333f; break;
             case 12: div = 1.33333f; break;
             case 13: div = 1.5f; break;
-            case 14: div = 1.5f; break;
-            case 15: div = 2.0f; break;
-            case 16: div = 4.0f; break;
+            case 14: div = 2.0f; break;
+            case 15: div = 2.5f; break;
+            case 16: div = 3.5f; break;
+            case 17: div = 4.0f; break;
+            case 18: div = 5.0f; break;
+            case 19: div = 6.0f; break;
           }
           rateHz = 1.0f / (beatLen * div);
         }
@@ -2056,26 +2068,29 @@ void AudioEngine::updateGlobalParameter(int parameterId, float value) {
         float delaySecs = 0.01f + value * 1.99f;
         if (mTapeEchoSync) {
           float beatLen = 60.0f / std::max(1.0f, mBpm);
-          int idx = (int)(value * 16.99f);
+          int idx = (int)(value * 19.99f);
           float div = 0.25f;
           switch (idx) {
             case 0: div = 0.125f; break;
             case 1: div = 0.16667f; break;
-            case 2: div = 0.25f; break;
-            case 3: div = 0.33333f; break;
+            case 2: div = 0.2f; break;
+            case 3: div = 0.25f; break;
             case 4: div = 0.33333f; break;
             case 5: div = 0.375f; break;
             case 6: div = 0.5f; break;
-            case 7: div = 0.8f; break;
-            case 8: div = 0.66667f; break;
-            case 9: div = 0.75f; break;
+            case 7: div = 0.66667f; break;
+            case 8: div = 0.75f; break;
+            case 9: div = 0.8f; break;
             case 10: div = 1.0f; break;
             case 11: div = 1.33333f; break;
             case 12: div = 1.33333f; break;
             case 13: div = 1.5f; break;
-            case 14: div = 1.5f; break;
-            case 15: div = 2.0f; break;
-            case 16: div = 4.0f; break;
+            case 14: div = 2.0f; break;
+            case 15: div = 2.5f; break;
+            case 16: div = 3.5f; break;
+            case 17: div = 4.0f; break;
+            case 18: div = 5.0f; break;
+            case 19: div = 6.0f; break;
           }
           delaySecs = beatLen * div;
         }

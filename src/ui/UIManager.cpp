@@ -10415,16 +10415,16 @@ void UIManager::fxControlEventCb(lv_event_t* e) {
         int syncIdx = -1;
         if (d->paramId == 520) {
             isSynced = d->ui->mEngine.getTracks()[0].parameters[527] >= 0.5f;
-            syncIdx = (int)(rawVal * 16.99f);
+            syncIdx = (int)(rawVal * 19.99f);
         } else if (d->paramId == 1510) {
             isSynced = d->ui->mEngine.getTracks()[0].parameters[1516] >= 0.5f;
-            syncIdx = (int)(rawVal * 16.99f);
+            syncIdx = (int)(rawVal * 19.99f);
         } else if (d->paramId == 1500) {
             isSynced = d->ui->mEngine.getTracks()[0].parameters[1505] >= 0.5f;
-            syncIdx = (int)(rawVal * 16.99f);
+            syncIdx = (int)(rawVal * 19.99f);
         } else if (d->paramId == 550) {
             isSynced = d->ui->mEngine.getTracks()[0].parameters[554] >= 0.5f;
-            syncIdx = (int)(rawVal * 16.99f);
+            syncIdx = (int)(rawVal * 19.99f);
         } else if (d->paramId == 490) {
             isSynced = d->ui->mEngine.getTracks()[0].parameters[495] >= 0.5f;
             syncIdx = (int)(rawVal * 22.99f);
@@ -10437,8 +10437,8 @@ void UIManager::fxControlEventCb(lv_event_t* e) {
             if (d->paramId == 490 || d->paramId == 1590) {
                 lv_label_set_text(d->valLbl, getLfoSyncLabel(syncIdx));
             } else {
-                const char* delaySyncLabels[] = {"1/32", "1/24", "1/16", "1/12", "1/8T", "1/16D", "1/8", "1/5", "1/4T", "1/8D", "1/4", "1/3", "1/2T", "3/8", "1/4D", "1/2", "1/1"};
-                lv_label_set_text(d->valLbl, delaySyncLabels[syncIdx % 17]);
+                const char* delaySyncLabels[] = {"1/32", "1/24", "1/5", "1/16", "1/12", "1/16D", "1/8", "1/4T", "1/8D", "4/5", "1/4", "1/2T", "4/3", "3/8", "1/2", "5/8", "7/8", "1/1", "5/4", "3/2"};
+                lv_label_set_text(d->valLbl, delaySyncLabels[syncIdx % 20]);
             }
         } else {
             float dispVal = rawVal;
