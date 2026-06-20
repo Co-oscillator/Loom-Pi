@@ -145,7 +145,7 @@ private:
     int mActiveNav = 4; // Default navigation page
     
     // Arpeggiator pattern grid
-    lv_obj_t* mArpButtons[4][16];
+    lv_obj_t* mArpButtons[7][16];
     lv_obj_t* mArpColumns[16];
     static void arpButtonEventCb(lv_event_t* e);
     void randomizeRhythm();

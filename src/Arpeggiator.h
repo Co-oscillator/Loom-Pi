@@ -34,9 +34,9 @@ public:
             std::chrono::high_resolution_clock::now().time_since_epoch().count() ^
             std::random_device{}())),
         mProbability(1.0f), mWeird(0.0f), mRateMultiplier(1.0f), mSpeedMultiplier(1.0f) {
-    // Default: Lane 0 (Root) active, Lanes 1-3 inactive
-    mRhythms.resize(4, std::vector<bool>(16, false));
-    std::fill(mRhythms[0].begin(), mRhythms[0].end(), true);
+    // Default: Lane 3 (Root) active, others inactive (7 lanes total)
+    mRhythms.resize(7, std::vector<bool>(16, false));
+    std::fill(mRhythms[3].begin(), mRhythms[3].end(), true);
     mScaleIntervals = {0, 2, 4, 5, 7, 9, 11}; // Default Major
 
     mHeldNotes.reserve(32);
@@ -255,8 +255,8 @@ public:
         }
     };
 
-    // Lane 2: Root/Main Note (UI Row 2)
-    if (mRhythms.size() > 2 && mRhythms[2][stepIndex]) {
+    // Lane 3: Root/Main Note (UI Row 3)
+    if (mRhythms.size() > 3 && mRhythms[3][stepIndex]) {
       if (stepAllowed) {
           int idx = mNoteIndex % seqSize;
           int noteIdx = mSequence[idx];
@@ -268,19 +268,34 @@ public:
       playedAnyInStep = true; 
     }
 
-    // Lane 1: +1 Walk (UI Row 1)
-    if (mRhythms.size() > 1 && mRhythms[1][stepIndex]) {
+    // Lane 2: +1 Walk (UI Row 2)
+    if (mRhythms.size() > 2 && mRhythms[2][stepIndex]) {
       addNoteIfVisible((mNoteIndex + 1) % seqSize);
     }
 
-    // Lane 0: +2 Walk (UI Row 0)
-    if (mRhythms.size() > 0 && mRhythms[0][stepIndex]) {
+    // Lane 1: +2 Walk (UI Row 1)
+    if (mRhythms.size() > 1 && mRhythms[1][stepIndex]) {
       addNoteIfVisible((mNoteIndex + 2) % seqSize);
     }
 
-    // Lane 3: -1 Walk (UI Row 3)
-    if (mRhythms.size() > 3 && mRhythms[3][stepIndex]) {
+    // Lane 0: +3 Walk (UI Row 0)
+    if (mRhythms.size() > 0 && mRhythms[0][stepIndex]) {
+      addNoteIfVisible((mNoteIndex + 3) % seqSize);
+    }
+
+    // Lane 4: -1 Walk (UI Row 4)
+    if (mRhythms.size() > 4 && mRhythms[4][stepIndex]) {
       addNoteIfVisible((mNoteIndex - 1 + seqSize) % seqSize);
+    }
+
+    // Lane 5: -2 Walk (UI Row 5)
+    if (mRhythms.size() > 5 && mRhythms[5][stepIndex]) {
+      addNoteIfVisible((mNoteIndex - 2 + seqSize) % seqSize);
+    }
+
+    // Lane 6: -3 Walk (UI Row 6)
+    if (mRhythms.size() > 6 && mRhythms[6][stepIndex]) {
+      addNoteIfVisible((mNoteIndex - 3 + seqSize) % seqSize);
     }
 
     if (playedAnyInStep) {

@@ -61,6 +61,7 @@ private:
 
     // Filter State
     float filterState = 0.0f;
+    float filterState2 = 0.0f;
     float attackPhase = 0.0f;
 
     // Clap State
@@ -87,6 +88,7 @@ private:
       clapStage = 0;
       clapEnv = 0.0f;
       filterState = 0.0f;
+      filterState2 = 0.0f;
       attackPhase = 0.0f;
       currentFreq = baseFreq;
 
@@ -116,19 +118,19 @@ private:
           return 0.0f;
         }
         float invSr = 1.0f / sampleRate;
-        currentFreq +=
-            (baseFreq - currentFreq) * (0.002f + (1.0f - tone) * 0.005f);
+        // Fast pitch sweep characteristic of 808
+        float sweepRate = 0.007f + paramA * 0.013f;
+        currentFreq += (baseFreq - currentFreq) * sweepRate;
         phase += (uint32_t)(currentFreq * invSr * 4294967296.0);
 
         float sine = FastSine::getInt(phase);
-        if (tone > 0.5f) {
-          float x = sine * 1.4f;
-          if (x > 1.0f)
-            x = 1.0f - expf(1.0f - x);
-          else if (x < -1.0f)
-            x = -1.0f + expf(1.0f + x);
-          float x2 = x * x;
-          sine = x * (27.0f + x2) / (27.0f + 9.0f * x2);
+        // Soft analog saturation waveshaper
+        if (tone > 0.1f) {
+          float drive = 1.0f + tone * 1.5f;
+          float x = sine * drive;
+          if (x > 1.0f) x = 1.0f - expf(1.0f - x);
+          else if (x < -1.0f) x = -1.0f + expf(1.0f + x);
+          sine = x * 0.7f;
         }
         out = sine * env;
         break;
@@ -136,19 +138,24 @@ private:
 
       case DrumType::Snare: {
         float invSr = 1.0f / sampleRate;
-        float envTone = std::max(0.0f, env - invSr / (decay * 0.4f));
+        float envTone = std::max(0.0f, env - invSr / (decay * 0.35f));
         env -= invSr / decay;
         if (env <= 0.0f) {
           active = false;
           return 0.0f;
         }
+        // Two oscillators for snare drum shell (fundamental + harmonic)
         phase += (uint32_t)(baseFreq * invSr * 4294967296.0);
-        float shell = FastSine::getInt(phase) * envTone;
+        float shell1 = FastSine::getInt(phase) * envTone;
+        float shell2 = FastSine::getInt(phase * 1.5f) * envTone * 0.4f;
+        float shell = shell1 + shell2;
+
         float noise = rng.next();
-        float hpCoeff = 0.1f + (tone * 0.6f);
+        // Snappy high-pass filtered white noise for snares
+        float hpCoeff = 0.15f + (tone * 0.55f);
         filterState += (noise - filterState) * hpCoeff;
         float wires = (noise - filterState) * env;
-        out = (shell * (1.0f - paramA * 0.5f)) + (wires * (0.2f + paramA));
+        out = (shell * (1.0f - paramA * 0.4f)) + (wires * (0.15f + paramA * 0.8f));
         break;
       }
 
@@ -157,12 +164,12 @@ private:
         if (clapStage < 4) {
           if (clapTimer <= 0) {
             clapEnv = 1.0f;
-            float spreadTime = 0.005f + (paramA * 0.025f);
-            clapTimer = spreadTime + rng.next() * 0.005f;
+            float spreadTime = 0.006f + (paramA * 0.02f);
+            clapTimer = spreadTime + rng.next() * 0.004f;
             clapStage++;
           }
         }
-        clapEnv -= dt / (0.01f + decay * 0.1f);
+        clapEnv -= dt / (0.008f + decay * 0.08f);
         if (clapEnv < 0.0f)
           clapEnv = 0.0f;
         env -= dt / decay;
@@ -171,8 +178,9 @@ private:
           return 0.0f;
         }
         float noise = rng.next();
-        filterState += (noise - filterState) * (0.4f + tone * 0.4f);
-        out = (noise - filterState) * clapEnv * 0.8f;
+        // Bandpass filter centered around 1kHz for authentic 808 clap
+        filterState += (noise - filterState) * (0.35f + tone * 0.35f);
+        out = (noise - filterState) * (clapEnv * 0.7f + env * 0.3f) * 0.85f;
         break;
       }
 
@@ -183,21 +191,26 @@ private:
           active = false;
           return 0.0f;
         }
-        float spread = 1.0f + (paramB * 0.3f);
+        float spread = 1.0f + (paramB * 0.35f);
+        // Six square wave frequencies of TR-808 hi-hat
         float freqs[6] = {baseFreq,
-                          baseFreq * 1.5f * spread,
-                          baseFreq * 1.63f,
-                          baseFreq * 1.86f * spread,
-                          baseFreq * 2.16f * spread,
-                          baseFreq * 2.66f};
+                          baseFreq * 1.48f * spread,
+                          baseFreq * 1.58f,
+                          baseFreq * 1.83f * spread,
+                          baseFreq * 2.14f * spread,
+                          baseFreq * 2.63f};
         float cluster = 0.0f;
         for (int i = 0; i < 6; ++i) {
           hatPhases[i] += (uint32_t)(freqs[i] * dt * 4294967296.0);
           cluster += (hatPhases[i] > 2147483648) ? 1.0f : -1.0f;
         }
-        float hpFreq = 0.25f + (tone * 0.7f);
+        // Double stage 12dB/oct highpass filter for crisp 808 metal sheen
+        float hpFreq = 0.45f + (tone * 0.45f);
         filterState += (cluster - filterState) * hpFreq;
-        out = (cluster - filterState) * env * 0.3f;
+        float hp1 = cluster - filterState;
+        filterState2 += (hp1 - filterState2) * hpFreq;
+        float hp2 = hp1 - filterState2;
+        out = hp2 * env * 0.28f;
         break;
       }
 
@@ -228,9 +241,13 @@ private:
           hatPhases[i] += (uint32_t)(freqs[i] * dt * 4294967296.0);
           cluster += (hatPhases[i] > 2147483648) ? 1.0f : -1.0f;
         }
-        float hpFreq = 0.05f + (tone * 0.4f);
+        // 12dB/oct Highpass filter
+        float hpFreq = 0.15f + (tone * 0.45f);
         filterState += (cluster - filterState) * hpFreq;
-        out = (cluster - filterState) * env * 0.4f;
+        float hp1 = cluster - filterState;
+        filterState2 += (hp1 - filterState2) * hpFreq;
+        float hp2 = hp1 - filterState2;
+        out = hp2 * env * 0.35f;
         break;
       }
 
@@ -242,7 +259,11 @@ private:
         }
         phase += (uint32_t)(baseFreq * dt * 4294967296.0);
         float sine = FastSine::getInt(phase);
-        out = sine * env * 0.8f;
+        // Subtle cowbell-like harmonic ring if tone is high
+        if (tone > 0.4f) {
+          sine = (sine + FastSine::getInt(phase * 1.48f) * 0.3f) * 0.8f;
+        }
+        out = sine * env * 0.75f;
         break;
       }
 
@@ -253,9 +274,9 @@ private:
           return 0.0f;
         }
         float noise = rng.next();
-        float lpFreq = 0.1f + (tone * 0.8f);
+        float lpFreq = 0.08f + (tone * 0.82f);
         filterState += (noise - filterState) * lpFreq;
-        out = filterState * env * 0.7f;
+        out = filterState * env * 0.65f;
         break;
       }
       } // Switch
@@ -293,15 +314,19 @@ public:
       break;
     case 2: // Tune
       if (v.type == DrumType::Kick)
-        v.baseFreq = 30.0f + (value * 60.0f);
+        v.baseFreq = 38.0f + (value * 45.0f); // 808 Kick sweet spot
+      else if (v.type == DrumType::Snare)
+        v.baseFreq = 120.0f + (value * 160.0f); // Snare shell tuning (120-280Hz)
+      else if (v.type == DrumType::Clap)
+        v.baseFreq = 800.0f + (value * 1000.0f); // Clap bandpass center
       else if (v.type == DrumType::Perc)
-        v.baseFreq = 200.0f + (value * 600.0f);
+        v.baseFreq = 150.0f + (value * 500.0f);
       else if (v.type == DrumType::HiHatClosed || v.type == DrumType::HiHatOpen)
-        v.baseFreq = 200.0f + (value * 800.0f);
+        v.baseFreq = 250.0f + (value * 450.0f);
       else if (v.type == DrumType::Cymbal)
-        v.baseFreq = 100.0f + (value * 400.0f);
+        v.baseFreq = 200.0f + (value * 300.0f);
       else
-        v.baseFreq = value;
+        v.baseFreq = 100.0f + (value * 400.0f);
       break;
     case 3:
       v.paramA = value;

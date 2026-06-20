@@ -1196,8 +1196,8 @@ void UIManager::populateArpScreen() {
     lv_label_set_text(topSpacer, " ");
     lv_obj_set_style_text_font(topSpacer, &lv_font_montserrat_12, 0);
 
-    const char* rowLabels[] = {"+2", "+1", "Rt", "-1"};
-    for (int r = 0; r < 4; ++r) {
+    const char* rowLabels[] = {"+3", "+2", "+1", "Rt", "-1", "-2", "-3"};
+    for (int r = 0; r < 7; ++r) {
         lv_obj_t* rl = lv_label_create(lblCol);
         lv_label_set_text(rl, rowLabels[r]);
         lv_obj_set_style_text_font(rl, &lv_font_montserrat_12, 0);
@@ -1223,24 +1223,27 @@ void UIManager::populateArpScreen() {
         lv_obj_set_style_text_font(colNum, isBeatStart ? &lv_font_montserrat_14 : &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(colNum, isBeatStart ? lv_color_hex(0xCCCCCC) : lv_color_hex(0x666666), 0);
 
-        // Create 4 buttons for the 4 rows
-        for (int r = 0; r < 4; ++r) {
+        // Create 7 buttons for the 7 rows (approx. 28px height)
+        for (int r = 0; r < 7; ++r) {
             lv_obj_t* btn = lv_button_create(colCont);
-            lv_obj_set_size(btn, 36, 46);
+            lv_obj_set_size(btn, 36, 28);
             lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
-            lv_obj_set_style_radius(btn, 10, 0); // Soft rounded rectangle
+            lv_obj_set_style_radius(btn, 6, 0); // Soft rounded rectangle
             lv_obj_set_style_border_width(btn, 0, 0);
 
             // Inactive (default) background
             lv_obj_set_style_bg_color(btn, lv_color_hex(0x252525), 0);
             lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
 
-            // Row-specific checked colors
+            // Row-specific checked colors (7-row scale)
             lv_color_t checkedColor;
-            if (r == 0) checkedColor = lv_color_hex(0x8A2BE2);      // +2 (Blue Violet)
-            else if (r == 1) checkedColor = lv_color_hex(0x32CD32); // +1 (Lime Green)
-            else if (r == 2) checkedColor = lv_color_hex(0x1E90FF); // Rt (Dodger Blue)
-            else checkedColor = lv_color_hex(0xFF4500);             // -1 (Orange Red)
+            if (r == 0) checkedColor = lv_color_hex(0x4B0082);      // +3 (Indigo)
+            else if (r == 1) checkedColor = lv_color_hex(0x8A2BE2); // +2 (Blue Violet)
+            else if (r == 2) checkedColor = lv_color_hex(0x32CD32); // +1 (Lime Green)
+            else if (r == 3) checkedColor = lv_color_hex(0x1E90FF); // Rt (Dodger Blue)
+            else if (r == 4) checkedColor = lv_color_hex(0xFF8C00); // -1 (Dark Orange)
+            else if (r == 5) checkedColor = lv_color_hex(0xFF4500); // -2 (Orange Red)
+            else checkedColor = lv_color_hex(0xDC143C);             // -3 (Crimson)
 
             const auto& rhythm = arp.getRhythm();
             bool isChecked = false;
@@ -1285,29 +1288,32 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_flow(bottomRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(bottomRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Legend container
+    // Legend container (increased width to 520 for 7 items)
     lv_obj_t* legendCont = lv_obj_create(bottomRow);
-    lv_obj_set_size(legendCont, 450, 40);
+    lv_obj_set_size(legendCont, 520, 40);
     lv_obj_set_style_bg_opa(legendCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(legendCont, 0, 0);
     lv_obj_set_style_pad_all(legendCont, 0, 0);
     lv_obj_set_layout(legendCont, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(legendCont, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(legendCont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(legendCont, 20, 0);
+    lv_obj_set_style_pad_column(legendCont, 10, 0);
 
-    const char* legendTexts[] = {"1 Below", "Root", "1 Above", "2 Above"};
+    const char* legendTexts[] = {"-3", "-2", "-1", "Rt", "+1", "+2", "+3"};
     lv_color_t legendColors[] = {
-        lv_color_hex(0xFF4500), // 1 Below
-        lv_color_hex(0x1E90FF), // Root
-        lv_color_hex(0x32CD32), // 1 Above
-        lv_color_hex(0x8A2BE2)  // 2 Above
+        lv_color_hex(0xDC143C), // -3 (Crimson)
+        lv_color_hex(0xFF4500), // -2 (Orange Red)
+        lv_color_hex(0xFF8C00), // -1 (Dark Orange)
+        lv_color_hex(0x1E90FF), // Rt (Dodger Blue)
+        lv_color_hex(0x32CD32), // +1 (Lime Green)
+        lv_color_hex(0x8A2BE2), // +2 (Blue Violet)
+        lv_color_hex(0x4B0082)  // +3 (Indigo)
     };
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 7; ++i) {
         // Draw tiny color dot
         lv_obj_t* dot = lv_obj_create(legendCont);
-        lv_obj_set_size(dot, 10, 10);
+        lv_obj_set_size(dot, 8, 8);
         lv_obj_set_style_bg_color(dot, legendColors[i], 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
@@ -1315,14 +1321,14 @@ void UIManager::populateArpScreen() {
 
         lv_obj_t* txt = lv_label_create(legendCont);
         lv_label_set_text(txt, legendTexts[i]);
-        lv_obj_set_style_text_font(txt, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(txt, &lv_font_montserrat_10, 0);
         lv_obj_set_style_text_color(txt, legendColors[i], 0);
         lv_obj_set_style_text_decor(txt, LV_TEXT_DECOR_NONE, 0);
     }
 
-    // Randomize Buttons Container (Right)
+    // Randomize Buttons Container (Right, slightly reduced to fit)
     lv_obj_t* randCont = lv_obj_create(bottomRow);
-    lv_obj_set_size(randCont, 290, 40);
+    lv_obj_set_size(randCont, 220, 40);
     lv_obj_set_style_bg_opa(randCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(randCont, 0, 0);
     lv_obj_set_style_pad_all(randCont, 0, 0);
@@ -1332,7 +1338,7 @@ void UIManager::populateArpScreen() {
 
     // Rand Rhythm Button
     lv_obj_t* randRhyBtn = lv_button_create(randCont);
-    lv_obj_set_size(randRhyBtn, 140, 40);
+    lv_obj_set_size(randRhyBtn, 105, 40);
     lv_obj_set_style_bg_color(randRhyBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_color(randRhyBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_border_width(randRhyBtn, 1, 0);
@@ -1346,7 +1352,7 @@ void UIManager::populateArpScreen() {
 
     // Rand Notes Button
     lv_obj_t* randNotBtn = lv_button_create(randCont);
-    lv_obj_set_size(randNotBtn, 140, 40);
+    lv_obj_set_size(randNotBtn, 105, 40);
     lv_obj_set_style_bg_color(randNotBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_color(randNotBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_border_width(randNotBtn, 1, 0);
@@ -1455,8 +1461,8 @@ void UIManager::updateArpConfig() {
     if (mArpProbArc) {
         probability = (float)lv_arc_get_value(mArpProbArc) / 100.0f;
     }
-    std::vector<std::vector<bool>> rhythms(4, std::vector<bool>(16, false));
-    for (int r = 0; r < 4; ++r) {
+    std::vector<std::vector<bool>> rhythms(7, std::vector<bool>(16, false));
+    for (int r = 0; r < 7; ++r) {
         for (int c = 0; c < 16; ++c) {
             if (mArpButtons[r][c]) {
                 rhythms[r][c] = lv_obj_has_state(mArpButtons[r][c], LV_STATE_CHECKED);
@@ -1570,22 +1576,22 @@ void UIManager::arpButtonEventCb(lv_event_t* e) {
 
 void UIManager::randomizeRhythm() {
     for (int col = 0; col < 16; ++col) {
-        for (int row = 0; row < 4; ++row) {
+        for (int row = 0; row < 7; ++row) {
             lv_obj_remove_state(mArpButtons[row][col], LV_STATE_CHECKED);
         }
         if ((rand() % 100) < 35) {
-            lv_obj_add_state(mArpButtons[2][col], LV_STATE_CHECKED); // Root note row is row index 2
+            lv_obj_add_state(mArpButtons[3][col], LV_STATE_CHECKED); // Root note row is row index 3
         }
     }
 }
 
 void UIManager::randomizeNotes() {
     for (int col = 0; col < 16; ++col) {
-        for (int row = 0; row < 4; ++row) {
+        for (int row = 0; row < 7; ++row) {
             lv_obj_remove_state(mArpButtons[row][col], LV_STATE_CHECKED);
         }
         if ((rand() % 100) < 35) {
-            int activeRow = rand() % 4;
+            int activeRow = rand() % 7;
             lv_obj_add_state(mArpButtons[activeRow][col], LV_STATE_CHECKED);
         }
     }
@@ -4345,14 +4351,16 @@ void UIManager::populateSeqScreen() {
     
     if (engineType == 5 || engineType == 6 || isSamplerChops) {
         lv_obj_t* drumTabRow = lv_obj_create(seqTab);
-        lv_obj_set_size(drumTabRow, lv_pct(100), 40);
+        lv_obj_set_width(drumTabRow, lv_pct(100));
+        lv_obj_set_height(drumTabRow, isSamplerChops ? 70 : 40);
         lv_obj_set_style_bg_opa(drumTabRow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(drumTabRow, 0, 0);
         lv_obj_set_style_pad_all(drumTabRow, 0, 0);
         lv_obj_set_layout(drumTabRow, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(drumTabRow, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_flow(drumTabRow, LV_FLEX_FLOW_ROW_WRAP);
         lv_obj_set_flex_align(drumTabRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_column(drumTabRow, 4, 0);
+        lv_obj_set_style_pad_row(drumTabRow, 4, 0);
         lv_obj_remove_flag(drumTabRow, LV_OBJ_FLAG_SCROLLABLE);
 
         int numTabs = 8;
@@ -6629,6 +6637,19 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
     if (paramId == 401) return prefix + "Density";
     if (paramId == 402) return prefix + "Jitter";
     if (paramId == 403) return prefix + "Spread";
+
+    // FM Drum & Analog Drum parameters (200-279)
+    if (engineType == 5 || engineType == 6) {
+        if (paramId >= 200 && paramId < 280) {
+            int drumIdx = (paramId - 200) / 10;
+            int offset = (paramId - 200) % 10;
+            const char* drumNames[8] = {"Kick", "Snare", "Clap", "HatC", "HatO", "Cymbal", "Perc", "Noise"};
+            const char* paramNames[10] = {"Pitch", "Snap", "Decay", "Tone", "ParamA", "Level", "ParamB", "H", "I", "J"};
+            if (drumIdx >= 0 && drumIdx < 8 && offset >= 0 && offset < 10) {
+                return prefix + drumNames[drumIdx] + " " + paramNames[offset];
+            }
+        }
+    }
 
     if (paramId >= 2000 && paramId < 2180) {
         int fxIdx = (paramId - 2000) / 10;
@@ -15650,7 +15671,8 @@ void UIManager::populateParamAnalogDrumTab1(lv_obj_t* tab) {
 
     addAnalogDrumVoiceStrip(tab, "KICK", 0);
     addAnalogDrumVoiceStrip(tab, "SNARE", 1);
-    addAnalogDrumVoiceStrip(tab, "RIM", 2);
+    addAnalogDrumVoiceStrip(tab, "CLAP", 2);
+    addAnalogDrumVoiceStrip(tab, "HAT C", 3);
 }
 
 void UIManager::populateParamAnalogDrumTab2(lv_obj_t* tab) {
@@ -15659,14 +15681,15 @@ void UIManager::populateParamAnalogDrumTab2(lv_obj_t* tab) {
     lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(tab, 8, 0);
 
-    addAnalogDrumVoiceStrip(tab, "HAT C", 3);
     addAnalogDrumVoiceStrip(tab, "HAT O", 4);
     addAnalogDrumVoiceStrip(tab, "CYMBAL", 5);
+    addAnalogDrumVoiceStrip(tab, "PERC", 6);
+    addAnalogDrumVoiceStrip(tab, "NOISE", 7);
 }
 
 void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumIdx) {
     lv_obj_t* card = lv_obj_create(parent);
-    lv_obj_set_size(card, 230, 450);
+    lv_obj_set_size(card, 220, 450);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(card, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(card, 1, 0);
