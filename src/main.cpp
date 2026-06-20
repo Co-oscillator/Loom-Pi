@@ -261,6 +261,14 @@ int main() {
         for (int k = 0; k < numKeys; ++k) {
             SDL_Keycode sym = keyEvents[k].key.keysym.sym;
             if (keyEvents[k].type == SDL_KEYDOWN) {
+                if (sym == SDLK_ESCAPE) {
+                    if (gCaptureDeviceID != 0) {
+                        SDL_CloseAudioDevice(gCaptureDeviceID);
+                    }
+                    SDL_CloseAudioDevice(gAudioDeviceID);
+                    SDL_Quit();
+                    return 0;
+                }
                 if (sym == SDLK_SPACE && !keyEvents[k].key.repeat) {
                     gEngine.setPlaying(!gEngine.getIsPlaying());
                 } else if ((sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) && !keyEvents[k].key.repeat) {
