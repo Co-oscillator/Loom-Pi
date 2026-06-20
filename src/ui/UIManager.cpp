@@ -1290,9 +1290,9 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_align(tab3, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(tab3, 20, 0);
 
-    // 1. Grid Row Container (Holds labels + columns)
+    // 1. Grid Row Container (Holds labels + columns, increased height to 315)
     lv_obj_t* gridRow = lv_obj_create(tab3);
-    lv_obj_set_size(gridRow, 760, 245);
+    lv_obj_set_size(gridRow, 760, 315);
     lv_obj_set_style_bg_opa(gridRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(gridRow, 0, 0);
     lv_obj_set_style_pad_all(gridRow, 0, 0);
@@ -1301,9 +1301,9 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_flow(gridRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(gridRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Create Row Label Column (Rt, +1, -1, etc.) at leftmost index
+    // Create Row Label Column (Rt, +1, -1, etc.) at leftmost index (increased height to 315)
     lv_obj_t* lblCol = lv_obj_create(gridRow);
-    lv_obj_set_size(lblCol, 30, 245);
+    lv_obj_set_size(lblCol, 30, 315);
     lv_obj_set_style_bg_opa(lblCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lblCol, 0, 0);
     lv_obj_set_style_pad_all(lblCol, 0, 0);
@@ -1328,7 +1328,7 @@ void UIManager::populateArpScreen() {
     for (int c = 0; c < 16; ++c) {
         lv_obj_t* colCont = lv_obj_create(gridRow);
         mArpColumns[c] = colCont;
-        lv_obj_set_size(colCont, 38, 245);
+        lv_obj_set_size(colCont, 38, 315);
         lv_obj_set_style_bg_opa(colCont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(colCont, 0, 0);
         lv_obj_set_style_pad_all(colCont, 0, 0);
@@ -1343,10 +1343,10 @@ void UIManager::populateArpScreen() {
         lv_obj_set_style_text_font(colNum, isBeatStart ? &lv_font_montserrat_14 : &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(colNum, isBeatStart ? lv_color_hex(0xCCCCCC) : lv_color_hex(0x666666), 0);
 
-        // Create 7 buttons for the 7 rows (approx. 28px height)
+        // Create 7 buttons for the 7 rows (uncompressed 36x36px size)
         for (int r = 0; r < 7; ++r) {
             lv_obj_t* btn = lv_button_create(colCont);
-            lv_obj_set_size(btn, 36, 28);
+            lv_obj_set_size(btn, 36, 36);
             lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
             lv_obj_set_style_radius(btn, 6, 0); // Soft rounded rectangle
             lv_obj_set_style_border_width(btn, 0, 0);
@@ -1385,16 +1385,16 @@ void UIManager::populateArpScreen() {
         }
 
         // Add subtle 1px floating vertical line after every 4th column (except last)
-        // Set to LV_OBJ_FLAG_FLOATING so it doesn't affect column spacing or flex layout
+        // Aligned to LV_ALIGN_BOTTOM_RIGHT to cleanly separate buttons without offset issues
         if (c == 3 || c == 7 || c == 11) {
             lv_obj_t* sep = lv_obj_create(colCont);
             lv_obj_add_flag(sep, LV_OBJ_FLAG_FLOATING);
-            lv_obj_set_size(sep, 1, 200);
+            lv_obj_set_size(sep, 1, 265);
             lv_obj_set_style_bg_color(sep, lv_color_hex(0x222222), 0); // Subtle, muted gray
             lv_obj_set_style_border_width(sep, 0, 0);
             lv_obj_set_style_radius(sep, 0, 0);
             lv_obj_set_style_pad_all(sep, 0, 0);
-            lv_obj_align(sep, LV_ALIGN_TOP_RIGHT, 3, 20); // Align 3px to the right of column container (exactly centered in the 6px flex gap)
+            lv_obj_align(sep, LV_ALIGN_BOTTOM_RIGHT, 3, 0);
         }
     }
 
