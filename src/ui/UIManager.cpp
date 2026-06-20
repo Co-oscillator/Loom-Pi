@@ -1384,18 +1384,6 @@ void UIManager::populateArpScreen() {
             mArpButtons[r][c] = btn;
         }
 
-        // Add subtle 1px floating vertical line after every 4th column (except last)
-        // Aligned to LV_ALIGN_BOTTOM_RIGHT to cleanly separate buttons without offset issues
-        if (c == 3 || c == 7 || c == 11) {
-            lv_obj_t* sep = lv_obj_create(colCont);
-            lv_obj_add_flag(sep, LV_OBJ_FLAG_FLOATING);
-            lv_obj_set_size(sep, 1, 265);
-            lv_obj_set_style_bg_color(sep, lv_color_hex(0x222222), 0); // Subtle, muted gray
-            lv_obj_set_style_border_width(sep, 0, 0);
-            lv_obj_set_style_radius(sep, 0, 0);
-            lv_obj_set_style_pad_all(sep, 0, 0);
-            lv_obj_align(sep, LV_ALIGN_BOTTOM_RIGHT, 13, 10);
-        }
     }
 
     // 3. Bottom Row: Legend (Left) & Randomize Rhythm (Right)
