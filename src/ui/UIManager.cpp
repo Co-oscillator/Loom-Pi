@@ -3119,9 +3119,16 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     
     lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
         std::cout << "Settings: Stopping Loom service and exiting..." << std::endl;
-        int r = system("sudo systemctl stop loom 2>/dev/null || "
-                       "sudo systemctl stop loompi 2>/dev/null || "
-                       "sudo systemctl stop loom-pi 2>/dev/null");
+        
+        // 1. Attempt to stop any systemd service containing "loom"
+        int r = system("sudo systemctl list-units --type=service --all | awk '/[lL]oom/ {print $1}' | xargs -I {} sudo systemctl stop {} 2>/dev/null");
+        
+        // 2. Kill the parent bash loop if Loom was launched via a simple 'while true' script (avoid killing init/systemd PID 1)
+        r = system("PP=$(ps -o ppid= -p $PPID | grep -o '[0-9]*'); if [ -n \"$PP\" ] && [ \"$PP\" != \"1\" ]; then kill -9 $PP 2>/dev/null; fi");
+        
+        // 3. Force the kernel display to switch to the text console (TTY2) in case we are stuck in DRM/Framebuffer
+        r = system("sudo chvt 2 2>/dev/null || sudo chvt 1 2>/dev/null");
+        
         (void)r;
         exit(0);
     }, LV_EVENT_CLICKED, this);
