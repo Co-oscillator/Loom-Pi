@@ -1733,6 +1733,7 @@ void UIManager::populateSettingsScreen() {
     lv_obj_t* tab2 = lv_tabview_add_tab(mSettingsTabview, "MIDI Pads");
     lv_obj_t* tab3 = lv_tabview_add_tab(mSettingsTabview, "Knobs/Faders");
     lv_obj_t* tab4 = lv_tabview_add_tab(mSettingsTabview, "System");
+    lv_obj_t* tab5 = lv_tabview_add_tab(mSettingsTabview, "USB MIDI");
 
     // Style the individual tab buttons in the tab bar
     for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
@@ -1746,17 +1747,20 @@ void UIManager::populateSettingsScreen() {
     lv_obj_set_style_pad_all(tab2, 8, 0);
     lv_obj_set_style_pad_all(tab3, 8, 0);
     lv_obj_set_style_pad_all(tab4, 8, 0);
+    lv_obj_set_style_pad_all(tab5, 8, 0);
     lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab3, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab4, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(tab5, LV_OBJ_FLAG_SCROLLABLE);
 
     populateSettingsGeneralTab(tab1);
     populateSettingsMidiPadsTab(tab2);
     populateSettingsKnobsFadersTab(tab3);
     populateSettingsSystemTab(tab4);
+    populateSettingsUsbMidiTab(tab5);
 
-    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 4) {
+    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 5) {
         lv_tabview_set_active(mSettingsTabview, mSettingsActiveTabIdx, LV_ANIM_OFF);
     }
 }
@@ -3136,6 +3140,224 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(btBtnLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(btBtnLbl);
     lv_obj_add_event_cb(btBtn, settingsBtPairBtnEventCb, LV_EVENT_CLICKED, this);
+}
+
+void UIManager::populateSettingsUsbMidiTab(lv_obj_t* tab) {
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    lv_obj_t* headerRow = lv_obj_create(tab);
+    lv_obj_set_size(headerRow, 750, 50);
+    lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(headerRow, 0, 0);
+    lv_obj_set_style_pad_all(headerRow, 0, 0);
+    lv_obj_set_layout(headerRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(headerRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(headerRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* title = lv_label_create(headerRow);
+    lv_label_set_text(title, "USB MIDI HARDWARE ROUTING");
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(title, trackColor, 0);
+
+    lv_obj_t* scanBtn = lv_button_create(headerRow);
+    lv_obj_set_size(scanBtn, 120, 34);
+    lv_obj_set_style_bg_color(scanBtn, lv_color_hex(0x333333), 0);
+    lv_obj_t* scanBtnLbl = lv_label_create(scanBtn);
+    lv_label_set_text(scanBtnLbl, "SCAN DEVICES");
+    lv_obj_set_style_text_font(scanBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(scanBtnLbl);
+
+    lv_obj_add_event_cb(scanBtn, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->mEngine.scanMidiDevices();
+        ui->mSettingsActiveTabIdx = 4;
+        ui->createCenterContentArea();
+    }, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* listContainer = lv_obj_create(tab);
+    lv_obj_set_size(listContainer, 750, 390);
+    lv_obj_align(listContainer, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_opa(listContainer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(listContainer, 0, 0);
+    lv_obj_set_style_pad_all(listContainer, 5, 0);
+    lv_obj_set_layout(listContainer, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(listContainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(listContainer, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(listContainer, 10, 0);
+
+    mEngine.scanMidiDevices();
+
+    if (mEngine.mMidiDevices.empty()) {
+        lv_obj_t* emptyLbl = lv_label_create(listContainer);
+        lv_label_set_text(emptyLbl, "No external USB MIDI devices detected.\nPlug in a keyboard, pad controller, or synthesizer and click SCAN.");
+        lv_obj_set_style_text_font(emptyLbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(emptyLbl, lv_color_hex(0x666666), 0);
+        lv_obj_set_style_text_align(emptyLbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(emptyLbl, LV_ALIGN_CENTER, 0, 0);
+        return;
+    }
+
+    std::string chOptions = "ALL\nOFF\n";
+    for (int c = 1; c <= 16; ++c) {
+        chOptions += "Ch " + std::to_string(c) + "\n";
+    }
+    if (!chOptions.empty()) chOptions.pop_back();
+
+    for (size_t i = 0; i < mEngine.mMidiDevices.size(); ++i) {
+        auto& dev = mEngine.mMidiDevices[i];
+
+        lv_obj_t* row = lv_obj_create(listContainer);
+        lv_obj_set_size(row, 720, 52);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x1A1A1A), 0);
+        lv_obj_set_style_border_color(row, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_radius(row, 8, 0);
+        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_all(row, 8, 0);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* nameLbl = lv_label_create(row);
+        lv_label_set_text(nameLbl, dev.name.c_str());
+        lv_obj_set_style_text_font(nameLbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(nameLbl, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_width(nameLbl, 220);
+
+        lv_obj_t* sendCol = lv_obj_create(row);
+        lv_obj_set_size(sendCol, 100, 36);
+        lv_obj_set_style_bg_opa(sendCol, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(sendCol, 0, 0);
+        lv_obj_set_layout(sendCol, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(sendCol, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(sendCol, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        
+        lv_obj_t* sendLbl = lv_label_create(sendCol);
+        lv_label_set_text(sendLbl, "SEND CH");
+        lv_obj_set_style_text_font(sendLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(sendLbl, lv_color_hex(0x888888), 0);
+        
+        lv_obj_t* sendDd = lv_dropdown_create(sendCol);
+        lv_obj_set_size(sendDd, 90, 24);
+        lv_obj_set_style_text_font(sendDd, &lv_font_montserrat_10, 0);
+        lv_dropdown_set_options(sendDd, chOptions.c_str());
+        lv_dropdown_set_selected(sendDd, dev.sendChannel + 1);
+
+        struct ChannelUserData {
+            MidiDeviceSettings* devPtr;
+            bool isSend;
+        };
+        ChannelUserData* cud = new ChannelUserData{&dev, true};
+        lv_obj_add_event_cb(sendDd, [](lv_event_t* e) {
+            ChannelUserData* data = (ChannelUserData*)lv_event_get_user_data(e);
+            lv_obj_t* ddObj = lv_event_get_target_obj(e);
+            int selected = lv_dropdown_get_selected(ddObj);
+            data->devPtr->sendChannel = selected - 1;
+            std::cout << "Midi Device '" << data->devPtr->name << "' send channel set to " << data->devPtr->sendChannel << std::endl;
+        }, LV_EVENT_VALUE_CHANGED, cud);
+        lv_obj_add_event_cb(sendDd, [](lv_event_t* e) {
+            ChannelUserData* data = (ChannelUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, cud);
+
+        lv_obj_t* recvCol = lv_obj_create(row);
+        lv_obj_set_size(recvCol, 100, 36);
+        lv_obj_set_style_bg_opa(recvCol, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(recvCol, 0, 0);
+        lv_obj_set_layout(recvCol, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(recvCol, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(recvCol, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        
+        lv_obj_t* recvLbl = lv_label_create(recvCol);
+        lv_label_set_text(recvLbl, "RECV CH");
+        lv_obj_set_style_text_font(recvLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(recvLbl, lv_color_hex(0x888888), 0);
+
+        lv_obj_t* recvDd = lv_dropdown_create(recvCol);
+        lv_obj_set_size(recvDd, 90, 24);
+        lv_obj_set_style_text_font(recvDd, &lv_font_montserrat_10, 0);
+        lv_dropdown_set_options(recvDd, chOptions.c_str());
+        lv_dropdown_set_selected(recvDd, dev.receiveChannel + 1);
+
+        ChannelUserData* cud2 = new ChannelUserData{&dev, false};
+        lv_obj_add_event_cb(recvDd, [](lv_event_t* e) {
+            ChannelUserData* data = (ChannelUserData*)lv_event_get_user_data(e);
+            lv_obj_t* ddObj = lv_event_get_target_obj(e);
+            int selected = lv_dropdown_get_selected(ddObj);
+            data->devPtr->receiveChannel = selected - 1;
+            std::cout << "Midi Device '" << data->devPtr->name << "' receive channel set to " << data->devPtr->receiveChannel << std::endl;
+        }, LV_EVENT_VALUE_CHANGED, cud2);
+        lv_obj_add_event_cb(recvDd, [](lv_event_t* e) {
+            ChannelUserData* data = (ChannelUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, cud2);
+
+        lv_obj_t* muteCol = lv_obj_create(row);
+        lv_obj_set_size(muteCol, 100, 36);
+        lv_obj_set_style_bg_opa(muteCol, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(muteCol, 0, 0);
+        lv_obj_set_layout(muteCol, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(muteCol, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(muteCol, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+        lv_obj_t* muteLbl = lv_label_create(muteCol);
+        lv_label_set_text(muteLbl, "MUTE OUT");
+        lv_obj_set_style_text_font(muteLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(muteLbl, lv_color_hex(0x888888), 0);
+
+        lv_obj_t* muteSw = lv_switch_create(muteCol);
+        lv_obj_set_size(muteSw, 40, 20);
+        if (dev.muteOutgoing) {
+            lv_obj_add_state(muteSw, LV_STATE_CHECKED);
+        }
+        
+        struct ToggleUserData {
+            MidiDeviceSettings* devPtr;
+            bool isMute;
+        };
+        ToggleUserData* tud = new ToggleUserData{&dev, true};
+        lv_obj_add_event_cb(muteSw, [](lv_event_t* e) {
+            ToggleUserData* data = (ToggleUserData*)lv_event_get_user_data(e);
+            lv_obj_t* swObj = lv_event_get_target_obj(e);
+            data->devPtr->muteOutgoing = lv_obj_has_state(swObj, LV_STATE_CHECKED);
+            std::cout << "Midi Device '" << data->devPtr->name << "' mute outgoing set to " << data->devPtr->muteOutgoing << std::endl;
+        }, LV_EVENT_VALUE_CHANGED, tud);
+        lv_obj_add_event_cb(muteSw, [](lv_event_t* e) {
+            ToggleUserData* data = (ToggleUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, tud);
+
+        lv_obj_t* ignoreCol = lv_obj_create(row);
+        lv_obj_set_size(ignoreCol, 100, 36);
+        lv_obj_set_style_bg_opa(ignoreCol, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(ignoreCol, 0, 0);
+        lv_obj_set_layout(ignoreCol, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(ignoreCol, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(ignoreCol, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+        lv_obj_t* ignoreLbl = lv_label_create(ignoreCol);
+        lv_label_set_text(ignoreLbl, "IGNORE IN");
+        lv_obj_set_style_text_font(ignoreLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(ignoreLbl, lv_color_hex(0x888888), 0);
+
+        lv_obj_t* ignoreSw = lv_switch_create(ignoreCol);
+        lv_obj_set_size(ignoreSw, 40, 20);
+        if (dev.ignoreIncoming) {
+            lv_obj_add_state(ignoreSw, LV_STATE_CHECKED);
+        }
+
+        ToggleUserData* tud2 = new ToggleUserData{&dev, false};
+        lv_obj_add_event_cb(ignoreSw, [](lv_event_t* e) {
+            ToggleUserData* data = (ToggleUserData*)lv_event_get_user_data(e);
+            lv_obj_t* swObj = lv_event_get_target_obj(e);
+            data->devPtr->ignoreIncoming = lv_obj_has_state(swObj, LV_STATE_CHECKED);
+            std::cout << "Midi Device '" << data->devPtr->name << "' ignore incoming set to " << data->devPtr->ignoreIncoming << std::endl;
+        }, LV_EVENT_VALUE_CHANGED, tud2);
+        lv_obj_add_event_cb(ignoreSw, [](lv_event_t* e) {
+            ToggleUserData* data = (ToggleUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, tud2);
+    }
 }
 
 // ==========================================================================
@@ -11450,8 +11672,8 @@ void UIManager::populateParamScreen() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
     
-    // Placeholder guard if active track is not using Subtractive (0), FM (1), Sampler (2), Granular (3), Wavetable (4), SoundFont (9), Audio In (8), FM Drum (5), or Analogue Drum (6) synthesis
-    if (engineType != 0 && engineType != 1 && engineType != 2 && engineType != 3 && engineType != 4 && engineType != 9 && engineType != 8 && engineType != 5 && engineType != 6) {
+    // Placeholder guard if active track is not using Subtractive (0), FM (1), Sampler (2), Granular (3), Wavetable (4), SoundFont (9), Audio In (8), FM Drum (5), Analogue Drum (6), or MIDI Engine (10)
+    if (engineType != 0 && engineType != 1 && engineType != 2 && engineType != 3 && engineType != 4 && engineType != 9 && engineType != 8 && engineType != 5 && engineType != 6 && engineType != 10) {
         lv_obj_t* placeholder = lv_obj_create(mCenterArea);
         lv_obj_set_size(placeholder, 770, 470);
         lv_obj_align(placeholder, LV_ALIGN_CENTER, 0, 0);
@@ -11730,6 +11952,33 @@ void UIManager::populateParamScreen() {
 
         populateParamAnalogDrumTab1(tab1);
         populateParamAnalogDrumTab2(tab2);
+    } else if (engineType == 10) {
+        // MIDI Engine Active: Create tab view dashboard
+        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
+        mParamTabview = tabview;
+        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
+        lv_tabview_set_tab_bar_size(tabview, 40);
+        lv_obj_set_size(tabview, 790, 480);
+        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(tabview, 0, 0);
+        
+        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
+        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
+        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+
+        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "MIDI ROUTING");
+        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "CONTROLLER MAPPING");
+
+        lv_obj_set_style_pad_all(tab1, 10, 0);
+        lv_obj_set_style_pad_all(tab2, 10, 0);
+        
+        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
+
+        populateParamMidiRoutingTab(tab1);
+        populateParamMidiMappingTab(tab2);
     }
 
     if (mParamTabview) {
@@ -15862,6 +16111,326 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
         addMiniDrumKnob("DCY", baseParam + 0);
         addMiniDrumKnob("COL", baseParam + 1);
         addMiniDrumKnob("GAIN", baseParam + 5);
+    }
+}
+
+void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
+    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(tab, 20, 0);
+    lv_obj_set_style_pad_row(tab, 20, 0);
+
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    auto& track = mEngine.getTracks()[mActiveTrack];
+
+    mEngine.scanMidiDevices();
+
+    // TARGET DEVICE
+    lv_obj_t* targetRow = lv_obj_create(tab);
+    lv_obj_set_size(targetRow, 500, 50);
+    lv_obj_set_style_bg_color(targetRow, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(targetRow, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(targetRow, 1, 0);
+    lv_obj_set_style_radius(targetRow, 8, 0);
+    lv_obj_set_layout(targetRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(targetRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(targetRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(targetRow, 10, 0);
+
+    lv_obj_t* targetLbl = lv_label_create(targetRow);
+    lv_label_set_text(targetLbl, "Target Device");
+    lv_obj_set_style_text_font(targetLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(targetLbl, lv_color_hex(0xFFFFFF), 0);
+
+    lv_obj_t* targetDd = lv_dropdown_create(targetRow);
+    lv_obj_set_size(targetDd, 300, 32);
+    lv_obj_set_style_text_font(targetDd, &lv_font_montserrat_12, 0);
+    
+    std::string deviceOptions = "ALL\n";
+    for (const auto& dev : mEngine.mMidiDevices) {
+        deviceOptions += dev.name + "\n";
+    }
+    if (!deviceOptions.empty()) deviceOptions.pop_back();
+    
+    lv_dropdown_set_options(targetDd, deviceOptions.c_str());
+    
+    int selectedIdx = 0;
+    if (track.targetMidiDevice != "ALL") {
+        for (size_t i = 0; i < mEngine.mMidiDevices.size(); ++i) {
+            if (mEngine.mMidiDevices[i].name == track.targetMidiDevice) {
+                selectedIdx = (int)i + 1;
+                break;
+            }
+        }
+    }
+    lv_dropdown_set_selected(targetDd, selectedIdx);
+
+    lv_obj_add_event_cb(targetDd, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        lv_obj_t* dd = lv_event_get_target_obj(e);
+        int selected = lv_dropdown_get_selected(dd);
+        auto& trk = ui->mEngine.getTracks()[ui->mActiveTrack];
+        if (selected == 0) {
+            trk.targetMidiDevice = "ALL";
+        } else {
+            int devIdx = selected - 1;
+            if (devIdx >= 0 && devIdx < (int)ui->mEngine.mMidiDevices.size()) {
+                trk.targetMidiDevice = ui->mEngine.mMidiDevices[devIdx].name;
+            }
+        }
+        std::cout << "MIDI Engine set target device: " << trk.targetMidiDevice << std::endl;
+    }, LV_EVENT_VALUE_CHANGED, this);
+
+    // OUT CHANNEL
+    lv_obj_t* outRow = lv_obj_create(tab);
+    lv_obj_set_size(outRow, 500, 50);
+    lv_obj_set_style_bg_color(outRow, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(outRow, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(outRow, 1, 0);
+    lv_obj_set_style_radius(outRow, 8, 0);
+    lv_obj_set_layout(outRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(outRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(outRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(outRow, 10, 0);
+
+    lv_obj_t* outLbl = lv_label_create(outRow);
+    lv_label_set_text(outLbl, "Out Channel");
+    lv_obj_set_style_text_font(outLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(outLbl, lv_color_hex(0xFFFFFF), 0);
+
+    lv_obj_t* outDd = lv_dropdown_create(outRow);
+    lv_obj_set_size(outDd, 300, 32);
+    lv_obj_set_style_text_font(outDd, &lv_font_montserrat_12, 0);
+    
+    std::string chanOptions = "OFF\n";
+    for (int c = 1; c <= 16; ++c) {
+        chanOptions += "Channel " + std::to_string(c) + "\n";
+    }
+    if (!chanOptions.empty()) chanOptions.pop_back();
+    lv_dropdown_set_options(outDd, chanOptions.c_str());
+    lv_dropdown_set_selected(outDd, track.midiOutChannel);
+
+    lv_obj_add_event_cb(outDd, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        lv_obj_t* dd = lv_event_get_target_obj(e);
+        int selected = lv_dropdown_get_selected(dd);
+        ui->mEngine.setParameter(ui->mActiveTrack, 801, (float)selected);
+    }, LV_EVENT_VALUE_CHANGED, this);
+
+    // IN CHANNEL
+    lv_obj_t* inRow = lv_obj_create(tab);
+    lv_obj_set_size(inRow, 500, 50);
+    lv_obj_set_style_bg_color(inRow, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(inRow, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(inRow, 1, 0);
+    lv_obj_set_style_radius(inRow, 8, 0);
+    lv_obj_set_layout(inRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(inRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(inRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(inRow, 10, 0);
+
+    lv_obj_t* inLbl = lv_label_create(inRow);
+    lv_label_set_text(inLbl, "In Channel");
+    lv_obj_set_style_text_font(inLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(inLbl, lv_color_hex(0xFFFFFF), 0);
+
+    lv_obj_t* inDd = lv_dropdown_create(inRow);
+    lv_obj_set_size(inDd, 300, 32);
+    lv_obj_set_style_text_font(inDd, &lv_font_montserrat_12, 0);
+    
+    std::string inChanOptions = "NONE\n";
+    for (int c = 1; c <= 16; ++c) {
+        inChanOptions += "Channel " + std::to_string(c) + "\n";
+    }
+    inChanOptions += "ALL";
+    lv_dropdown_set_options(inDd, inChanOptions.c_str());
+    lv_dropdown_set_selected(inDd, track.midiInChannel);
+
+    lv_obj_add_event_cb(inDd, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        lv_obj_t* dd = lv_event_get_target_obj(e);
+        int selected = lv_dropdown_get_selected(dd);
+        ui->mEngine.setParameter(ui->mActiveTrack, 800, (float)selected);
+    }, LV_EVENT_VALUE_CHANGED, this);
+}
+
+void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
+    lv_obj_t* listContainer = lv_obj_create(tab);
+    lv_obj_set_size(listContainer, 750, 400);
+    lv_obj_align(listContainer, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_bg_opa(listContainer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(listContainer, 0, 0);
+    lv_obj_set_style_pad_all(listContainer, 10, 0);
+    lv_obj_set_layout(listContainer, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(listContainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(listContainer, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(listContainer, 10, 0);
+
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    auto& track = mEngine.getTracks()[mActiveTrack];
+
+    std::string ccOptions = "";
+    for (int i = 0; i <= 127; ++i) {
+        ccOptions += "CC " + std::to_string(i) + "\n";
+    }
+    if (!ccOptions.empty()) ccOptions.pop_back();
+
+    auto createMappingRow = [&](const std::string& labelText, int parameterId, bool isKnob, int index) {
+        lv_obj_t* row = lv_obj_create(listContainer);
+        lv_obj_set_size(row, 700, 48);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x1E1E1E), 0);
+        lv_obj_set_style_border_color(row, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_radius(row, 8, 0);
+        
+        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_all(row, 8, 0);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* lbl = lv_label_create(row);
+        lv_label_set_text(lbl, labelText.c_str());
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_width(lbl, 80);
+
+        lv_obj_t* slider = lv_slider_create(row);
+        lv_obj_set_size(slider, 180, 10);
+        lv_slider_set_range(slider, 0, 127);
+        lv_obj_set_style_bg_color(slider, lv_color_hex(0x333333), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(slider, trackColor, LV_PART_INDICATOR);
+        lv_slider_set_value(slider, (int)(track.parameters[parameterId] * 127.f), LV_ANIM_OFF);
+        
+        struct SliderUserData {
+            UIManager* ui;
+            int paramId;
+        };
+        SliderUserData* sud = new SliderUserData{this, parameterId};
+        lv_obj_add_event_cb(slider, [](lv_event_t* e) {
+            SliderUserData* data = (SliderUserData*)lv_event_get_user_data(e);
+            lv_obj_t* sliderObj = lv_event_get_target_obj(e);
+            float normVal = lv_slider_get_value(sliderObj) / 127.f;
+            data->ui->mEngine.setParameter(data->ui->mActiveTrack, data->paramId, normVal);
+        }, LV_EVENT_VALUE_CHANGED, sud);
+        lv_obj_add_event_cb(slider, [](lv_event_t* e) {
+            SliderUserData* data = (SliderUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, sud);
+
+        lv_obj_t* ccDd = lv_dropdown_create(row);
+        lv_obj_set_size(ccDd, 120, 30);
+        lv_obj_set_style_text_font(ccDd, &lv_font_montserrat_10, 0);
+        lv_dropdown_set_options(ccDd, ccOptions.c_str());
+        
+        int currentCc = isKnob ? track.midiOutCcKnob[index] : track.midiOutCcFader[index];
+        lv_dropdown_set_selected(ccDd, currentCc);
+        
+        struct DdUserData {
+            UIManager* ui;
+            bool isKnobType;
+            int idx;
+        };
+        DdUserData* dud = new DdUserData{this, isKnob, index};
+        lv_obj_add_event_cb(ccDd, [](lv_event_t* e) {
+            DdUserData* data = (DdUserData*)lv_event_get_user_data(e);
+            lv_obj_t* ddObj = lv_event_get_target_obj(e);
+            int cc = lv_dropdown_get_selected(ddObj);
+            auto& trk = data->ui->mEngine.getTracks()[data->ui->mActiveTrack];
+            if (data->isKnobType) {
+                trk.midiOutCcKnob[data->idx] = cc;
+            } else {
+                trk.midiOutCcFader[data->idx] = cc;
+            }
+            std::cout << "Updated MIDI Out CC for " << (data->isKnobType ? "Knob" : "Fader") << " " << (data->idx + 1) << " to CC " << cc << std::endl;
+        }, LV_EVENT_VALUE_CHANGED, dud);
+        lv_obj_add_event_cb(ccDd, [](lv_event_t* e) {
+            DdUserData* data = (DdUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, dud);
+
+        lv_obj_t* ccMappingLbl = lv_label_create(row);
+        lv_obj_set_width(ccMappingLbl, 130);
+        
+        int hwCc = -1;
+        int hwChan = -1;
+        for (int k = 0; k < mSettingsKnobCount; ++k) {
+            if (mSeqMidiKnobParam[mActiveTrack][k] == parameterId) {
+                hwCc = mSeqMidiKnobCC[mActiveTrack][k];
+                hwChan = mSeqMidiKnobChannel[mActiveTrack][k];
+                break;
+            }
+        }
+        if (hwCc == -1) {
+            for (int f = 0; f < mSettingsSliderCount; ++f) {
+                if (mSeqMidiFaderParam[mActiveTrack][f] == parameterId) {
+                    hwCc = mSeqMidiFaderCC[mActiveTrack][f];
+                    hwChan = mSeqMidiFaderChannel[mActiveTrack][f];
+                    break;
+                }
+            }
+        }
+
+        if (hwCc != -1) {
+            lv_label_set_text_fmt(ccMappingLbl, "IN: CC %d (Ch %d)", hwCc, hwChan);
+            lv_obj_set_style_text_color(ccMappingLbl, trackColor, 0);
+        } else {
+            lv_label_set_text(ccMappingLbl, "IN: Unmapped");
+            lv_obj_set_style_text_color(ccMappingLbl, lv_color_hex(0x777777), 0);
+        }
+        lv_obj_set_style_text_font(ccMappingLbl, &lv_font_montserrat_10, 0);
+
+        lv_obj_t* learnBtn = lv_button_create(row);
+        lv_obj_set_size(learnBtn, 80, 30);
+        
+        bool isThisLearning = (mMidiLearnActive && mMidiLearnTargetParamId == parameterId);
+        if (isThisLearning) {
+            lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0xD32F2F), 0);
+        } else {
+            lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0x333333), 0);
+        }
+        lv_obj_set_style_radius(learnBtn, 4, 0);
+        
+        lv_obj_t* learnBtnLbl = lv_label_create(learnBtn);
+        lv_label_set_text(learnBtnLbl, isThisLearning ? "LISTENING" : "LEARN");
+        lv_obj_set_style_text_font(learnBtnLbl, &lv_font_montserrat_10, 0);
+        lv_obj_center(learnBtnLbl);
+
+        struct LearnUserData {
+            UIManager* ui;
+            int paramId;
+            lv_obj_t* btnLbl;
+        };
+        LearnUserData* lud = new LearnUserData{this, parameterId, learnBtnLbl};
+        
+        lv_obj_add_event_cb(learnBtn, [](lv_event_t* e) {
+            LearnUserData* data = (LearnUserData*)lv_event_get_user_data(e);
+            lv_obj_t* btnObj = lv_event_get_target_obj(e);
+            
+            data->ui->mMidiLearnActive = !data->ui->mMidiLearnActive;
+            if (data->ui->mMidiLearnActive) {
+                data->ui->mMidiLearnTargetParamId = data->paramId;
+                lv_label_set_text(data->btnLbl, "LISTENING");
+                lv_obj_set_style_bg_color(btnObj, lv_color_hex(0xD32F2F), 0);
+            } else {
+                data->ui->mMidiLearnTargetParamId = -1;
+                lv_label_set_text(data->btnLbl, "LEARN");
+                lv_obj_set_style_bg_color(btnObj, lv_color_hex(0x333333), 0);
+            }
+        }, LV_EVENT_CLICKED, lud);
+        lv_obj_add_event_cb(learnBtn, [](lv_event_t* e) {
+            LearnUserData* data = (LearnUserData*)lv_event_get_user_data(e);
+            delete data;
+        }, LV_EVENT_DELETE, lud);
+    };
+
+    for (int i = 0; i < 8; ++i) {
+        createMappingRow("V-KNOB " + std::to_string(i + 1), 2400 + i, true, i);
+    }
+    
+    for (int i = 0; i < 8; ++i) {
+        createMappingRow("V-FADER " + std::to_string(i + 1), 2408 + i, false, i);
     }
 }
 

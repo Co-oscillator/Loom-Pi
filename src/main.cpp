@@ -11,6 +11,20 @@
 // Global audio engine
 AudioEngine gEngine;
 
+#ifdef __APPLE__
+MIDIClientRef gMidiClient = 0;
+MIDIPortRef gMidiInputPort = 0;
+MIDIPortRef gMidiOutputPort = 0;
+MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
+#else
+snd_seq_t* gSeq = nullptr;
+int gInPort = -1;
+int gOutPort = -1;
+pthread_t gMidiThread;
+bool gMidiThreadRunning = false;
+MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
+#endif
+
 
 // Audio Callback
 void audioCallback(void* userdata, Uint8* stream, int len) {

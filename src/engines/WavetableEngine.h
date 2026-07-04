@@ -234,20 +234,22 @@ public:
   }
 
   void renderBlock(float* outL, float* outR, int numFrames) {
+    std::unique_lock<std::mutex> lock(*mMutex, std::try_to_lock);
+    if (!lock.owns_lock() || mTable.empty()) {
+      std::fill(outL, outL + numFrames, 0.0f);
+      std::fill(outR, outR + numFrames, 0.0f);
+      return;
+    }
     for (int i = 0; i < numFrames; ++i) {
-      float s = render();
+      float s = renderInternal();
       outL[i] = s;
       outR[i] = s;
     }
   }
 
-  float render() {
+  float renderInternal() {
     float mixedOutput = 0.0f;
     int activeCount = 0;
-
-    std::unique_lock<std::mutex> lock(*mMutex, std::try_to_lock);
-    if (!lock.owns_lock() || mTable.empty())
-      return 0.0f;
 
     for (auto &v : mVoices) {
       if (!v.active)

@@ -521,6 +521,7 @@ private:
     void populateSettingsMidiPadsTab(lv_obj_t* tab);
     void populateSettingsKnobsFadersTab(lv_obj_t* tab);
     void populateSettingsSystemTab(lv_obj_t* tab);
+    void populateSettingsUsbMidiTab(lv_obj_t* tab);
     void rebuildPadGrid();
     std::string detectChordName(const int* notes, int count);
     
@@ -560,6 +561,8 @@ private:
     lv_obj_t* mGranularLockBtn = nullptr;
     void populateParamGranularSamplingTab(lv_obj_t* tab);
     void populateParamGranularSynthTab(lv_obj_t* tab);
+    void populateParamMidiRoutingTab(lv_obj_t* tab);
+    void populateParamMidiMappingTab(lv_obj_t* tab);
     void updateGranularWaveformPreview();
 public:
     lv_obj_t* mSettingsRootDd = nullptr;

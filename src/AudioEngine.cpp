@@ -1,5 +1,14 @@
 #define TSF_IMPLEMENTATION
 #include "AudioEngine.h"
+#ifdef __APPLE__
+#include <CoreMIDI/CoreMIDI.h>
+#include <CoreFoundation/CoreFoundation.h>
+extern MIDIPortRef gMidiOutputPort;
+#else
+#include <alsa/asoundlib.h>
+extern snd_seq_t* gSeq;
+extern int gOutPort;
+#endif
 #include <iostream>
 #include "WavFileUtils.h" // New
 #include "engines/BitcrusherFx.h"
@@ -845,6 +854,9 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
     case 9: // SOUNDFONT
       track.soundFontEngine.noteOn(note, velocity);
       break;
+    case 10: // MIDI ENGINE
+      sendMidiOut(trackIndex, 0x90, note, velocity);
+      break;
     }
 
     // 5. Recording Logic
@@ -1407,6 +1419,22 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
       track.midiInChannel = static_cast<int>(value);
     else if (parameterId == 801)
       track.midiOutChannel = static_cast<int>(value);
+  }
+  // MIDI Engine Outbound CCs (2400-2415)
+  else if (parameterId >= 2400 && parameterId < 2416) {
+    if (track.engineType == 10) {
+      int ccVal = static_cast<int>(value * 127.0f + 0.5f);
+      ccVal = std::max(0, std::min(127, ccVal));
+      int ccNum = -1;
+      if (parameterId < 2408) {
+        ccNum = track.midiOutCcKnob[parameterId - 2400];
+      } else {
+        ccNum = track.midiOutCcFader[parameterId - 2408];
+      }
+      if (ccNum >= 0 && ccNum <= 127) {
+        sendMidiOut(trackIndex, 0xB0, ccNum, ccVal);
+      }
+    }
   }
   // Extra Global FX (1500-1599)
   else if (parameterId >= 1500 && parameterId < 1600) {
@@ -2288,6 +2316,9 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
       track.analogDrumEngine.releaseNote(transposedNote);
       track.audioInEngine.releaseNote(transposedNote);
       track.soundFontEngine.noteOff(transposedNote);
+      if (track.engineType == 10) {
+        sendMidiOut(trackIndex, 0x80, transposedNote, 0);
+      }
     }
   }
 }
@@ -5236,4 +5267,213 @@ void AudioEngine::setSlicePosition(int trackIndex, int sliceIndex,
   if (trackIndex >= 0 && trackIndex < (int)mTracks.size()) {
     mTracks[trackIndex].samplerEngine.setSlicePosition(sliceIndex, position);
   }
+}
+
+void AudioEngine::scanMidiDevices() {
+    std::vector<MidiDeviceSettings> newDevices;
+#ifdef __APPLE__
+    ItemCount numSources = MIDIGetNumberOfSources();
+    for (ItemCount i = 0; i < numSources; ++i) {
+        MIDIEndpointRef src = MIDIGetSource(i);
+        if (src != 0) {
+            CFStringRef nameRef = NULL;
+            MIDIObjectGetStringProperty(src, kMIDIPropertyName, &nameRef);
+            char name[256] = "Unknown Device";
+            if (nameRef) {
+                CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+                CFRelease(nameRef);
+            }
+            
+            bool found = false;
+            for (const auto& d : mMidiDevices) {
+                if (d.name == name) {
+                    MidiDeviceSettings existing = d;
+                    existing.port = (int)i;
+                    newDevices.push_back(existing);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                MidiDeviceSettings d;
+                d.name = name;
+                d.port = (int)i;
+                newDevices.push_back(d);
+            }
+        }
+    }
+    
+    ItemCount numDests = MIDIGetNumberOfDestinations();
+    for (ItemCount i = 0; i < numDests; ++i) {
+        MIDIEndpointRef dest = MIDIGetDestination(i);
+        if (dest != 0) {
+            CFStringRef nameRef = NULL;
+            MIDIObjectGetStringProperty(dest, kMIDIPropertyName, &nameRef);
+            char name[256] = "Unknown Device";
+            if (nameRef) {
+                CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+                CFRelease(nameRef);
+            }
+            
+            // Check if we already added it from sources, update port
+            bool found = false;
+            for (auto& d : newDevices) {
+                if (d.name == name) {
+                    d.client = (int)i; // use client to store destination index
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // If it's a destination only
+                bool foundInOld = false;
+                for (const auto& d : mMidiDevices) {
+                    if (d.name == name) {
+                        MidiDeviceSettings existing = d;
+                        existing.client = (int)i;
+                        newDevices.push_back(existing);
+                        foundInOld = true;
+                        break;
+                    }
+                }
+                if (!foundInOld) {
+                    MidiDeviceSettings d;
+                    d.name = name;
+                    d.client = (int)i;
+                    newDevices.push_back(d);
+                }
+            }
+        }
+    }
+#else
+    if (gSeq) {
+        snd_seq_client_info_t *cinfo = nullptr;
+        snd_seq_port_info_t *pinfo = nullptr;
+        if (snd_seq_client_info_malloc(&cinfo) >= 0 && snd_seq_port_info_malloc(&pinfo) >= 0) {
+            snd_seq_client_info_set_client(cinfo, -1);
+            while (snd_seq_query_next_client(gSeq, cinfo) >= 0) {
+                int client = snd_seq_client_info_get_client(cinfo);
+                if (client == snd_seq_client_id(gSeq)) continue;
+                
+                const char* clientName = snd_seq_client_info_get_name(cinfo);
+                snd_seq_port_info_set_client(pinfo, client);
+                snd_seq_port_info_set_port(pinfo, -1);
+                while (snd_seq_query_next_port(gSeq, pinfo) >= 0) {
+                    unsigned int capability = snd_seq_port_info_get_capability(pinfo);
+                    bool isInput = (capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ);
+                    bool isOutput = (capability & SND_SEQ_PORT_CAP_WRITE) && (capability & SND_SEQ_PORT_CAP_SUBS_WRITE);
+                    if (isInput || isOutput) {
+                        const char* portName = snd_seq_port_info_get_name(pinfo);
+                        std::string fullName = clientName ? clientName : "Unknown Client";
+                        if (portName && strlen(portName) > 0) {
+                            fullName += " - " + std::string(portName);
+                        }
+                        
+                        int portId = snd_seq_port_info_get_port(pinfo);
+                        
+                        bool found = false;
+                        for (const auto& d : mMidiDevices) {
+                            if (d.name == fullName) {
+                                MidiDeviceSettings existing = d;
+                                existing.client = client;
+                                existing.port = portId;
+                                newDevices.push_back(existing);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            MidiDeviceSettings d;
+                            d.name = fullName;
+                            d.client = client;
+                            d.port = portId;
+                            newDevices.push_back(d);
+                        }
+                    }
+                }
+            }
+            snd_seq_port_info_free(pinfo);
+            snd_seq_client_info_free(cinfo);
+        }
+    }
+#endif
+    mMidiDevices = newDevices;
+}
+
+void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t d2) {
+    if (trackIdx < 0 || trackIdx >= (int)mTracks.size()) return;
+    Track& track = mTracks[trackIdx];
+    if (track.engineType != 10) return;
+    
+    int outChan = track.midiOutChannel;
+    if (outChan == 0) return; // 0 = Off
+    
+    uint8_t msgType = status & 0xF0;
+    uint8_t mappedStatus = msgType | ((outChan - 1) & 0x0F);
+    
+#ifdef __APPLE__
+    ItemCount numDests = MIDIGetNumberOfDestinations();
+    for (ItemCount i = 0; i < numDests; ++i) {
+        MIDIEndpointRef dest = MIDIGetDestination(i);
+        if (dest != 0) {
+            CFStringRef nameRef = NULL;
+            MIDIObjectGetStringProperty(dest, kMIDIPropertyName, &nameRef);
+            char name[256] = "";
+            if (nameRef) {
+                CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+                CFRelease(nameRef);
+            }
+            
+            if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != name) {
+                continue;
+            }
+            
+            bool shouldSend = true;
+            for (const auto& dev : mMidiDevices) {
+                if (dev.name == name) {
+                    if (dev.muteOutgoing) shouldSend = false;
+                    if (dev.sendChannel > 0 && dev.sendChannel != outChan) shouldSend = false;
+                    break;
+                }
+            }
+            
+            if (shouldSend && gMidiOutputPort != 0) {
+                Byte buffer[256];
+                MIDIPacketList* packetList = (MIDIPacketList*)buffer;
+                MIDIPacket* packet = MIDIPacketListInit(packetList);
+                Byte msg[3] = { mappedStatus, d1, d2 };
+                packet = MIDIPacketListAdd(packetList, sizeof(buffer), packet, 0, 3, msg);
+                if (packet) {
+                    MIDISend(gMidiOutputPort, dest, packetList);
+                }
+            }
+        }
+    }
+#else
+    if (gSeq && gOutPort >= 0) {
+        for (const auto& dev : mMidiDevices) {
+            if (dev.client < 0 || dev.port < 0) continue;
+            if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) continue;
+            if (dev.muteOutgoing) continue;
+            if (dev.sendChannel > 0 && dev.sendChannel != outChan) continue;
+            
+            snd_seq_event_t ev;
+            snd_seq_ev_clear(&ev);
+            snd_seq_ev_set_source(&ev, gOutPort);
+            snd_seq_ev_set_dest(&ev, dev.client, dev.port);
+            snd_seq_ev_set_direct(&ev);
+            
+            if (msgType == 0x90) {
+                snd_seq_ev_set_noteon(&ev, (outChan - 1) & 0x0F, d1, d2);
+            } else if (msgType == 0x80) {
+                snd_seq_ev_set_noteoff(&ev, (outChan - 1) & 0x0F, d1, d2);
+            } else if (msgType == 0xB0) {
+                snd_seq_ev_set_controller(&ev, (outChan - 1) & 0x0F, d1, d2);
+            } else {
+                continue;
+            }
+            snd_seq_event_output_direct(gSeq, &ev);
+        }
+    }
+#endif
 }

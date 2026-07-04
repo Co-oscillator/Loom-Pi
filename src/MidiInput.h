@@ -167,9 +167,10 @@ static inline int snapNoteToScale(int note, int scaleIdx, int rootKey) {
 #include <CoreMIDI/CoreMIDI.h>
 #include <CoreFoundation/CoreFoundation.h>
 
-static MIDIClientRef gMidiClient = 0;
-static MIDIPortRef gMidiInputPort = 0;
-static MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
+extern MIDIClientRef gMidiClient;
+extern MIDIPortRef gMidiInputPort;
+extern MIDIPortRef gMidiOutputPort;
+extern MidiCallbackData gMidiCallbackData;
 
 static void reconnectMidiSources() {
     if (gMidiInputPort == 0) return;
@@ -189,7 +190,7 @@ static void reconnectMidiSources() {
             } else {
                 std::cout << "  Source [" << i << "]: (Unknown Name)" << std::endl;
             }
-            OSStatus err = MIDIPortConnectSource(gMidiInputPort, source, NULL);
+            OSStatus err = MIDIPortConnectSource(gMidiInputPort, source, (void*)(uintptr_t)source);
             if (err != noErr) {
                 std::cerr << "  CoreMIDI: Failed to connect source, error: " << err << std::endl;
             } else {
@@ -209,10 +210,52 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
     MidiCallbackData* data = static_cast<MidiCallbackData*>(readProcRefCon);
     if (!data || !data->engine || !data->ui) return;
     
+    MIDIEndpointRef source = (MIDIEndpointRef)(uintptr_t)srcRefCon;
+    std::string senderName = "";
+    if (source != 0) {
+        CFStringRef nameRef = NULL;
+        MIDIObjectGetStringProperty(source, kMIDIPropertyName, &nameRef);
+        if (nameRef) {
+            char name[256];
+            CFStringGetCString(nameRef, name, sizeof(name), kCFStringEncodingUTF8);
+            CFRelease(nameRef);
+            senderName = name;
+        }
+    }
+    
+    bool ignoreDev = false;
+    int rxChan = -1;
+    for (const auto& dev : data->engine->mMidiDevices) {
+        if (dev.name == senderName) {
+            if (dev.ignoreIncoming) ignoreDev = true;
+            rxChan = dev.receiveChannel;
+            break;
+        }
+    }
+    if (ignoreDev) return;
+    
     const MIDIPacket *packet = &pktlist->packet[0];
     for (UInt32 i = 0; i < pktlist->numPackets; ++i) {
         for (int b = 0; b < packet->length; ) {
             uint8_t status = packet->data[b];
+            
+            // Channel filtering for channel voice messages
+            uint8_t msgType = status & 0xF0;
+            if (msgType >= 0x80 && msgType <= 0xEF) {
+                uint8_t channel = status & 0x0F;
+                if (rxChan == 0) { // Off
+                    // Skip this message
+                    if (msgType == 0xC0 || msgType == 0xD0) b += 2;
+                    else b += 3;
+                    continue;
+                }
+                if (rxChan > 0 && rxChan != (channel + 1)) {
+                    // Skip mismatching channel
+                    if (msgType == 0xC0 || msgType == 0xD0) b += 2;
+                    else b += 3;
+                    continue;
+                }
+            }
             
             // Check for MIDI Real-Time messages (single byte)
             if (status == 0xFA) { // Start / Play
@@ -822,6 +865,11 @@ static inline void setupMidiInput(MidiCallbackData* data) {
         return;
     }
     
+    err = MIDIOutputPortCreate(gMidiClient, CFSTR("LoomPi Output Port"), &gMidiOutputPort);
+    if (err != noErr) {
+        std::cerr << "CoreMIDI: Failed to create output port" << std::endl;
+    }
+    
     reconnectMidiSources();
     std::cout << "CoreMIDI: MIDI Input successfully initialized." << std::endl;
 }
@@ -833,11 +881,12 @@ static inline void setupMidiInput(MidiCallbackData* data) {
 #include <unistd.h>
 #include <vector>
 
-static snd_seq_t* gSeq = nullptr;
-static int gInPort = -1;
-static pthread_t gMidiThread;
-static bool gMidiThreadRunning = false;
-static MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
+extern snd_seq_t* gSeq;
+extern int gInPort;
+extern int gOutPort;
+extern pthread_t gMidiThread;
+extern bool gMidiThreadRunning;
+extern MidiCallbackData gMidiCallbackData;
 
 static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data) {
     if (!data || !data->engine || !data->ui) return;
@@ -1422,6 +1471,59 @@ static void* alsaMidiThreadProc(void* arg) {
         }
         if (!ev) continue;
         
+        std::string senderName = "";
+        snd_seq_client_info_t *cinfo = nullptr;
+        if (snd_seq_client_info_malloc(&cinfo) >= 0) {
+            if (snd_seq_get_any_client_info(gSeq, ev->source.client, cinfo) >= 0) {
+                const char* name = snd_seq_client_info_get_name(cinfo);
+                if (name) {
+                    senderName = name;
+                    snd_seq_port_info_t *pinfo = nullptr;
+                    if (snd_seq_port_info_malloc(&pinfo) >= 0) {
+                        if (snd_seq_get_any_port_info(gSeq, ev->source.client, ev->source.port, pinfo) >= 0) {
+                            const char* portName = snd_seq_port_info_get_name(pinfo);
+                            if (portName && strlen(portName) > 0) {
+                                senderName += " - " + std::string(portName);
+                            }
+                        }
+                        snd_seq_port_info_free(pinfo);
+                    }
+                }
+            }
+            snd_seq_client_info_free(cinfo);
+        }
+        
+        bool ignoreDev = false;
+        int rxChan = -1;
+        for (const auto& dev : data->engine->mMidiDevices) {
+            if (dev.name == senderName) {
+                if (dev.ignoreIncoming) ignoreDev = true;
+                rxChan = dev.receiveChannel;
+                break;
+            }
+        }
+        if (ignoreDev) {
+            continue;
+        }
+        
+        uint8_t evChan = 0;
+        bool isChannelMsg = false;
+        if (ev->type == SND_SEQ_EVENT_NOTEON || ev->type == SND_SEQ_EVENT_NOTEOFF || ev->type == SND_SEQ_EVENT_KEYPRESS) {
+            evChan = ev->data.note.channel;
+            isChannelMsg = true;
+        } else if (ev->type == SND_SEQ_EVENT_CONTROLLER || ev->type == SND_SEQ_EVENT_CHANPRESS) {
+            evChan = ev->data.control.channel;
+            isChannelMsg = true;
+        }
+        if (isChannelMsg) {
+            if (rxChan == 0) { // Off
+                continue;
+            }
+            if (rxChan > 0 && rxChan != (evChan + 1)) {
+                continue;
+            }
+        }
+        
         uint8_t status = 0;
         uint8_t d1 = 0;
         uint8_t d2 = 0;
@@ -1545,9 +1647,9 @@ static void* alsaAutoConnectThreadProc(void* arg) {
 static inline void setupMidiInput(MidiCallbackData* data) {
     gMidiCallbackData = *data;
     
-    int err = snd_seq_open(&gSeq, "default", SND_SEQ_OPEN_INPUT, 0);
+    int err = snd_seq_open(&gSeq, "default", SND_SEQ_OPEN_DUPLEX, 0);
     if (err < 0) {
-        std::cerr << "ALSA Sequencer: Failed to open sequencer. MIDI input disabled." << std::endl;
+        std::cerr << "ALSA Sequencer: Failed to open sequencer. MIDI input/output disabled." << std::endl;
         return;
     }
     
@@ -1557,8 +1659,12 @@ static inline void setupMidiInput(MidiCallbackData* data) {
         SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
         
-    if (gInPort < 0) {
-        std::cerr << "ALSA Sequencer: Failed to create port." << std::endl;
+    gOutPort = snd_seq_create_simple_port(gSeq, "LoomPi Output",
+        SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+        SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+        
+    if (gInPort < 0 || gOutPort < 0) {
+        std::cerr << "ALSA Sequencer: Failed to create ports." << std::endl;
         snd_seq_close(gSeq);
         gSeq = nullptr;
         return;

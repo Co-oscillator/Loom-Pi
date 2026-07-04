@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include "MidiDeviceSettings.h"
 
 #include "Arpeggiator.h"
 #include "EnvelopeFollower.h"
@@ -218,6 +219,9 @@ public:
   void saveProject(const std::string& path);
   void loadProject(const std::string& path);
   void newProject();
+  std::vector<MidiDeviceSettings> mMidiDevices;
+  void scanMidiDevices();
+  void sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t d2);
 
   // Returns flat array: [type, ch, d1, d2, type, ch, d1, d2...]
   int fetchMidiEvents(int *outBuffer, int maxEvents);
@@ -366,6 +370,9 @@ public:
     int mPhysicallyHeldNoteCount = 0;
     int midiInChannel = 17; // 1-16, 17=ALL, 0=NONE
     int midiOutChannel = 0; // 0=NONE, 1-16
+    std::string targetMidiDevice = "ALL";
+    int midiOutCcKnob[8] = { 74, 71, 79, 72, 73, 75, 76, 77 };
+    int midiOutCcFader[8] = { 7, 10, 91, 93, 1, 11, 2, 4 };
     struct PendingNote {
       int note;
       float velocity;
