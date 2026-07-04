@@ -3018,44 +3018,6 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_center(panicLbl);
     lv_obj_add_event_cb(panicBtn, settingsPanicBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // Renew IP/Network Button
-    lv_obj_t* renewNetBtn = lv_button_create(audioCard);
-    lv_obj_set_size(renewNetBtn, 200, 36);
-    lv_obj_set_style_bg_color(renewNetBtn, lv_color_hex(0x28A745), 0);
-    lv_obj_t* renewNetLbl = lv_label_create(renewNetBtn);
-    lv_label_set_text(renewNetLbl, "RENEW IP ADDRESS");
-    lv_obj_set_style_text_font(renewNetLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(renewNetLbl);
-    
-    lv_obj_add_event_cb(renewNetBtn, [](lv_event_t* e) {
-        std::cout << "Settings: Triggering DHCP / network renew..." << std::endl;
-        int r = system("sudo dhcpcd -n wlan0 2>/dev/null || sudo dhcpcd -n eth0 2>/dev/null || "
-                       "sudo systemctl restart dhcpcd 2>/dev/null || "
-                       "sudo systemctl restart NetworkManager 2>/dev/null");
-        (void)r;
-    }, LV_EVENT_CLICKED, this);
-
-    // Exit to Console Button
-    lv_obj_t* exitConsoleBtn = lv_button_create(audioCard);
-    lv_obj_set_size(exitConsoleBtn, 200, 36);
-    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0xD32F2F), 0);
-    lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
-    lv_label_set_text(exitConsoleLbl, "EXIT TO CONSOLE");
-    lv_obj_set_style_text_font(exitConsoleLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(exitConsoleLbl);
-    
-    lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
-        std::cout << "Settings: Stopping Loom service and exiting..." << std::endl;
-        int r = system("sudo systemctl stop loom 2>/dev/null || "
-                       "sudo systemctl stop loompi 2>/dev/null || "
-                       "sudo systemctl stop loom-pi 2>/dev/null");
-        (void)r;
-        exit(0);
-    }, LV_EVENT_CLICKED, this);
-    
-    // Allow scrolling on audioCard in case of height overflow
-    lv_obj_add_flag(audioCard, LV_OBJ_FLAG_SCROLLABLE);
-
 
     // --- Column 2: System Performance & Updater ---
     lv_obj_t* perfCard = lv_obj_create(tab);
@@ -3128,6 +3090,44 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(restartBtnLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(restartBtnLbl);
     lv_obj_add_event_cb(restartBtn, settingsRestartBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Renew IP/Network Button
+    lv_obj_t* renewNetBtn = lv_button_create(perfCard);
+    lv_obj_set_size(renewNetBtn, 180, 36);
+    lv_obj_set_style_bg_color(renewNetBtn, lv_color_hex(0x28A745), 0);
+    lv_obj_t* renewNetLbl = lv_label_create(renewNetBtn);
+    lv_label_set_text(renewNetLbl, "RENEW IP ADDRESS");
+    lv_obj_set_style_text_font(renewNetLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(renewNetLbl);
+    
+    lv_obj_add_event_cb(renewNetBtn, [](lv_event_t* e) {
+        std::cout << "Settings: Triggering DHCP / network renew..." << std::endl;
+        int r = system("sudo dhcpcd -n wlan0 2>/dev/null || sudo dhcpcd -n eth0 2>/dev/null || "
+                       "sudo systemctl restart dhcpcd 2>/dev/null || "
+                       "sudo systemctl restart NetworkManager 2>/dev/null");
+        (void)r;
+    }, LV_EVENT_CLICKED, this);
+
+    // Exit to Console Button
+    lv_obj_t* exitConsoleBtn = lv_button_create(perfCard);
+    lv_obj_set_size(exitConsoleBtn, 180, 36);
+    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0xD32F2F), 0);
+    lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
+    lv_label_set_text(exitConsoleLbl, "EXIT TO CONSOLE");
+    lv_obj_set_style_text_font(exitConsoleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(exitConsoleLbl);
+    
+    lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
+        std::cout << "Settings: Stopping Loom service and exiting..." << std::endl;
+        int r = system("sudo systemctl stop loom 2>/dev/null || "
+                       "sudo systemctl stop loompi 2>/dev/null || "
+                       "sudo systemctl stop loom-pi 2>/dev/null");
+        (void)r;
+        exit(0);
+    }, LV_EVENT_CLICKED, this);
+    
+    // Allow scrolling on perfCard in case of height overflow
+    lv_obj_add_flag(perfCard, LV_OBJ_FLAG_SCROLLABLE);
 
 
     // --- Column 3: USB/MIDI Diagnostic Monitor ---
@@ -10822,7 +10822,8 @@ void UIManager::openMixerPopup(int trackIdx) {
         LV_SYMBOL_WARNING " FM Drum\n"
         LV_SYMBOL_CHARGE " Analog Drum\n"
         LV_SYMBOL_PLAY " Audio In\n"
-        LV_SYMBOL_AUDIO " SoundFont"
+        LV_SYMBOL_AUDIO " SoundFont\n"
+        LV_SYMBOL_USB " MIDI"
     );
     lv_obj_set_style_bg_color(engDd, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_border_color(engDd, lv_color_hex(0x444444), 0);
