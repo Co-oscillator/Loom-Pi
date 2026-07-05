@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.7");
+    lv_label_set_text(versionLbl, "Version: v3.1.8");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -17724,6 +17724,9 @@ void UIManager::openConsoleModal() {
         std::cout << "[DEBUG] TextArea updated: " << lv_textarea_get_text(ta) << std::endl;
     }, LV_EVENT_VALUE_CHANGED, nullptr);
     
+    // Add the execution callback to the text area directly for hardware keyboard "Enter" support!
+    lv_obj_add_event_cb(mConsoleInputTa, consoleExecuteCb, LV_EVENT_READY, this);
+    
     mConsoleKb = lv_keyboard_create(mConsoleModal);
     lv_obj_set_size(mConsoleKb, 1024, 220);
     lv_obj_align(mConsoleKb, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -17753,12 +17756,18 @@ void UIManager::consoleExecuteCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui->mConsoleInputTa || !ui->mConsoleOutputTa) return;
     
-    const char* cmd = lv_textarea_get_text(ui->mConsoleInputTa);
-    if (!cmd || strlen(cmd) == 0) return;
+    const char* rawCmd = lv_textarea_get_text(ui->mConsoleInputTa);
+    if (!rawCmd || strlen(rawCmd) == 0) return;
     
-    std::string commandStr = cmd;
+    std::string commandStr = rawCmd;
+    // Strip any trailing newlines (LVGL sometimes inserts them on Enter)
+    while (!commandStr.empty() && (commandStr.back() == '\n' || commandStr.back() == '\r')) {
+        commandStr.pop_back();
+    }
+    if (commandStr.empty()) return;
+    
     lv_textarea_add_text(ui->mConsoleOutputTa, "\n$ ");
-    lv_textarea_add_text(ui->mConsoleOutputTa, cmd);
+    lv_textarea_add_text(ui->mConsoleOutputTa, commandStr.c_str());
     lv_textarea_add_text(ui->mConsoleOutputTa, "\n");
     
     commandStr += " 2>&1"; // capture stderr

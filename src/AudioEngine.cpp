@@ -5402,6 +5402,8 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     Track& track = mTracks[trackIdx];
     if (track.engineType != 10) return;
     
+    std::cout << "ALSA Debug: sendMidiOut called for T" << trackIdx << " outChan=" << track.midiOutChannel << std::endl;
+    
     int outChan = track.midiOutChannel;
     if (outChan == 0) {
         std::cout << "ALSA Skip: track " << trackIdx << " has midiOutChannel set to OFF (0)." << std::endl;
@@ -5452,6 +5454,10 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
 #else
     if (!gSeqOut) {
         std::cout << "ALSA Skip: gSeqOut is NULL! ALSA failed to initialize properly." << std::endl;
+        return;
+    }
+    if (gOutPort < 0) {
+        std::cout << "ALSA Skip: gOutPort is invalid (" << gOutPort << "). Outbound MIDI is completely disabled!" << std::endl;
         return;
     }
     
