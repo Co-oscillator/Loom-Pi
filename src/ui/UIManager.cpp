@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.11");
+    lv_label_set_text(versionLbl, "Version: v3.1.12");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -4142,6 +4142,16 @@ static void setBacklightPower(bool on) {
 }
 
 void UIManager::update() {
+    if (mMidiWakeRequested) {
+        mMidiWakeRequested = false;
+        lv_display_trigger_activity(nullptr);
+        if (mSleepOverlay != nullptr) {
+            lv_obj_delete(mSleepOverlay);
+            mSleepOverlay = nullptr;
+            setBacklightPower(true);
+        }
+    }
+
     if (mStepModal && mEditingStepIdx >= 0) {
         int engineType = mEngine.getTracks()[mActiveTrack].engineType;
         bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
@@ -17097,13 +17107,7 @@ void UIManager::loadSettings(const std::string& path) {
 }
 
 void UIManager::addMidiLog(const std::string& type, int channel, int d1, int d2) {
-    // Reset inactivity timer on MIDI event
-    lv_display_trigger_activity(nullptr);
-    if (mSleepOverlay != nullptr) {
-        lv_obj_delete(mSleepOverlay);
-        mSleepOverlay = nullptr;
-        setBacklightPower(true);
-    }
+    mMidiWakeRequested = true;
 
     std::lock_guard<std::mutex> lock(mMidiLogMutex);
     MidiLogMessage msg;

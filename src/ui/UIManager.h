@@ -692,6 +692,7 @@ public:
     std::atomic<bool> mUpdateInstallFinished{false};
     std::string mUpdateInstallStatusStr = "";
     int mUpdateInstallProgressPercent = 0;
+    std::atomic<bool> mMidiWakeRequested{false};
 
     // MIDI Monitor log definitions
     struct MidiLogMessage {
