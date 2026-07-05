@@ -7,6 +7,7 @@ extern MIDIPortRef gMidiOutputPort;
 #else
 #include <alsa/asoundlib.h>
 extern snd_seq_t* gSeq;
+extern snd_seq_t* gSeqOut;
 extern int gOutPort;
 #endif
 #include <iostream>
