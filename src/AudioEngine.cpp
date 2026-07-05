@@ -5346,19 +5346,19 @@ void AudioEngine::scanMidiDevices() {
         }
     }
 #else
-    if (gSeq) {
+    if (gSeqOut) {
         snd_seq_client_info_t *cinfo = nullptr;
         snd_seq_port_info_t *pinfo = nullptr;
         if (snd_seq_client_info_malloc(&cinfo) >= 0 && snd_seq_port_info_malloc(&pinfo) >= 0) {
             snd_seq_client_info_set_client(cinfo, -1);
-            while (snd_seq_query_next_client(gSeq, cinfo) >= 0) {
+            while (snd_seq_query_next_client(gSeqOut, cinfo) >= 0) {
                 int client = snd_seq_client_info_get_client(cinfo);
-                if (client == snd_seq_client_id(gSeq)) continue;
+                if (client == snd_seq_client_id(gSeqOut)) continue;
                 
                 const char* clientName = snd_seq_client_info_get_name(cinfo);
                 snd_seq_port_info_set_client(pinfo, client);
                 snd_seq_port_info_set_port(pinfo, -1);
-                while (snd_seq_query_next_port(gSeq, pinfo) >= 0) {
+                while (snd_seq_query_next_port(gSeqOut, pinfo) >= 0) {
                     unsigned int capability = snd_seq_port_info_get_capability(pinfo);
                     bool isInput = (capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ);
                     bool isOutput = (capability & SND_SEQ_PORT_CAP_WRITE) && (capability & SND_SEQ_PORT_CAP_SUBS_WRITE);
@@ -5450,7 +5450,7 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
         }
     }
 #else
-    if (gSeq && gOutPort >= 0) {
+    if (gSeqOut && gOutPort >= 0) {
         bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
@@ -5473,11 +5473,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             } else {
                 continue;
             }
-            snd_seq_event_output(gSeq, &ev);
+            snd_seq_event_output(gSeqOut, &ev);
             sentAny = true;
         }
         if (sentAny) {
-            snd_seq_drain_output(gSeq);
+            snd_seq_drain_output(gSeqOut);
         }
     }
 #endif

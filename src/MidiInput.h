@@ -882,6 +882,7 @@ static inline void setupMidiInput(MidiCallbackData* data) {
 #include <vector>
 
 extern snd_seq_t* gSeq;
+extern snd_seq_t* gSeqOut;
 extern int gInPort;
 extern int gOutPort;
 extern pthread_t gMidiThread;
@@ -1659,14 +1660,22 @@ static inline void setupMidiInput(MidiCallbackData* data) {
         SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
         
-    gOutPort = snd_seq_create_simple_port(gSeq, "LoomPi Output",
-        SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
-        SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+    int errOut = snd_seq_open(&gSeqOut, "default", SND_SEQ_OPEN_OUTPUT, 0);
+    if (errOut >= 0) {
+        snd_seq_set_client_name(gSeqOut, "LoomPi Out");
+        gOutPort = snd_seq_create_simple_port(gSeqOut, "LoomPi Output",
+            SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+            SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+    } else {
+        std::cerr << "ALSA Sequencer: Failed to open dedicated output handle." << std::endl;
+        gSeqOut = nullptr;
+    }
         
     if (gInPort < 0 || gOutPort < 0) {
         std::cerr << "ALSA Sequencer: Failed to create ports." << std::endl;
         snd_seq_close(gSeq);
         gSeq = nullptr;
+        if (gSeqOut) { snd_seq_close(gSeqOut); gSeqOut = nullptr; }
         return;
     }
     

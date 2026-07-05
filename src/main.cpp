@@ -18,6 +18,7 @@ MIDIPortRef gMidiOutputPort = 0;
 MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
 #else
 snd_seq_t* gSeq = nullptr;
+snd_seq_t* gSeqOut = nullptr; // Dedicated output handle for thread safety
 int gInPort = -1;
 int gOutPort = -1;
 pthread_t gMidiThread;
