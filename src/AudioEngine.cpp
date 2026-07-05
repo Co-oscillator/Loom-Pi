@@ -5503,10 +5503,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
                 continue;
             }
             
-            int err = snd_seq_event_output_direct(gSeqOut, &ev);
+            int err = snd_seq_event_output(gSeqOut, &ev);
             if (err < 0) {
-                debugStr += " [ALSA Err: " + std::string(snd_strerror(err)) + "]";
+                debugStr += " [ALSA Err on " + dev.name + ": " + std::string(snd_strerror(err)) + "]";
             } else {
+                snd_seq_drain_output(gSeqOut);
                 sentAny = true;
                 debugStr += " [Sent to " + dev.name + "]";
             }
