@@ -17172,8 +17172,8 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
         }
 
         ui->mUpdateInstallProgressPercent = 70;
-        ui->mUpdateInstallStatusStr = "Compiling system (takes ~1 min)...";
-        ret = std::system("cmake --build build --config Release -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)");
+        ui->mUpdateInstallStatusStr = "Compiling system (takes ~2 mins)...";
+        ret = std::system("cmake --build build --config Release -j1");
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "Compilation failed.";
             ui->mUpdateInstallFinished = true;
