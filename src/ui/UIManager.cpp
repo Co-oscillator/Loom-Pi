@@ -2565,7 +2565,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     lv_obj_t* sliderCountDd = lv_dropdown_create(controlsRow);
     lv_obj_set_size(sliderCountDd, 80, 36);
-    lv_dropdown_set_options(sliderCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24");
+    lv_dropdown_set_options(sliderCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40");
     lv_obj_set_style_bg_color(sliderCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(sliderCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(sliderCountDd, 6, 0);
@@ -3058,7 +3058,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.23");
+    lv_label_set_text(versionLbl, "Version: v3.1.24");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -7351,9 +7351,9 @@ void UIManager::populateAssignScreen() {
         lv_obj_add_flag(fCard, LV_OBJ_FLAG_CLICKABLE);
         struct RemapEventData {
             UIManager* ui;
-            int targetIdx; // 24-47 for faders
+            int targetIdx; // 40-79 for faders
         };
-        RemapEventData* remapData = new RemapEventData{this, f + 24};
+        RemapEventData* remapData = new RemapEventData{this, f + 40};
         lv_obj_add_event_cb(fCard, openRemapModalEventCb, LV_EVENT_CLICKED, remapData);
 
         struct FaderEventData {
@@ -8675,8 +8675,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     if (ui->mControllerSetupActive) {
         ui->mControllerSetupTargetIndex = data->targetIdx;
         if (ui->mControllerSetupBtnLabel) {
-            bool isKnob = (data->targetIdx < 24);
-            int idx = isKnob ? data->targetIdx : (data->targetIdx - 24);
+            bool isKnob = (data->targetIdx < 40);
+            int idx = isKnob ? data->targetIdx : (data->targetIdx - 40);
             lv_label_set_text_fmt(ui->mControllerSetupBtnLabel, "WIGGLE HARDWARE CONTROLLER TO ASSIGN TO %s %d", 
                                   isKnob ? "KNOB" : "SLIDER", idx + 1);
         }
@@ -8699,10 +8699,10 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
 
     lv_obj_t* title = lv_label_create(ui->mRemapModal);
-    if (ui->mRemapTargetIndex < 24) {
+    if (ui->mRemapTargetIndex < 40) {
         lv_label_set_text_fmt(title, "REMAP KNOB %d", ui->mRemapTargetIndex + 1);
     } else {
-        lv_label_set_text_fmt(title, "REMAP FADER %d", ui->mRemapTargetIndex - 23);
+        lv_label_set_text_fmt(title, "REMAP FADER %d", ui->mRemapTargetIndex - 39);
     }
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(title, trackColor, 0);
@@ -8748,8 +8748,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_size(ui->mRemapCcSpinner, 90, 10);
     lv_slider_set_range(ui->mRemapCcSpinner, 0, 127);
     
-    int currentCc = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobCC[ui->mActiveTrack][ui->mRemapTargetIndex]
-                                               : ui->mSeqMidiFaderCC[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
+    int currentCc = (ui->mRemapTargetIndex < 40) ? ui->mSeqMidiKnobCC[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                               : ui->mSeqMidiFaderCC[ui->mActiveTrack][ui->mRemapTargetIndex - 40];
     lv_slider_set_value(ui->mRemapCcSpinner, currentCc, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(ui->mRemapCcSpinner, trackColor, LV_PART_INDICATOR);
 
@@ -8821,8 +8821,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     ui->mRemapChannelDd = lv_dropdown_create(chRow);
     lv_obj_set_size(ui->mRemapChannelDd, 120, 32);
     lv_dropdown_set_options(ui->mRemapChannelDd, "All\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16");
-    int currentChannel = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobChannel[ui->mActiveTrack][ui->mRemapTargetIndex]
-                                                     : ui->mSeqMidiFaderChannel[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
+    int currentChannel = (ui->mRemapTargetIndex < 40) ? ui->mSeqMidiKnobChannel[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                                     : ui->mSeqMidiFaderChannel[ui->mActiveTrack][ui->mRemapTargetIndex - 40];
     lv_dropdown_set_selected(ui->mRemapChannelDd, currentChannel);
     lv_obj_set_style_bg_color(ui->mRemapChannelDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(ui->mRemapChannelDd, &lv_font_montserrat_12, 0);
@@ -8852,8 +8852,8 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_style_pad_row(listContainer, 8, 0);
     lv_obj_add_flag(listContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-    int currentParam = (ui->mRemapTargetIndex < 24) ? ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex]
-                                                  : ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 24];
+    int currentParam = (ui->mRemapTargetIndex < 40) ? ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex]
+                                                  : ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 40];
     ui->mRemapSelectedParamId = currentParam;
 
     auto options = ui->getTrackParamOptions(ui->mActiveTrack);
@@ -8930,7 +8930,7 @@ void UIManager::saveRemapModalEventCb(lv_event_t* e) {
     int newCh = lv_dropdown_get_selected(ui->mRemapChannelDd);
     int paramId = ui->mRemapSelectedParamId;
 
-    if (ui->mRemapTargetIndex < 24) {
+    if (ui->mRemapTargetIndex < 40) {
         for (int t = 0; t < 8; ++t) {
             ui->mSeqMidiKnobCC[t][ui->mRemapTargetIndex] = newCc;
             ui->mSeqMidiKnobChannel[t][ui->mRemapTargetIndex] = newCh;
@@ -8938,10 +8938,10 @@ void UIManager::saveRemapModalEventCb(lv_event_t* e) {
         ui->mSeqMidiKnobParam[ui->mActiveTrack][ui->mRemapTargetIndex] = paramId;
     } else {
         for (int t = 0; t < 8; ++t) {
-            ui->mSeqMidiFaderCC[t][ui->mRemapTargetIndex - 24] = newCc;
-            ui->mSeqMidiFaderChannel[t][ui->mRemapTargetIndex - 24] = newCh;
+            ui->mSeqMidiFaderCC[t][ui->mRemapTargetIndex - 40] = newCc;
+            ui->mSeqMidiFaderChannel[t][ui->mRemapTargetIndex - 40] = newCh;
         }
-        ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 24] = paramId;
+        ui->mSeqMidiFaderParam[ui->mActiveTrack][ui->mRemapTargetIndex - 40] = paramId;
     }
 
     // Refresh center screen

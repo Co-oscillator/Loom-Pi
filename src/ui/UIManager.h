@@ -33,19 +33,19 @@ public:
     bool isConsoleModalOpen() const { return mConsoleModal != nullptr; }
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
-    int mSeqMidiKnobCC[8][24];
-    int mSeqMidiKnobChannel[8][24]; // 0=ALL, 1-16
-    int mSeqMidiKnobParam[8][24]; // mapped param IDs
-    float mSeqMidiKnobValue[8][24];
-    bool mSeqMidiKnobInverted[8][24];
-    uint32_t mLastKnobMs[8][24] = {0};
-    uint8_t mLastKnobCcVal[8][24] = {0};
-    bool mKnobInitialized[8][24] = {false};
-    int mSeqMidiFaderCC[8][24];
-    int mSeqMidiFaderChannel[8][24]; // 0=ALL, 1-16
-    int mSeqMidiFaderParam[8][24]; // mapped param IDs
-    float mSeqMidiFaderValue[8][24];
-    bool mSeqMidiFaderInverted[8][24];
+    int mSeqMidiKnobCC[8][40];
+    int mSeqMidiKnobChannel[8][40]; // 0=ALL, 1-16
+    int mSeqMidiKnobParam[8][40]; // mapped param IDs
+    float mSeqMidiKnobValue[8][40];
+    bool mSeqMidiKnobInverted[8][40];
+    uint32_t mLastKnobMs[8][40] = {0};
+    uint8_t mLastKnobCcVal[8][40] = {0};
+    bool mKnobInitialized[8][40] = {false};
+    int mSeqMidiFaderCC[8][40];
+    int mSeqMidiFaderChannel[8][40]; // 0=ALL, 1-16
+    int mSeqMidiFaderParam[8][40]; // mapped param IDs
+    float mSeqMidiFaderValue[8][40];
+    bool mSeqMidiFaderInverted[8][40];
     int mSettingsKnobCount = 12;
     int mSettingsSliderCount = 4;
 
@@ -587,16 +587,16 @@ public:
     int mSettingsOctaveOffset = 0; // -5 to +5
     lv_obj_t* mSettingsOctaveDd = nullptr;
     bool mSettingsFxPadMomentary = true; // true=Momentary, false=Toggle
-    int mSettingsPadFxAssign[24] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
-    int mSettingsPadDrumAssign[24] = {0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7};
-    int mSettingsPadChordNotes[24][8] = {};
-    int mSettingsPadChordCount[24] = {};
-    bool mSettingsPadFxToggleState[24] = {}; // For toggle mode: is FX currently on?
+    int mSettingsPadFxAssign[40] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39};
+    int mSettingsPadDrumAssign[40] = {0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7};
+    int mSettingsPadChordNotes[40][8] = {};
+    int mSettingsPadChordCount[40] = {};
+    bool mSettingsPadFxToggleState[40] = {}; // For toggle mode: is FX currently on?
     int mSettingsChordRecordingPad = -1;
     int mSettingsMidiTrackSelect = 0;
     int mSettingsActiveTabIdx = 0;
 
-    int mSettingsPadNoteMap[24] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43};
+    int mSettingsPadNoteMap[40] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59};
     bool mPadLearnActive = false;
     int mPadLearnTarget = -1;
     

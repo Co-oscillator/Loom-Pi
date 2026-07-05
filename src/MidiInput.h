@@ -316,7 +316,7 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                     int activeTrack = data->ui->getActiveTrack();
                     int targetTrack = activeTrack;
 
-                    if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
+                    if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 40) {
                         if (velocity > 0) {
                             data->ui->mSettingsPadNoteMap[data->ui->mPadLearnTarget] = note;
                             data->ui->mPadLearnActive = false;
@@ -1017,7 +1017,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         } // Close padIdx >= 0
         } // Close isLaunchkey
 
-        if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
+        if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 40) {
             if (velocity > 0) {
                 data->ui->mSettingsPadNoteMap[data->ui->mPadLearnTarget] = note;
                 data->ui->mPadLearnActive = false;
