@@ -705,16 +705,22 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                 if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
                                     int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
                                     if (mappedCh == 0 || mappedCh == (channel + 1)) {
-                                        int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
+                                        int effectiveK = k;
+                                        if (true && k < 8) { // On Mac, assume Launchkey is connected for now
+                                            effectiveK = k + (gLoomPiLaunchkeyKnobBank * 8);
+                                            if (effectiveK >= data->ui->mSettingsKnobCount) effectiveK = k; // Fallback
+                                        }
+
+                                        int paramId = data->ui->mSeqMidiKnobParam[activeTrack][effectiveK];
                                         if (paramId >= 0) {
                                             uint32_t now = lv_tick_get();
-                                            uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
-                                            uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
-                                            bool isInit = data->ui->mKnobInitialized[activeTrack][k];
+                                            uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][effectiveK];
+                                            uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][effectiveK];
+                                            bool isInit = data->ui->mKnobInitialized[activeTrack][effectiveK];
 
-                                            data->ui->mLastKnobCcVal[activeTrack][k] = val;
-                                            data->ui->mLastKnobMs[activeTrack][k] = now;
-                                            data->ui->mKnobInitialized[activeTrack][k] = true;
+                                            data->ui->mLastKnobCcVal[activeTrack][effectiveK] = val;
+                                            data->ui->mLastKnobMs[activeTrack][effectiveK] = now;
+                                            data->ui->mKnobInitialized[activeTrack][effectiveK] = true;
 
                                             float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
 
@@ -746,7 +752,7 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                                 }
 
                                                 float paramDelta = delta * multiplier;
-                                                if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
+                                                if (data->ui->mSeqMidiKnobInverted[activeTrack][effectiveK]) {
                                                     paramDelta = -paramDelta;
                                                 }
 
@@ -757,10 +763,10 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                                 float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
 
                                                 data->engine->setParameter(activeTrack, paramId, scaledVal);
-                                                data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+                                                data->ui->mSeqMidiKnobValue[activeTrack][effectiveK] = newNormVal;
                                             } else {
                                                 // First knob move: synchronize visual state to current soft param
-                                                data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
+                                                data->ui->mSeqMidiKnobValue[activeTrack][effectiveK] = data->ui->normalizeParamValue(paramId, paramVal);
                                             }
                                         }
                                         ccMatched = true;
@@ -894,7 +900,7 @@ extern pthread_t gMidiThread;
 extern bool gMidiThreadRunning;
 extern MidiCallbackData gMidiCallbackData;
 
-static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data) {
+static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data, int sourceClient = -1) {
     if (!data || !data->engine || !data->ui) return;
 
     if (data->ui->mWizardActive) {
@@ -929,23 +935,32 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
     uint8_t messageType = status & 0xF0;
     uint8_t channel = status & 0x0F;
     
+    // Is this coming from the Launchkey DAW port?
+    bool isLaunchkey = false;
+#ifdef __APPLE__
+    isLaunchkey = true; // On Mac CoreMIDI, we don't strict-filter client ID yet
+#else
+    isLaunchkey = (sourceClient == gLaunchkeyDawClient && gLaunchkeyDawClient != -1);
+#endif
+    
     if (messageType == 0x90) { // Note On
         uint8_t note = d1;
         uint8_t velocity = d2;
 
         // Launchkey MK4/MK3 DAW Mode Intercept (MK4 uses Ch 1, MK3 uses Ch 16)
-        int padIdx = -1;
-        if (channel == 15 && note >= 96 && note <= 111) {
-            padIdx = note - 96; // MK3 contiguous
-        } else if (channel == 0) {
-            if (note >= 96 && note <= 103) {
-                padIdx = note - 96; // MK4 top row
-            } else if (note >= 112 && note <= 119) {
-                padIdx = (note - 112) + 8; // MK4 bottom row
+        if (isLaunchkey) {
+            int padIdx = -1;
+            if (channel == 15 && note >= 96 && note <= 111) {
+                padIdx = note - 96; // MK3 contiguous
+            } else if (channel == 0) {
+                if (note >= 96 && note <= 103) {
+                    padIdx = note - 96; // MK4 top row
+                } else if (note >= 112 && note <= 119) {
+                    padIdx = (note - 112) + 8; // MK4 bottom row
+                }
             }
-        }
-        
-        if (padIdx >= 0) {
+            
+            if (padIdx >= 0) {
             if (velocity > 0) { // Pad Pressed
                 int seqIdx = (gLoomPiLaunchkeyPage * 16) + padIdx;
                 int activeTrack = data->ui->getActiveTrack();
@@ -964,7 +979,8 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 }
             }
             return;
-        }
+        } // Close padIdx >= 0
+        } // Close isLaunchkey
 
         if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
             if (velocity > 0) {
@@ -1312,12 +1328,21 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                     data->ui->mNeedsScreenRebuild = true;
                 }
                 return;
-            } else if (cc == 105) { // Function (Toggle Keyboard Mode)
+            } else if (cc == 105) { // Function (Clear Sequence)
                 if (val > 0) {
-                    // We don't have a direct setter for KeyboardMode, but we can toggle mSettingsKeyboardMode via friend access
-                    // Wait, MidiInput.h is a friend, so we can access it!
-                    data->ui->mSettingsKeyboardMode = !data->ui->mSettingsKeyboardMode;
+                    data->engine->clearSequencer(data->ui->getActiveTrack());
+                    pushLaunchkeyLedUpdate(data->engine, data->ui);
                     data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            } else if (cc == 51) { // Prev Knob Bank
+                if (val > 0) {
+                    gLoomPiLaunchkeyKnobBank = std::max(0, gLoomPiLaunchkeyKnobBank - 1);
+                }
+                return;
+            } else if (cc == 52) { // Next Knob Bank
+                if (val > 0) {
+                    gLoomPiLaunchkeyKnobBank = std::min(2, gLoomPiLaunchkeyKnobBank + 1);
                 }
                 return;
             } else if (cc == 115) { // Play
@@ -1464,16 +1489,22 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                     if (data->ui->mSeqMidiKnobCC[activeTrack][k] == cc) {
                         int mappedCh = data->ui->mSeqMidiKnobChannel[activeTrack][k];
                         if (mappedCh == 0 || mappedCh == (channel + 1)) {
-                            int paramId = data->ui->mSeqMidiKnobParam[activeTrack][k];
+                            int effectiveK = k;
+                            if (isLaunchkey && k < 8) {
+                                effectiveK = k + (gLoomPiLaunchkeyKnobBank * 8);
+                                if (effectiveK >= data->ui->mSettingsKnobCount) effectiveK = k; // Fallback
+                            }
+                            
+                            int paramId = data->ui->mSeqMidiKnobParam[activeTrack][effectiveK];
                             if (paramId >= 0) {
                                 uint32_t now = lv_tick_get();
-                                uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][k];
-                                uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][k];
-                                bool isInit = data->ui->mKnobInitialized[activeTrack][k];
+                                uint8_t lastCcVal = data->ui->mLastKnobCcVal[activeTrack][effectiveK];
+                                uint32_t lastTime = data->ui->mLastKnobMs[activeTrack][effectiveK];
+                                bool isInit = data->ui->mKnobInitialized[activeTrack][effectiveK];
 
-                                data->ui->mLastKnobCcVal[activeTrack][k] = val;
-                                data->ui->mLastKnobMs[activeTrack][k] = now;
-                                data->ui->mKnobInitialized[activeTrack][k] = true;
+                                data->ui->mLastKnobCcVal[activeTrack][effectiveK] = val;
+                                data->ui->mLastKnobMs[activeTrack][effectiveK] = now;
+                                data->ui->mKnobInitialized[activeTrack][effectiveK] = true;
 
                                 float paramVal = data->engine->getTracks()[activeTrack].parameters[paramId];
 
@@ -1505,7 +1536,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                                     }
 
                                     float paramDelta = delta * multiplier;
-                                    if (data->ui->mSeqMidiKnobInverted[activeTrack][k]) {
+                                    if (data->ui->mSeqMidiKnobInverted[activeTrack][effectiveK]) {
                                         paramDelta = -paramDelta;
                                     }
 
@@ -1516,10 +1547,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                                     float scaledVal = data->ui->scaleParamFromNormalized(paramId, newNormVal);
 
                                     data->engine->setParameter(activeTrack, paramId, scaledVal);
-                                    data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+                                    data->ui->mSeqMidiKnobValue[activeTrack][effectiveK] = newNormVal;
                                 } else {
                                     // First knob move: synchronize visual state to current soft param
-                                    data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
+                                    data->ui->mSeqMidiKnobValue[activeTrack][effectiveK] = data->ui->normalizeParamValue(paramId, paramVal);
                                 }
                             }
                             ccMatched = true;

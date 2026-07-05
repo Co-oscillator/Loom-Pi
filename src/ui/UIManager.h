@@ -10,11 +10,11 @@
 #include <mutex>
 
 struct MidiCallbackData;
-static void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data);
+static void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data, int sourceClient = -1);
 
 class UIManager {
 public:
-    friend void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data);
+    friend void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data, int sourceClient);
     UIManager(AudioEngine& engine);
     ~UIManager();
 

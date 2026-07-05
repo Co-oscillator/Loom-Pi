@@ -8,6 +8,7 @@
 inline int gLaunchkeyDawClient = -1;
 inline int gLaunchkeyDawPort = -1;
 inline int gLoomPiLaunchkeyPage = 0; // 0 = steps 1-16, 1 = steps 17-32, etc.
+inline int gLoomPiLaunchkeyKnobBank = 0; // 0 = knobs 0-7, 1 = 8-15, 2 = 16-23
 
 // Forward declare to avoid circular dependency
 class AudioEngine;
