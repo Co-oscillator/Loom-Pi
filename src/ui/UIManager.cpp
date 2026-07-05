@@ -3119,19 +3119,8 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_center(exitConsoleLbl);
     
     lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
-        std::cout << "Settings: Stopping Loom service and exiting..." << std::endl;
-        
-        // 1. Attempt to stop any systemd service containing "loom"
-        int r = system("sudo systemctl list-units --type=service --all | awk '/[lL]oom/ {print $1}' | xargs -I {} sudo systemctl stop {} 2>/dev/null");
-        
-        // 2. Kill X11 window system forcefully to break out of xinitrc or lightdm auto-loops
-        r = system("sudo killall -9 Xorg lightdm openbox xinit 2>/dev/null");
-        
-        // 3. Force the kernel display to switch to the text console (TTY2) in case we are stuck in DRM/Framebuffer
-        r = system("sudo chvt 2 2>/dev/null || sudo chvt 1 2>/dev/null");
-        
-        (void)r;
-        exit(0);
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openConsoleModal();
     }, LV_EVENT_CLICKED, this);
     
     // Allow scrolling on perfCard in case of height overflow
@@ -17671,5 +17660,89 @@ void UIManager::advanceWizard(int incomingVal, int incomingChannel) {
             lv_label_set_text_fmt(mWizardStepLbl, "PAD %d / %d", mWizardStep + 1, totalSteps);
             lv_label_set_text_fmt(mWizardDescLbl, "Please tap PAD %d\non your pad controller.", mWizardStep + 1);
         }
+    }
+}
+
+void UIManager::openConsoleModal() {
+    if (mConsoleModal) return;
+    
+    mConsoleModal = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(mConsoleModal, 800, 480);
+    lv_obj_center(mConsoleModal);
+    lv_obj_set_style_bg_color(mConsoleModal, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_border_width(mConsoleModal, 0, 0);
+    lv_obj_remove_flag(mConsoleModal, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* closeBtn = lv_button_create(mConsoleModal);
+    lv_obj_set_size(closeBtn, 40, 40);
+    lv_obj_align(closeBtn, LV_ALIGN_TOP_RIGHT, -10, 10);
+    lv_obj_set_style_bg_color(closeBtn, lv_color_hex(0xD32F2F), 0);
+    lv_obj_t* closeLbl = lv_label_create(closeBtn);
+    lv_label_set_text(closeLbl, LV_SYMBOL_CLOSE);
+    lv_obj_center(closeLbl);
+    lv_obj_add_event_cb(closeBtn, consoleCloseCb, LV_EVENT_CLICKED, this);
+
+    mConsoleOutputTa = lv_textarea_create(mConsoleModal);
+    lv_obj_set_size(mConsoleOutputTa, 780, 200);
+    lv_obj_align(mConsoleOutputTa, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_bg_color(mConsoleOutputTa, lv_color_hex(0x111111), 0);
+    lv_obj_set_style_text_color(mConsoleOutputTa, lv_color_hex(0x00FF00), 0); // Green terminal text
+    lv_obj_set_style_text_font(mConsoleOutputTa, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_border_color(mConsoleOutputTa, lv_color_hex(0x444444), 0);
+    lv_textarea_set_text(mConsoleOutputTa, "Loom Pi Integrated Console\nType a command below and press Enter on the keyboard.\n");
+    lv_textarea_set_cursor_click_pos(mConsoleOutputTa, false);
+    
+    mConsoleInputTa = lv_textarea_create(mConsoleModal);
+    lv_obj_set_size(mConsoleInputTa, 780, 40);
+    lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 220);
+    lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_text_color(mConsoleInputTa, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(mConsoleInputTa, &lv_font_montserrat_14, 0);
+    lv_textarea_set_one_line(mConsoleInputTa, true);
+    
+    mConsoleKb = lv_keyboard_create(mConsoleModal);
+    lv_obj_set_size(mConsoleKb, 800, 210);
+    lv_obj_align(mConsoleKb, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_keyboard_set_textarea(mConsoleKb, mConsoleInputTa);
+    
+    lv_obj_add_event_cb(mConsoleKb, consoleExecuteCb, LV_EVENT_READY, this);
+}
+
+void UIManager::consoleExecuteCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui->mConsoleInputTa || !ui->mConsoleOutputTa) return;
+    
+    const char* cmd = lv_textarea_get_text(ui->mConsoleInputTa);
+    if (!cmd || strlen(cmd) == 0) return;
+    
+    std::string commandStr = cmd;
+    lv_textarea_add_text(ui->mConsoleOutputTa, "\n$ ");
+    lv_textarea_add_text(ui->mConsoleOutputTa, cmd);
+    lv_textarea_add_text(ui->mConsoleOutputTa, "\n");
+    
+    commandStr += " 2>&1"; // capture stderr
+    
+    FILE* fp = popen(commandStr.c_str(), "r");
+    if (fp) {
+        char buffer[256];
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            lv_textarea_add_text(ui->mConsoleOutputTa, buffer);
+        }
+        pclose(fp);
+    } else {
+        lv_textarea_add_text(ui->mConsoleOutputTa, "Error executing command.\n");
+    }
+    
+    lv_textarea_set_text(ui->mConsoleInputTa, "");
+}
+
+void UIManager::consoleCloseCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (ui->mConsoleModal) {
+        lv_obj_del(ui->mConsoleModal);
+        ui->mConsoleModal = nullptr;
+        ui->mConsoleOutputTa = nullptr;
+        ui->mConsoleInputTa = nullptr;
+        ui->mConsoleKb = nullptr;
     }
 }

@@ -604,6 +604,15 @@ public:
     int mWizardType = 0; // 0 = Knobs/Sliders/Transport, 1 = MIDI Pads
     int mWizardStep = 0;
     lv_obj_t* mWizardModal = nullptr;
+    
+    // Console Modal
+    lv_obj_t* mConsoleModal = nullptr;
+    lv_obj_t* mConsoleOutputTa = nullptr;
+    lv_obj_t* mConsoleInputTa = nullptr;
+    lv_obj_t* mConsoleKb = nullptr;
+    void openConsoleModal();
+    static void consoleExecuteCb(lv_event_t* e);
+    static void consoleCloseCb(lv_event_t* e);
     lv_obj_t* mWizardStepLbl = nullptr;
     lv_obj_t* mWizardDescLbl = nullptr;
     uint32_t mLastWizardActionTimeMs = 0;
