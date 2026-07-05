@@ -9,6 +9,7 @@
 #include "AudioEngine.h"
 #include "ui/UIManager.h"
 #include <iostream>
+#include <algorithm>
 
 struct MidiCallbackData {
     AudioEngine* engine;
@@ -900,7 +901,7 @@ extern pthread_t gMidiThread;
 extern bool gMidiThreadRunning;
 extern MidiCallbackData gMidiCallbackData;
 
-static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data, int sourceClient = -1) {
+static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallbackData* data, int sourceClient) {
     if (!data || !data->engine || !data->ui) return;
 
     if (data->ui->mWizardActive) {
@@ -1739,7 +1740,7 @@ static void* alsaMidiThreadProc(void* arg) {
         }
         
         if (valid) {
-            processMidiMessage(status, d1, d2, data);
+            processMidiMessage(status, d1, d2, data, ev->source.client);
         }
         
         snd_seq_free_event(ev);
