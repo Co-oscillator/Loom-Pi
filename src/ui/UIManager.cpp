@@ -17707,6 +17707,17 @@ void UIManager::openConsoleModal() {
     
     lv_obj_add_event_cb(mConsoleKb, consoleExecuteCb, LV_EVENT_READY, this);
     
+    // Route hardware keyboard to the input textarea
+    lv_group_t* g = lv_group_create();
+    lv_group_add_obj(g, mConsoleInputTa);
+    lv_indev_t* kb_indev = lv_indev_get_next(NULL);
+    while(kb_indev) {
+        if(lv_indev_get_type(kb_indev) == LV_INDEV_TYPE_KEYPAD) {
+            lv_indev_set_group(kb_indev, g);
+        }
+        kb_indev = lv_indev_get_next(kb_indev);
+    }
+    
     // Bring close button to front so it isn't blocked by the textarea
     lv_obj_move_foreground(closeBtn);
 }
@@ -17742,6 +17753,18 @@ void UIManager::consoleExecuteCb(lv_event_t* e) {
 void UIManager::consoleCloseCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (ui->mConsoleModal) {
+        lv_group_t* g = lv_obj_get_group(ui->mConsoleInputTa);
+        if(g) {
+            lv_indev_t* kb_indev = lv_indev_get_next(NULL);
+            while(kb_indev) {
+                if(lv_indev_get_type(kb_indev) == LV_INDEV_TYPE_KEYPAD && lv_indev_get_group(kb_indev) == g) {
+                    lv_indev_set_group(kb_indev, NULL);
+                }
+                kb_indev = lv_indev_get_next(kb_indev);
+            }
+            lv_group_del(g);
+        }
+        
         lv_obj_del(ui->mConsoleModal);
         ui->mConsoleModal = nullptr;
         ui->mConsoleOutputTa = nullptr;

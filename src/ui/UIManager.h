@@ -29,6 +29,7 @@ public:
     void setActiveTrack(int track) { mActiveTrack = track; }
     bool isKeyboardModeEnabled() const { return mSettingsKeyboardMode; }
     bool isFileBrowserOpen() const { return mSeqModal != nullptr; }
+    bool isConsoleModalOpen() const { return mConsoleModal != nullptr; }
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
     int mSeqMidiKnobCC[8][24];

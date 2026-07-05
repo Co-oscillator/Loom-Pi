@@ -145,6 +145,7 @@ int main() {
     // Create a 1024x600 window using LVGL's SDL driver
     lv_display_t * disp = lv_sdl_window_create(1024, 600);
     lv_indev_t * indev = lv_sdl_mouse_create();
+    lv_sdl_keyboard_create();
     
     // 4. Init UI Manager
     UIManager ui(gEngine);
@@ -266,10 +267,10 @@ int main() {
             activeKeyNotes.clear();
         }
         
-        // Transport & QWERTY Keyboard: grab key events ONLY if file browser is NOT open
+        // Transport & QWERTY Keyboard: grab key events ONLY if file browser/console are NOT open
         SDL_Event keyEvents[32];
         int numKeys = 0;
-        if (!ui.isFileBrowserOpen()) {
+        if (!ui.isFileBrowserOpen() && !ui.isConsoleModalOpen()) {
             numKeys = SDL_PeepEvents(keyEvents, 32, SDL_GETEVENT, SDL_KEYDOWN, SDL_KEYUP);
         }
         for (int k = 0; k < numKeys; ++k) {
