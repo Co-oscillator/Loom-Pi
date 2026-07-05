@@ -5564,8 +5564,13 @@ void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
         snd_seq_ev_set_dest(&ev, gLaunchkeyDawClient, gLaunchkeyDawPort);
         snd_seq_ev_set_direct(&ev);
         
-        // MK4 Drum pads in DAW mode map to notes 96-111 on Channel 16 (0x0F)
+        // MK4 Drum pads in DAW mode map to notes 96-111 on Channel 1 (0x00)
+        // MK3 uses Channel 16 (0x0F)
+        // Send to both to seamlessly support both models
         snd_seq_ev_set_noteon(&ev, 15, 96 + i, color);
+        snd_seq_event_output_direct(gSeqOut, &ev);
+        
+        snd_seq_ev_set_noteon(&ev, 0, 96 + i, color);
         snd_seq_event_output_direct(gSeqOut, &ev);
     }
 #endif

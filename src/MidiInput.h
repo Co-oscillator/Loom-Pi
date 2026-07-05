@@ -933,8 +933,8 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         uint8_t note = d1;
         uint8_t velocity = d2;
 
-        // Launchkey MK4 DAW Mode Intercept
-        if (channel == 15 && note >= 96 && note <= 111) {
+        // Launchkey MK4/MK3 DAW Mode Intercept (MK4 uses Ch 1, MK3 uses Ch 16)
+        if ((channel == 15 || channel == 0) && note >= 96 && note <= 111) {
             if (velocity > 0) { // Pad Pressed
                 int padIdx = note - 96;
                 int seqIdx = (gLoomPiLaunchkeyPage * 16) + padIdx;
@@ -1276,20 +1276,32 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         uint8_t cc = d1;
         uint8_t val = d2;
         
-        // Launchkey MK4 DAW Mode Paging Intercept (Track Left = 102, Track Right = 103)
-        if (channel == 15) {
-            if (cc == 102) {
+        // Launchkey MK4/MK3 DAW Mode Paging Intercept
+        // MK3 uses Ch 16 (channel=15) and CC 102, 103
+        // MK4 uses Ch 1 (channel=0) and CC 106, 107. Play=115, Record=117.
+        if (channel == 15 || channel == 0) {
+            if (cc == 102 || cc == 106) {
                 if (val > 0) {
                     gLoomPiLaunchkeyPage = std::max(0, gLoomPiLaunchkeyPage - 1);
                     pushLaunchkeyLedUpdate(data->engine, data->ui);
                     data->ui->mNeedsScreenRebuild = true;
                 }
                 return;
-            } else if (cc == 103) {
+            } else if (cc == 103 || cc == 107) {
                 if (val > 0) {
                     gLoomPiLaunchkeyPage = std::min(3, gLoomPiLaunchkeyPage + 1); // Up to 64 steps (4 pages)
                     pushLaunchkeyLedUpdate(data->engine, data->ui);
                     data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            } else if (cc == 115) { // Play
+                if (val > 0) {
+                    data->engine->setPlaying(!data->engine->getIsPlaying());
+                }
+                return;
+            } else if (cc == 117) { // Record
+                if (val > 0) {
+                    data->engine->setIsRecording(!data->engine->getIsRecording());
                 }
                 return;
             }
