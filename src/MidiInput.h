@@ -934,9 +934,19 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         uint8_t velocity = d2;
 
         // Launchkey MK4/MK3 DAW Mode Intercept (MK4 uses Ch 1, MK3 uses Ch 16)
-        if ((channel == 15 || channel == 0) && note >= 96 && note <= 111) {
+        int padIdx = -1;
+        if (channel == 15 && note >= 96 && note <= 111) {
+            padIdx = note - 96; // MK3 contiguous
+        } else if (channel == 0) {
+            if (note >= 96 && note <= 103) {
+                padIdx = note - 96; // MK4 top row
+            } else if (note >= 112 && note <= 119) {
+                padIdx = (note - 112) + 8; // MK4 bottom row
+            }
+        }
+        
+        if (padIdx >= 0) {
             if (velocity > 0) { // Pad Pressed
-                int padIdx = note - 96;
                 int seqIdx = (gLoomPiLaunchkeyPage * 16) + padIdx;
                 int activeTrack = data->ui->getActiveTrack();
                 auto& track = data->engine->getTracks()[activeTrack];
@@ -1291,6 +1301,22 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 if (val > 0) {
                     gLoomPiLaunchkeyPage = std::min(3, gLoomPiLaunchkeyPage + 1); // Up to 64 steps (4 pages)
                     pushLaunchkeyLedUpdate(data->engine, data->ui);
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            } else if (cc == 104) { // Right Arrow (Next Track)
+                if (val > 0) {
+                    int nextTrack = (data->ui->getActiveTrack() + 1) % 8;
+                    data->ui->setActiveTrack(nextTrack);
+                    pushLaunchkeyLedUpdate(data->engine, data->ui);
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            } else if (cc == 105) { // Function (Toggle Keyboard Mode)
+                if (val > 0) {
+                    // We don't have a direct setter for KeyboardMode, but we can toggle mSettingsKeyboardMode via friend access
+                    // Wait, MidiInput.h is a friend, so we can access it!
+                    data->ui->mSettingsKeyboardMode = !data->ui->mSettingsKeyboardMode;
                     data->ui->mNeedsScreenRebuild = true;
                 }
                 return;
