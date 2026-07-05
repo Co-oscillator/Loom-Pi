@@ -1674,10 +1674,56 @@ static void autoConnectAlsaSources(snd_seq_t* seq, int ourPort) {
     snd_seq_client_info_free(cinfo);
 }
 
+static void autoConnectAlsaOutputs(snd_seq_t* seq, int ourPort) {
+    if (!seq || ourPort < 0) return;
+    
+    snd_seq_client_info_t *cinfo = nullptr;
+    snd_seq_port_info_t *pinfo = nullptr;
+    
+    if (snd_seq_client_info_malloc(&cinfo) < 0) return;
+    if (snd_seq_port_info_malloc(&pinfo) < 0) {
+        snd_seq_client_info_free(cinfo);
+        return;
+    }
+    
+    snd_seq_client_info_set_client(cinfo, -1);
+    while (snd_seq_query_next_client(seq, cinfo) >= 0) {
+        int client = snd_seq_client_info_get_client(cinfo);
+        if (client == snd_seq_client_id(seq)) continue;
+        
+        snd_seq_port_info_set_client(pinfo, client);
+        snd_seq_port_info_set_port(pinfo, -1);
+        while (snd_seq_query_next_port(seq, pinfo) >= 0) {
+            unsigned int capability = snd_seq_port_info_get_capability(pinfo);
+            // Check if the port supports write events (is an input/receiver)
+            if ((capability & (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE)) != 0) {
+                snd_seq_port_subscribe_t *sub = nullptr;
+                if (snd_seq_port_subscribe_malloc(&sub) >= 0) {
+                    snd_seq_addr_t sender, dest;
+                    sender.client = snd_seq_client_id(seq);
+                    sender.port = ourPort;
+                    dest.client = client;
+                    dest.port = snd_seq_port_info_get_port(pinfo);
+                    
+                    snd_seq_port_subscribe_set_sender(sub, &sender);
+                    snd_seq_port_subscribe_set_dest(sub, &dest);
+                    
+                    snd_seq_subscribe_port(seq, sub);
+                    snd_seq_port_subscribe_free(sub);
+                }
+            }
+        }
+    }
+    
+    snd_seq_port_info_free(pinfo);
+    snd_seq_client_info_free(cinfo);
+}
+
 static void* alsaAutoConnectThreadProc(void* arg) {
     std::cout << "ALSA Sequencer: Background auto-connection thread started." << std::endl;
     while (gMidiThreadRunning) {
         autoConnectAlsaSources(gSeq, gInPort);
+        autoConnectAlsaOutputs(gSeqOut, gOutPort);
         sleep(2);
     }
     return nullptr;
