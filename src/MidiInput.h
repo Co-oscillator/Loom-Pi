@@ -1086,24 +1086,43 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 }
             }
         } else {
-            // Standard note: plays in active track, snaps to active scale if selected!
-            if (velocity > 0) {
-                int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
-                int scaleIdx = data->ui->mSelectedScaleIdx;
-                int finalNote = note;
-                if (scaleIdx > 0) {
-                    finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+            std::vector<int> targetTracks;
+            int activeTrack = data->ui->getActiveTrack();
+            
+            bool explicitlyClaimed = false;
+            for (int t = 0; t < 8; ++t) {
+                int inCh = data->engine->getTracks()[t].midiInChannel;
+                if (inCh == (channel + 1)) {
+                    targetTracks.push_back(t);
+                    explicitlyClaimed = true;
                 }
-                data->engine->triggerNote(activeTrack, finalNote, velocity);
-            } else {
-                // Note Off via velocity 0
-                int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
-                int scaleIdx = data->ui->mSelectedScaleIdx;
-                int finalNote = note;
-                if (scaleIdx > 0) {
-                    finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+            }
+            
+            if (!explicitlyClaimed) {
+                int activeInCh = data->engine->getTracks()[activeTrack].midiInChannel;
+                if (activeInCh == 17 || activeInCh == (channel + 1)) {
+                    targetTracks.push_back(activeTrack);
                 }
-                data->engine->releaseNote(activeTrack, finalNote);
+            }
+            
+            for (int trk : targetTracks) {
+                if (velocity > 0) {
+                    int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
+                    int scaleIdx = data->ui->mSelectedScaleIdx;
+                    int finalNote = note;
+                    if (scaleIdx > 0) {
+                        finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+                    }
+                    data->engine->triggerNote(trk, finalNote, velocity);
+                } else {
+                    int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
+                    int scaleIdx = data->ui->mSelectedScaleIdx;
+                    int finalNote = note;
+                    if (scaleIdx > 0) {
+                        finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+                    }
+                    data->engine->releaseNote(trk, finalNote);
+                }
             }
         }
     } else if (messageType == 0x80) { // Note Off
@@ -1191,14 +1210,33 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 data->engine->releaseNote(activeTrack, 60 + drumIdx);
             }
         } else {
-            // Standard note: plays in active track, snaps to active scale if selected!
-            int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
-            int scaleIdx = data->ui->mSelectedScaleIdx;
-            int finalNote = note;
-            if (scaleIdx > 0) {
-                finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+            // Standard note off
+            std::vector<int> targetTracks;
+            bool explicitlyClaimed = false;
+            for (int t = 0; t < 8; ++t) {
+                int inCh = data->engine->getTracks()[t].midiInChannel;
+                if (inCh == (channel + 1)) {
+                    targetTracks.push_back(t);
+                    explicitlyClaimed = true;
+                }
             }
-            data->engine->releaseNote(activeTrack, finalNote);
+            
+            if (!explicitlyClaimed) {
+                int activeInCh = data->engine->getTracks()[activeTrack].midiInChannel;
+                if (activeInCh == 17 || activeInCh == (channel + 1)) {
+                    targetTracks.push_back(activeTrack);
+                }
+            }
+            
+            for (int trk : targetTracks) {
+                int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
+                int scaleIdx = data->ui->mSelectedScaleIdx;
+                int finalNote = note;
+                if (scaleIdx > 0) {
+                    finalNote = snapNoteToScale(note, scaleIdx, rootKey);
+                }
+                data->engine->releaseNote(trk, finalNote);
+            }
         }
     } else if (messageType == 0xB0) { // CC (Control Change)
         uint8_t cc = d1;

@@ -5378,6 +5378,8 @@ void AudioEngine::scanMidiDevices() {
                                 MidiDeviceSettings existing = d;
                                 existing.client = client;
                                 existing.port = portId;
+                                existing.isInput = isInput;
+                                existing.isOutput = isOutput;
                                 newDevices.push_back(existing);
                                 found = true;
                                 break;
@@ -5388,6 +5390,8 @@ void AudioEngine::scanMidiDevices() {
                             d.name = fullName;
                             d.client = client;
                             d.port = portId;
+                            d.isInput = isInput;
+                            d.isOutput = isOutput;
                             newDevices.push_back(d);
                         }
                     }
@@ -5463,6 +5467,7 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
         bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
+            if (!dev.isOutput) continue;
             
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
                 std::cout << "ALSA Skip: Target mismatch. Track wants " << track.targetMidiDevice << " but dev is " << dev.name << std::endl;

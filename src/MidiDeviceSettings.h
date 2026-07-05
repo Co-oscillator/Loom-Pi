@@ -11,6 +11,8 @@ struct MidiDeviceSettings {
     int receiveChannel = -1;  // 1-16, -1 = All, 0 = Off/Ignored
     bool muteOutgoing = false;
     bool ignoreIncoming = false;
+    bool isInput = false;
+    bool isOutput = false;
 };
 
 #endif // MIDI_DEVICE_SETTINGS_H
