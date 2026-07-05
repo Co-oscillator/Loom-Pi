@@ -17706,6 +17706,9 @@ void UIManager::openConsoleModal() {
     lv_keyboard_set_textarea(mConsoleKb, mConsoleInputTa);
     
     lv_obj_add_event_cb(mConsoleKb, consoleExecuteCb, LV_EVENT_READY, this);
+    
+    // Bring close button to front so it isn't blocked by the textarea
+    lv_obj_move_foreground(closeBtn);
 }
 
 void UIManager::consoleExecuteCb(lv_event_t* e) {
