@@ -686,12 +686,6 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
       velocity = 100;
     }
 
-    if (track.engineType == 7) {
-      enqueueMidiEvent(0x90, track.midiOutChannel - 1, note, velocity);
-      track.isActive = true;
-      return;
-    }
-
     // Apply Per-Track Transpose (Skip Drums and Slicers)
     if (track.engineType != 5 && track.engineType != 6) {
       bool isSliceMode =
@@ -857,6 +851,7 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
       break;
     case 10: // MIDI ENGINE
       sendMidiOut(trackIndex, 0x90, note, velocity);
+      track.isActive = true;
       break;
     }
 
@@ -2229,10 +2224,7 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
     if (!track.isTrackEnabled) {
       return;
     }
-    if (track.engineType == 7) {
-      enqueueMidiEvent(0x80, track.midiOutChannel - 1, note, 0);
-      track.isActive = false;
-    } else {
+
       if (!isSequencerTrigger) {
         track.mPhysicallyHeldNoteCount--;
         auto it = std::find(track.mLiveHeldNotes.begin(), track.mLiveHeldNotes.end(), note);
@@ -2320,7 +2312,7 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
       if (track.engineType == 10) {
         sendMidiOut(trackIndex, 0x80, transposedNote, 0);
       }
-    }
+
   }
 }
 
@@ -5361,8 +5353,8 @@ void AudioEngine::scanMidiDevices() {
                 snd_seq_port_info_set_port(pinfo, -1);
                 while (snd_seq_query_next_port(gSeqOut, pinfo) >= 0) {
                     unsigned int capability = snd_seq_port_info_get_capability(pinfo);
-                    bool isInput = (capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ);
-                    bool isOutput = (capability & SND_SEQ_PORT_CAP_WRITE) && (capability & SND_SEQ_PORT_CAP_SUBS_WRITE);
+                    bool isInput = (capability & (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ)) != 0;
+                    bool isOutput = (capability & (SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE)) != 0;
                     if (isInput || isOutput) {
                         const char* portName = snd_seq_port_info_get_name(pinfo);
                         std::string fullName = clientName ? clientName : "Unknown Client";
