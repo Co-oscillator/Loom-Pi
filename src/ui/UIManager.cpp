@@ -2178,7 +2178,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
 
     lv_obj_t* padCountDd = lv_dropdown_create(configRow);
     lv_obj_set_size(padCountDd, 80, 36);
-    lv_dropdown_set_options(padCountDd, "4\n8\n12\n16\n20\n24");
+    lv_dropdown_set_options(padCountDd, "4\n8\n12\n16\n20\n24\n28\n32\n36\n40");
     lv_obj_set_style_bg_color(padCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(padCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(padCountDd, 6, 0);
@@ -2551,7 +2551,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     lv_obj_t* knobCountDd = lv_dropdown_create(controlsRow);
     lv_obj_set_size(knobCountDd, 80, 36);
-    lv_dropdown_set_options(knobCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24");
+    lv_dropdown_set_options(knobCountDd, "2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40");
     lv_obj_set_style_bg_color(knobCountDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_text_font(knobCountDd, &lv_font_montserrat_12, 0);
     lv_obj_set_style_radius(knobCountDd, 6, 0);
@@ -3058,7 +3058,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.24");
+    lv_label_set_text(versionLbl, "Version: v3.1.25");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -3541,7 +3541,7 @@ void UIManager::settingsPadCountDdEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
     int sel = lv_dropdown_get_selected(dd);
-    int counts[] = {4, 8, 12, 16, 20, 24};
+    int counts[] = {4, 8, 12, 16, 20, 24, 28, 32, 36, 40};
     ui->mSettingsPadCount = counts[sel];
     ui->rebuildPadGrid();
 }
@@ -3592,14 +3592,14 @@ void UIManager::settingsFxPadBehaviorSwitchEventCb(lv_event_t* e) {
         lv_label_set_text(label, ui->mSettingsFxPadMomentary ? "Momentary" : "Toggle");
     }
     // Reset toggle states when switching
-    for (int i = 0; i < 24; ++i) ui->mSettingsPadFxToggleState[i] = false;
+    for (int i = 0; i < 40; ++i) ui->mSettingsPadFxToggleState[i] = false;
 }
 
 void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* pad = (lv_obj_t*)lv_event_get_target(e);
     int padIdx = (int)(intptr_t)lv_obj_get_user_data(pad);
-    if (padIdx < 0 || padIdx >= 24) return;
+    if (padIdx < 0 || padIdx >= 40) return;
 
     if (ui->mPadLearnActive) {
         ui->mPadLearnTarget = padIdx;
@@ -3818,7 +3818,7 @@ void UIManager::settingsFxSelectBtnEventCb(lv_event_t* e) {
     int padIdx = (packedData >> 16) & 0xFFFF;
     int fxIdx = packedData & 0xFFFF;
 
-    if (padIdx >= 0 && padIdx < 24 && fxIdx >= 0 && fxIdx < kNumFxSlots) {
+    if (padIdx >= 0 && padIdx < 40 && fxIdx >= 0 && fxIdx < kNumFxSlots) {
         ui->mSettingsPadFxAssign[padIdx] = fxIdx;
         std::cout << "Settings: Pad " << padIdx + 1 << " reassigned to FX " << kFxNames[fxIdx] << std::endl;
         
