@@ -17710,6 +17710,9 @@ void UIManager::openConsoleModal() {
     // Route hardware keyboard to the input textarea
     lv_group_t* g = lv_group_create();
     lv_group_add_obj(g, mConsoleInputTa);
+    lv_group_focus_obj(mConsoleInputTa); // explicitly focus it for the hardware keyboard
+    lv_obj_add_state(mConsoleInputTa, LV_STATE_FOCUSED); // explicitly focus it for the onscreen keyboard
+    
     lv_indev_t* kb_indev = lv_indev_get_next(NULL);
     while(kb_indev) {
         if(lv_indev_get_type(kb_indev) == LV_INDEV_TYPE_KEYPAD) {

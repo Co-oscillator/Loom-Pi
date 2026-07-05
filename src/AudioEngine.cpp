@@ -5455,9 +5455,13 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
         bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
-            if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) continue;
+            if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
+                continue;
+            }
             if (dev.muteOutgoing) continue;
-            if (dev.sendChannel > 0 && dev.sendChannel != outChan) continue;
+            if (dev.sendChannel > 0 && dev.sendChannel != outChan) {
+                continue;
+            }
             
             snd_seq_event_t ev;
             snd_seq_ev_clear(&ev);
@@ -5474,11 +5478,20 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             } else {
                 continue;
             }
-            snd_seq_event_output(gSeqOut, &ev);
-            sentAny = true;
+            
+            int err = snd_seq_event_output(gSeqOut, &ev);
+            if (err < 0) {
+                std::cout << "ALSA Error sending to " << dev.name << ": " << snd_strerror(err) << std::endl;
+            } else {
+                sentAny = true;
+                std::cout << "ALSA Sent msgType " << std::hex << (int)msgType << std::dec << " to " << dev.name << std::endl;
+            }
         }
         if (sentAny) {
-            snd_seq_drain_output(gSeqOut);
+            int err2 = snd_seq_drain_output(gSeqOut);
+            if (err2 < 0) {
+                std::cout << "ALSA Drain Error: " << snd_strerror(err2) << std::endl;
+            }
         }
     }
 #endif
