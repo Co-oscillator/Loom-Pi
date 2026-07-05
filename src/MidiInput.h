@@ -938,9 +938,17 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             if (velocity > 0) { // Pad Pressed
                 int padIdx = note - 96;
                 int seqIdx = (gLoomPiLaunchkeyPage * 16) + padIdx;
-                if (seqIdx < 64) {
-                    int activeTrack = data->ui->getActiveTrack();
-                    data->engine->getTracks()[activeTrack].sequence[seqIdx] = !data->engine->getTracks()[activeTrack].sequence[seqIdx];
+                int activeTrack = data->ui->getActiveTrack();
+                auto& track = data->engine->getTracks()[activeTrack];
+                
+                bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
+                              (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                
+                auto& steps = isDrum ? track.drumSequencers[data->ui->mActiveDrumIdx].getStepsMutable()
+                                     : track.sequencer.getStepsMutable();
+                
+                if (seqIdx < (int)steps.size()) {
+                    steps[seqIdx].active = !steps[seqIdx].active;
                     pushLaunchkeyLedUpdate(data->engine, data->ui);
                     data->ui->mNeedsScreenRebuild = true;
                 }

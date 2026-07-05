@@ -5524,18 +5524,29 @@ void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
     if (gLaunchkeyDawClient < 0 || gLaunchkeyDawPort < 0 || gSeqOut == nullptr || gOutPort < 0) return;
     
     int activeTrack = ui->getActiveTrack();
-    TrackState& track = engine->getTracks()[activeTrack];
+    auto& track = engine->getTracks()[activeTrack];
     
     int pageStart = gLoomPiLaunchkeyPage * 16;
+    
+    bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
+                  (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+    
+    std::vector<Step> currentSteps = isDrum ? engine->getDrumSequencerSteps(activeTrack, ui->mActiveDrumIdx)
+                                            : engine->getSequencerSteps(activeTrack);
+    
+    int seqLength = isDrum ? track.drumSequencers[ui->mActiveDrumIdx].getSteps().size()
+                           : track.sequencer.getSteps().size();
+                           
+    if (seqLength == 0) seqLength = 16;
     
     for (int i = 0; i < 16; ++i) {
         int seqIdx = pageStart + i;
         bool isActive = false;
-        if (seqIdx < 64) {
-            isActive = track.sequence[seqIdx];
+        if (seqIdx < (int)currentSteps.size()) {
+            isActive = currentSteps[seqIdx].active;
         }
         
-        bool isPlaying = (engine->getIsPlaying() && (engine->getCurrentStep() % track.seqLength) == seqIdx);
+        bool isPlaying = (engine->getIsPlaying() && (engine->getCurrentStep(activeTrack, isDrum ? ui->mActiveDrumIdx : -1)) == seqIdx);
         
         // Novation colors: 0=Off, 5=Red, 21=Green, 13=Yellow, 3=White
         uint8_t color = 0;
