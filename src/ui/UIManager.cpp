@@ -10855,6 +10855,8 @@ void UIManager::openMixerPopup(int trackIdx) {
         ddIndex = 7;
     } else if (currentEngineType == 9) {
         ddIndex = 8;
+    } else if (currentEngineType == 10) {
+        ddIndex = 9;
     }
     lv_dropdown_set_selected(engDd, ddIndex);
 
@@ -11086,6 +11088,8 @@ void UIManager::mixerEngineDdEventCb(lv_event_t* e) {
         engineType = 8;
     } else if (selected == 8) {
         engineType = 9;
+    } else if (selected == 9) {
+        engineType = 10;
     }
     d->ui->mEngine.setEngineType(d->trackIdx, engineType);
     d->ui->applyDefaultMidiMappings(d->trackIdx, engineType);
