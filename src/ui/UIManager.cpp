@@ -4,7 +4,14 @@
 #include <dirent.h>
 #include <string>
 #include <sys/stat.h>
+#include <vector>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
+#ifndef __APPLE__
+#include <alsa/asoundlib.h>
+#endif
+#include "../HardwareIntegration.h"
 #include <cmath>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
@@ -3051,7 +3058,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.17");
+    lv_label_set_text(versionLbl, "Version: v3.1.18");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -4590,6 +4597,12 @@ void UIManager::update() {
         
         // Highlight active playing step (Playhead Tracking)
         int currentStep = mEngine.getIsPlaying() ? mEngine.getCurrentStep(mActiveTrack, isDrum ? activeDrumIdx : -1) : -1;
+        
+        if (currentStep != mLastLaunchkeyStep) {
+            mLastLaunchkeyStep = currentStep;
+            pushLaunchkeyLedUpdate(&mEngine, this);
+        }
+        
         bool isRecording = mEngine.getIsRecording();
         lv_color_t playheadColor = isRecording ? lv_color_hex(0xEF4444) : lv_color_hex(0xFFFFFF);
         for (int i = 0; i < 64; ++i) {

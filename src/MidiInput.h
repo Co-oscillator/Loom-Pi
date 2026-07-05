@@ -1,6 +1,11 @@
 #ifndef MIDI_INPUT_H
 #define MIDI_INPUT_H
 
+#include <unistd.h>
+#include <pthread.h>
+#include <poll.h>
+
+#include "HardwareIntegration.h"
 #include "AudioEngine.h"
 #include "ui/UIManager.h"
 #include <iostream>
@@ -928,6 +933,21 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         uint8_t note = d1;
         uint8_t velocity = d2;
 
+        // Launchkey MK4 DAW Mode Intercept
+        if (channel == 15 && note >= 96 && note <= 111) {
+            if (velocity > 0) { // Pad Pressed
+                int padIdx = note - 96;
+                int seqIdx = (gLoomPiLaunchkeyPage * 16) + padIdx;
+                if (seqIdx < 64) {
+                    int activeTrack = data->ui->getActiveTrack();
+                    data->engine->getTracks()[activeTrack].sequence[seqIdx] = !data->engine->getTracks()[activeTrack].sequence[seqIdx];
+                    pushLaunchkeyLedUpdate(data->engine, data->ui);
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+            }
+            return;
+        }
+
         if (data->ui->mPadLearnActive && data->ui->mPadLearnTarget >= 0 && data->ui->mPadLearnTarget < 24) {
             if (velocity > 0) {
                 data->ui->mSettingsPadNoteMap[data->ui->mPadLearnTarget] = note;
@@ -1127,6 +1147,12 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
         }
     } else if (messageType == 0x80) { // Note Off
         uint8_t note = d1;
+        
+        // Launchkey MK4 DAW Mode Intercept
+        if (channel == 15 && note >= 96 && note <= 111) {
+            return;
+        }
+
         data->ui->addMidiLog("Note Off", channel + 1, note, d2);
         int activeTrack = data->ui->getActiveTrack();
         int targetTrack = activeTrack;
@@ -1241,6 +1267,26 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
     } else if (messageType == 0xB0) { // CC (Control Change)
         uint8_t cc = d1;
         uint8_t val = d2;
+        
+        // Launchkey MK4 DAW Mode Paging Intercept (Track Left = 102, Track Right = 103)
+        if (channel == 15) {
+            if (cc == 102) {
+                if (val > 0) {
+                    gLoomPiLaunchkeyPage = std::max(0, gLoomPiLaunchkeyPage - 1);
+                    pushLaunchkeyLedUpdate(data->engine, data->ui);
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            } else if (cc == 103) {
+                if (val > 0) {
+                    gLoomPiLaunchkeyPage = std::min(3, gLoomPiLaunchkeyPage + 1); // Up to 64 steps (4 pages)
+                    pushLaunchkeyLedUpdate(data->engine, data->ui);
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            }
+        }
+        
         data->ui->addMidiLog("CC", channel + 1, cc, val);
         
         // Hardware transport & navigation CC buttons
@@ -1663,7 +1709,10 @@ static void autoConnectAlsaSources(snd_seq_t* seq, int ourPort) {
                     snd_seq_port_subscribe_set_sender(sub, &sender);
                     snd_seq_port_subscribe_set_dest(sub, &dest);
                     
-                    snd_seq_subscribe_port(seq, sub);
+                    int err = snd_seq_subscribe_port(seq, sub);
+                    if (err < 0 && err != -EBUSY) {
+                        std::cerr << "ALSA Autoconnect Source Err on " << client << ":" << snd_seq_port_info_get_port(pinfo) << " -> " << err << std::endl;
+                    }
                     snd_seq_port_subscribe_free(sub);
                 }
             }
@@ -1710,6 +1759,15 @@ static void autoConnectAlsaOutputs(snd_seq_t* seq, int ourPort) {
                     
                     snd_seq_subscribe_port(seq, sub);
                     snd_seq_port_subscribe_free(sub);
+                    
+                    std::string portName = snd_seq_port_info_get_name(pinfo);
+                    if (portName.find("DAW In") != std::string::npos && portName.find("Launchkey") != std::string::npos) {
+                        if (gLaunchkeyDawClient != client || gLaunchkeyDawPort != snd_seq_port_info_get_port(pinfo)) {
+                            gLaunchkeyDawClient = client;
+                            gLaunchkeyDawPort = snd_seq_port_info_get_port(pinfo);
+                            sendLaunchkeyDawModeInit(client, snd_seq_port_info_get_port(pinfo));
+                        }
+                    }
                 }
             }
         }

@@ -5515,3 +5515,47 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     }
 #endif
 }
+
+#include "HardwareIntegration.h"
+#include "ui/UIManager.h"
+
+void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
+#ifndef __APPLE__
+    if (gLaunchkeyDawClient < 0 || gLaunchkeyDawPort < 0 || gSeqOut == nullptr || gOutPort < 0) return;
+    
+    int activeTrack = ui->getActiveTrack();
+    TrackState& track = engine->getTracks()[activeTrack];
+    
+    int pageStart = gLoomPiLaunchkeyPage * 16;
+    
+    for (int i = 0; i < 16; ++i) {
+        int seqIdx = pageStart + i;
+        bool isActive = false;
+        if (seqIdx < 64) {
+            isActive = track.sequence[seqIdx];
+        }
+        
+        bool isPlaying = (engine->getIsPlaying() && (engine->getCurrentStep() % track.seqLength) == seqIdx);
+        
+        // Novation colors: 0=Off, 5=Red, 21=Green, 13=Yellow, 3=White
+        uint8_t color = 0;
+        if (isPlaying) {
+            color = 21; // Green
+        } else if (isActive) {
+            color = 5;  // Red
+        } else {
+            color = 0;  // Off
+        }
+        
+        snd_seq_event_t ev;
+        snd_seq_ev_clear(&ev);
+        snd_seq_ev_set_source(&ev, gOutPort);
+        snd_seq_ev_set_dest(&ev, gLaunchkeyDawClient, gLaunchkeyDawPort);
+        snd_seq_ev_set_direct(&ev);
+        
+        // MK4 Drum pads in DAW mode map to notes 96-111 on Channel 16 (0x0F)
+        snd_seq_ev_set_noteon(&ev, 15, 96 + i, color);
+        snd_seq_event_output_direct(gSeqOut, &ev);
+    }
+#endif
+}
