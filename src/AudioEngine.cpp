@@ -850,6 +850,7 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
       track.soundFontEngine.noteOn(note, velocity);
       break;
     case 10: // MIDI ENGINE
+      track.lastMidiDebug = "Triggered " + std::to_string(note);
       sendMidiOut(trackIndex, 0x90, note, velocity);
       track.isActive = true;
       break;
@@ -2890,11 +2891,11 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
     // Extra debug: track states
     for (int t = 0; t < 8; ++t) {
       if (mTracks[t].isActive || mTracks[t].smoothedVolume > 0.01f || mTracks[t].engineType == 10) {
-        if (mTracks[t].engineType == 10 && !mTracks[t].lastMidiDebug.empty()) {
+        if (mTracks[t].engineType == 10) {
             LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f, MidiDebug=[%s]", t,
                  mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
                  mTracks[t].engineType, mTracks[t].gainReduction, mTracks[t].lastMidiDebug.c_str());
-            mTracks[t].lastMidiDebug = ""; // clear after printing
+            mTracks[t].lastMidiDebug = "Idle"; // clear after printing
         } else {
             LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f", t,
                  mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
@@ -5468,21 +5469,21 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     
     if (gSeqOut && gOutPort >= 0) {
         bool sentAny = false;
-        std::string debugStr = "";
+        std::string debugStr = track.lastMidiDebug + " | Devices=" + std::to_string(mMidiDevices.size());
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
             if (!dev.isOutput) continue;
             
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
-                debugStr = "Skip: Target mismatch (" + dev.name + ")";
+                debugStr += " [Skip Target: " + dev.name + "]";
                 continue;
             }
             if (dev.muteOutgoing) {
-                debugStr = "Skip: Device muted (" + dev.name + ")";
+                debugStr += " [Skip Muted: " + dev.name + "]";
                 continue;
             }
             if (dev.sendChannel > 0 && dev.sendChannel != outChan) {
-                debugStr = "Skip: Channel mismatch (" + dev.name + ")";
+                debugStr += " [Skip Chan: " + dev.name + "]";
                 continue;
             }
             
@@ -5504,10 +5505,10 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             
             int err = snd_seq_event_output_direct(gSeqOut, &ev);
             if (err < 0) {
-                debugStr = "ALSA Error: " + std::string(snd_strerror(err));
+                debugStr += " [ALSA Err: " + std::string(snd_strerror(err)) + "]";
             } else {
                 sentAny = true;
-                debugStr = "Sent msgType " + std::to_string(msgType) + " to " + dev.name;
+                debugStr += " [Sent to " + dev.name + "]";
             }
         }
         track.lastMidiDebug = debugStr;
