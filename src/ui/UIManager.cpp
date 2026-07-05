@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.10");
+    lv_label_set_text(versionLbl, "Version: v3.1.11");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 

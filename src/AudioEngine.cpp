@@ -2889,10 +2889,17 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
 
     // Extra debug: track states
     for (int t = 0; t < 8; ++t) {
-      if (mTracks[t].isActive || mTracks[t].smoothedVolume > 0.01f) {
-        LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f", t,
-             mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
-             mTracks[t].engineType, mTracks[t].gainReduction);
+      if (mTracks[t].isActive || mTracks[t].smoothedVolume > 0.01f || mTracks[t].engineType == 10) {
+        if (mTracks[t].engineType == 10 && !mTracks[t].lastMidiDebug.empty()) {
+            LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f, MidiDebug=[%s]", t,
+                 mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
+                 mTracks[t].engineType, mTracks[t].gainReduction, mTracks[t].lastMidiDebug.c_str());
+            mTracks[t].lastMidiDebug = ""; // clear after printing
+        } else {
+            LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f", t,
+                 mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
+                 mTracks[t].engineType, mTracks[t].gainReduction);
+        }
       }
     }
     maxPeak = 0.0f; // Reset max peak every second
@@ -5402,11 +5409,9 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     Track& track = mTracks[trackIdx];
     if (track.engineType != 10) return;
     
-    LOGD("ALSA Debug: sendMidiOut called for T%d outChan=%d", trackIdx, track.midiOutChannel);
-    
     int outChan = track.midiOutChannel;
     if (outChan == 0) {
-        LOGD("ALSA Skip: track %d has midiOutChannel set to OFF (0).", trackIdx);
+        track.lastMidiDebug = "Skip: Channel OFF (0)";
         return; // 0 = Off
     }
     
@@ -5453,30 +5458,31 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     }
 #else
     if (!gSeqOut) {
-        LOGD("ALSA Skip: gSeqOut is NULL! ALSA failed to initialize properly.");
+        track.lastMidiDebug = "Skip: gSeqOut is NULL";
         return;
     }
     if (gOutPort < 0) {
-        LOGD("ALSA Skip: gOutPort is invalid (%d). Outbound MIDI is completely disabled!", gOutPort);
+        track.lastMidiDebug = "Skip: gOutPort is invalid";
         return;
     }
     
     if (gSeqOut && gOutPort >= 0) {
         bool sentAny = false;
+        std::string debugStr = "";
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
             if (!dev.isOutput) continue;
             
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
-                LOGD("ALSA Skip: Target mismatch. Track wants %s but dev is %s", track.targetMidiDevice.c_str(), dev.name.c_str());
+                debugStr = "Skip: Target mismatch (" + dev.name + ")";
                 continue;
             }
             if (dev.muteOutgoing) {
-                LOGD("ALSA Skip: Device %s is muted for outgoing.", dev.name.c_str());
+                debugStr = "Skip: Device muted (" + dev.name + ")";
                 continue;
             }
             if (dev.sendChannel > 0 && dev.sendChannel != outChan) {
-                LOGD("ALSA Skip: Channel mismatch on %s. Track chan=%d, Dev chan=%d", dev.name.c_str(), outChan, dev.sendChannel);
+                debugStr = "Skip: Channel mismatch (" + dev.name + ")";
                 continue;
             }
             
@@ -5496,20 +5502,15 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
                 continue;
             }
             
-            int err = snd_seq_event_output(gSeqOut, &ev);
+            int err = snd_seq_event_output_direct(gSeqOut, &ev);
             if (err < 0) {
-                LOGD("ALSA Error sending to %s: %s", dev.name.c_str(), snd_strerror(err));
+                debugStr = "ALSA Error: " + std::string(snd_strerror(err));
             } else {
                 sentAny = true;
-                LOGD("ALSA Sent msgType %x to %s", (int)msgType, dev.name.c_str());
+                debugStr = "Sent msgType " + std::to_string(msgType) + " to " + dev.name;
             }
         }
-        if (sentAny) {
-            int err2 = snd_seq_drain_output(gSeqOut);
-            if (err2 < 0) {
-                LOGD("ALSA Drain Error: %s", snd_strerror(err2));
-            }
-        }
+        track.lastMidiDebug = debugStr;
     }
 #endif
 }

@@ -371,6 +371,7 @@ public:
     int midiInChannel = 17; // 1-16, 17=ALL, 0=NONE
     int midiOutChannel = 0; // 0=NONE, 1-16
     std::string targetMidiDevice = "ALL";
+    std::string lastMidiDebug = "";
     int midiOutCcKnob[8] = { 74, 71, 79, 72, 73, 75, 76, 77 };
     int midiOutCcFader[8] = { 7, 10, 91, 93, 1, 11, 2, 4 };
     struct PendingNote {
