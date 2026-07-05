@@ -5402,11 +5402,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     Track& track = mTracks[trackIdx];
     if (track.engineType != 10) return;
     
-    std::cout << "ALSA Debug: sendMidiOut called for T" << trackIdx << " outChan=" << track.midiOutChannel << std::endl;
+    LOGD("ALSA Debug: sendMidiOut called for T%d outChan=%d", trackIdx, track.midiOutChannel);
     
     int outChan = track.midiOutChannel;
     if (outChan == 0) {
-        std::cout << "ALSA Skip: track " << trackIdx << " has midiOutChannel set to OFF (0)." << std::endl;
+        LOGD("ALSA Skip: track %d has midiOutChannel set to OFF (0).", trackIdx);
         return; // 0 = Off
     }
     
@@ -5453,11 +5453,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     }
 #else
     if (!gSeqOut) {
-        std::cout << "ALSA Skip: gSeqOut is NULL! ALSA failed to initialize properly." << std::endl;
+        LOGD("ALSA Skip: gSeqOut is NULL! ALSA failed to initialize properly.");
         return;
     }
     if (gOutPort < 0) {
-        std::cout << "ALSA Skip: gOutPort is invalid (" << gOutPort << "). Outbound MIDI is completely disabled!" << std::endl;
+        LOGD("ALSA Skip: gOutPort is invalid (%d). Outbound MIDI is completely disabled!", gOutPort);
         return;
     }
     
@@ -5468,15 +5468,15 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             if (!dev.isOutput) continue;
             
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
-                std::cout << "ALSA Skip: Target mismatch. Track wants " << track.targetMidiDevice << " but dev is " << dev.name << std::endl;
+                LOGD("ALSA Skip: Target mismatch. Track wants %s but dev is %s", track.targetMidiDevice.c_str(), dev.name.c_str());
                 continue;
             }
             if (dev.muteOutgoing) {
-                std::cout << "ALSA Skip: Device " << dev.name << " is muted for outgoing." << std::endl;
+                LOGD("ALSA Skip: Device %s is muted for outgoing.", dev.name.c_str());
                 continue;
             }
             if (dev.sendChannel > 0 && dev.sendChannel != outChan) {
-                std::cout << "ALSA Skip: Channel mismatch on " << dev.name << ". Track chan=" << outChan << ", Dev chan=" << dev.sendChannel << std::endl;
+                LOGD("ALSA Skip: Channel mismatch on %s. Track chan=%d, Dev chan=%d", dev.name.c_str(), outChan, dev.sendChannel);
                 continue;
             }
             
@@ -5498,16 +5498,16 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             
             int err = snd_seq_event_output(gSeqOut, &ev);
             if (err < 0) {
-                std::cout << "ALSA Error sending to " << dev.name << ": " << snd_strerror(err) << std::endl;
+                LOGD("ALSA Error sending to %s: %s", dev.name.c_str(), snd_strerror(err));
             } else {
                 sentAny = true;
-                std::cout << "ALSA Sent msgType " << std::hex << (int)msgType << std::dec << " to " << dev.name << std::endl;
+                LOGD("ALSA Sent msgType %x to %s", (int)msgType, dev.name.c_str());
             }
         }
         if (sentAny) {
             int err2 = snd_seq_drain_output(gSeqOut);
             if (err2 < 0) {
-                std::cout << "ALSA Drain Error: " << snd_strerror(err2) << std::endl;
+                LOGD("ALSA Drain Error: %s", snd_strerror(err2));
             }
         }
     }

@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.9");
+    lv_label_set_text(versionLbl, "Version: v3.1.10");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -10828,9 +10828,9 @@ void UIManager::openMixerPopup(int trackIdx) {
     lv_obj_set_style_text_color(engDd, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(engDd, &lv_font_montserrat_12, 0);
 
-    // Style the dropdown list dynamically so it fits 9 items on screen perfectly without scrolling
+    // Style the dropdown list dynamically so it fits all 10 items on screen perfectly without scrolling
     lv_obj_t* engList = lv_dropdown_get_list(engDd);
-    lv_obj_set_style_max_height(engList, 300, 0);
+    lv_obj_set_style_max_height(engList, 350, 0);
     lv_obj_set_style_bg_color(engList, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_border_color(engList, lv_color_hex(0x444444), 0);
     lv_obj_set_style_border_width(engList, 1, 0);
