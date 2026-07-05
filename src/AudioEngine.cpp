@@ -1420,16 +1420,16 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
     else if (parameterId == 801)
       track.midiOutChannel = static_cast<int>(value);
   }
-  // MIDI Engine Outbound CCs (2400-2415)
-  else if (parameterId >= 2400 && parameterId < 2416) {
+  // MIDI Engine Outbound CCs (2400-2431)
+  else if (parameterId >= 2400 && parameterId < 2432) {
     if (track.engineType == 10) {
       int ccVal = static_cast<int>(value * 127.0f + 0.5f);
       ccVal = std::max(0, std::min(127, ccVal));
       int ccNum = -1;
-      if (parameterId < 2408) {
+      if (parameterId < 2416) {
         ccNum = track.midiOutCcKnob[parameterId - 2400];
       } else {
-        ccNum = track.midiOutCcFader[parameterId - 2408];
+        ccNum = track.midiOutCcFader[parameterId - 2416];
       }
       if (ccNum >= 0 && ccNum <= 127) {
         sendMidiOut(trackIndex, 0xB0, ccNum, ccVal);
@@ -5451,6 +5451,7 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     }
 #else
     if (gSeq && gOutPort >= 0) {
+        bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) continue;
@@ -5472,7 +5473,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
             } else {
                 continue;
             }
-            snd_seq_event_output_direct(gSeq, &ev);
+            snd_seq_event_output(gSeq, &ev);
+            sentAny = true;
+        }
+        if (sentAny) {
+            snd_seq_drain_output(gSeq);
         }
     }
 #endif

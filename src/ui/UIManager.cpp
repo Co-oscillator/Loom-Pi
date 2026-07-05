@@ -718,6 +718,7 @@ void UIManager::updateHighlighting() {
                 case 6: icon = LV_SYMBOL_CHARGE;   break; // Analog Drum (voltage charge/trigger ⚡)
                 case 8: icon = LV_SYMBOL_PLAY;     break; // Audio In (audio signal input ▶)
                 case 9: icon = LV_SYMBOL_AUDIO;    break; // SoundFont (polyphonic MIDI note 🎵)
+                case 10: icon = LV_SYMBOL_USB;     break; // MIDI Engine (USB symbol 🔌)
                 default: icon = LV_SYMBOL_KEYBOARD; break;
             }
             lv_label_set_text(iconLabel, icon);
@@ -3123,8 +3124,8 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
         // 1. Attempt to stop any systemd service containing "loom"
         int r = system("sudo systemctl list-units --type=service --all | awk '/[lL]oom/ {print $1}' | xargs -I {} sudo systemctl stop {} 2>/dev/null");
         
-        // 2. Kill the parent bash loop if Loom was launched via a simple 'while true' script (avoid killing init/systemd PID 1)
-        r = system("PP=$(ps -o ppid= -p $PPID | grep -o '[0-9]*'); if [ -n \"$PP\" ] && [ \"$PP\" != \"1\" ]; then kill -9 $PP 2>/dev/null; fi");
+        // 2. Kill X11 window system forcefully to break out of xinitrc or lightdm auto-loops
+        r = system("sudo killall -9 Xorg lightdm openbox xinit 2>/dev/null");
         
         // 3. Force the kernel display to switch to the text console (TTY2) in case we are stuck in DRM/Framebuffer
         r = system("sudo chvt 2 2>/dev/null || sudo chvt 1 2>/dev/null");
@@ -16475,12 +16476,12 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
         }, LV_EVENT_DELETE, lud);
     };
 
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < mSettingsKnobCount; ++i) {
         createMappingRow("V-KNOB " + std::to_string(i + 1), 2400 + i, true, i);
     }
     
-    for (int i = 0; i < 8; ++i) {
-        createMappingRow("V-FADER " + std::to_string(i + 1), 2408 + i, false, i);
+    for (int i = 0; i < mSettingsSliderCount; ++i) {
+        createMappingRow("V-FADER " + std::to_string(i + 1), 2416 + i, false, i);
     }
 }
 
