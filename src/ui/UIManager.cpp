@@ -17700,6 +17700,18 @@ void UIManager::openConsoleModal() {
     lv_obj_set_style_text_font(mConsoleInputTa, &lv_font_montserrat_12, 0);
     lv_textarea_set_one_line(mConsoleInputTa, true);
     
+    // Add default text and visible cursor for debugging
+    lv_textarea_set_text(mConsoleInputTa, "> ");
+    lv_textarea_set_cursor_click_pos(mConsoleInputTa, true);
+    lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x00FF00), LV_PART_CURSOR);
+    lv_obj_set_style_bg_opa(mConsoleInputTa, LV_OPA_COVER, LV_PART_CURSOR);
+    
+    // Debug print on keystroke
+    lv_obj_add_event_cb(mConsoleInputTa, [](lv_event_t* e) {
+        lv_obj_t* ta = (lv_obj_t*)lv_event_get_target(e);
+        std::cout << "[DEBUG] TextArea updated: " << lv_textarea_get_text(ta) << std::endl;
+    }, LV_EVENT_VALUE_CHANGED, nullptr);
+    
     mConsoleKb = lv_keyboard_create(mConsoleModal);
     lv_obj_set_size(mConsoleKb, 800, 210);
     lv_obj_align(mConsoleKb, LV_ALIGN_BOTTOM_MID, 0, 0);
