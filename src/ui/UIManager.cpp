@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.4");
+    lv_label_set_text(versionLbl, "Version: v3.1.5");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -16189,18 +16189,25 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
     
     std::string deviceOptions = "ALL\n";
     for (const auto& dev : mEngine.mMidiDevices) {
-        deviceOptions += dev.name + "\n";
+        if (dev.isOutput) {
+            deviceOptions += dev.name + "\n";
+        }
     }
     if (!deviceOptions.empty()) deviceOptions.pop_back();
     
     lv_dropdown_set_options(targetDd, deviceOptions.c_str());
     
+    // Find selected index by iterating the filtered list
     int selectedIdx = 0;
     if (track.targetMidiDevice != "ALL") {
+        int idx = 1; // "ALL" is 0
         for (size_t i = 0; i < mEngine.mMidiDevices.size(); ++i) {
-            if (mEngine.mMidiDevices[i].name == track.targetMidiDevice) {
-                selectedIdx = (int)i + 1;
-                break;
+            if (mEngine.mMidiDevices[i].isOutput) {
+                if (mEngine.mMidiDevices[i].name == track.targetMidiDevice) {
+                    selectedIdx = idx;
+                    break;
+                }
+                idx++;
             }
         }
     }
@@ -16209,15 +16216,15 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(targetDd, [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         lv_obj_t* dd = lv_event_get_target_obj(e);
-        int selected = lv_dropdown_get_selected(dd);
+        char buf[128];
+        lv_dropdown_get_selected_str(dd, buf, sizeof(buf));
+        std::string selectedName = buf;
+        
         auto& trk = ui->mEngine.getTracks()[ui->mActiveTrack];
-        if (selected == 0) {
+        if (selectedName == "ALL") {
             trk.targetMidiDevice = "ALL";
         } else {
-            int devIdx = selected - 1;
-            if (devIdx >= 0 && devIdx < (int)ui->mEngine.mMidiDevices.size()) {
-                trk.targetMidiDevice = ui->mEngine.mMidiDevices[devIdx].name;
-            }
+            trk.targetMidiDevice = selectedName;
         }
         std::cout << "MIDI Engine set target device: " << trk.targetMidiDevice << std::endl;
     }, LV_EVENT_VALUE_CHANGED, this);
@@ -17667,7 +17674,7 @@ void UIManager::openConsoleModal() {
     if (mConsoleModal) return;
     
     mConsoleModal = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(mConsoleModal, 800, 480);
+    lv_obj_set_size(mConsoleModal, 1024, 600);
     lv_obj_center(mConsoleModal);
     lv_obj_set_style_bg_color(mConsoleModal, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(mConsoleModal, 0, 0);
@@ -17683,7 +17690,7 @@ void UIManager::openConsoleModal() {
     lv_obj_add_event_cb(closeBtn, consoleCloseCb, LV_EVENT_CLICKED, this);
 
     mConsoleOutputTa = lv_textarea_create(mConsoleModal);
-    lv_obj_set_size(mConsoleOutputTa, 780, 200);
+    lv_obj_set_size(mConsoleOutputTa, 1000, 300);
     lv_obj_align(mConsoleOutputTa, LV_ALIGN_TOP_MID, 0, 10);
     lv_obj_set_style_bg_color(mConsoleOutputTa, lv_color_hex(0x111111), 0);
     lv_obj_set_style_text_color(mConsoleOutputTa, lv_color_hex(0x00FF00), 0); // Green terminal text
@@ -17693,8 +17700,8 @@ void UIManager::openConsoleModal() {
     lv_textarea_set_cursor_click_pos(mConsoleOutputTa, false);
     
     mConsoleInputTa = lv_textarea_create(mConsoleModal);
-    lv_obj_set_size(mConsoleInputTa, 780, 50);
-    lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 210);
+    lv_obj_set_size(mConsoleInputTa, 1000, 50);
+    lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 320);
     
     // Explicitly style ALL states so LV_STATE_EDITED doesn't make it invisible
     lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), 0);
@@ -17718,7 +17725,7 @@ void UIManager::openConsoleModal() {
     }, LV_EVENT_VALUE_CHANGED, nullptr);
     
     mConsoleKb = lv_keyboard_create(mConsoleModal);
-    lv_obj_set_size(mConsoleKb, 800, 210);
+    lv_obj_set_size(mConsoleKb, 1024, 220);
     lv_obj_align(mConsoleKb, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_keyboard_set_textarea(mConsoleKb, mConsoleInputTa);
     
