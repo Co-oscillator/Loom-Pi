@@ -5407,7 +5407,10 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
     if (track.engineType != 10) return;
     
     int outChan = track.midiOutChannel;
-    if (outChan == 0) return; // 0 = Off
+    if (outChan == 0) {
+        std::cout << "ALSA Skip: track " << trackIdx << " has midiOutChannel set to OFF (0)." << std::endl;
+        return; // 0 = Off
+    }
     
     uint8_t msgType = status & 0xF0;
     uint8_t mappedStatus = msgType | ((outChan - 1) & 0x0F);
@@ -5451,6 +5454,11 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
         }
     }
 #else
+    if (!gSeqOut) {
+        std::cout << "ALSA Skip: gSeqOut is NULL! ALSA failed to initialize properly." << std::endl;
+        return;
+    }
+    
     if (gSeqOut && gOutPort >= 0) {
         bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
