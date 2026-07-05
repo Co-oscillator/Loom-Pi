@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.2");
+    lv_label_set_text(versionLbl, "Version: v3.1.3");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -16255,7 +16255,7 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         lv_obj_t* dd = lv_event_get_target_obj(e);
         int selected = lv_dropdown_get_selected(dd);
-        ui->mEngine.setParameter(ui->mActiveTrack, 801, (float)selected);
+        ui->mEngine.setParameter(ui->mActiveTrack, 901, (float)selected);
     }, LV_EVENT_VALUE_CHANGED, this);
 
     // IN CHANNEL
@@ -16291,7 +16291,7 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         lv_obj_t* dd = lv_event_get_target_obj(e);
         int selected = lv_dropdown_get_selected(dd);
-        ui->mEngine.setParameter(ui->mActiveTrack, 800, (float)selected);
+        ui->mEngine.setParameter(ui->mActiveTrack, 900, (float)selected);
     }, LV_EVENT_VALUE_CHANGED, this);
 }
 

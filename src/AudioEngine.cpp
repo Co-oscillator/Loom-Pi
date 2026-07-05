@@ -1414,11 +1414,11 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
       track.samplerEngine.setSliceParameter(sliceIdx, 8 + slotIdx, value);
     }
   }
-  // Midi Channels (800-809)
-  else if (parameterId >= 800 && parameterId < 810) {
-    if (parameterId == 800)
+  // Midi Channels (900-909)
+  else if (parameterId >= 900 && parameterId < 910) {
+    if (parameterId == 900)
       track.midiInChannel = static_cast<int>(value);
-    else if (parameterId == 801)
+    else if (parameterId == 901)
       track.midiOutChannel = static_cast<int>(value);
   }
   // MIDI Engine Outbound CCs (2400-2431)
