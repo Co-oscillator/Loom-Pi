@@ -1651,7 +1651,7 @@ static void autoConnectAlsaSources(snd_seq_t* seq, int ourPort) {
         while (snd_seq_query_next_port(seq, pinfo) >= 0) {
             unsigned int capability = snd_seq_port_info_get_capability(pinfo);
             // Check if the port supports read events (is an output/sender)
-            if ((capability & SND_SEQ_PORT_CAP_READ) && (capability & SND_SEQ_PORT_CAP_SUBS_READ)) {
+            if ((capability & (SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ)) != 0) {
                 snd_seq_port_subscribe_t *sub = nullptr;
                 if (snd_seq_port_subscribe_malloc(&sub) >= 0) {
                     snd_seq_addr_t sender, dest;

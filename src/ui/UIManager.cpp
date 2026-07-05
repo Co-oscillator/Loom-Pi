@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.6");
+    lv_label_set_text(versionLbl, "Version: v3.1.7");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -17690,7 +17690,7 @@ void UIManager::openConsoleModal() {
     lv_obj_add_event_cb(closeBtn, consoleCloseCb, LV_EVENT_CLICKED, this);
 
     mConsoleOutputTa = lv_textarea_create(mConsoleModal);
-    lv_obj_set_size(mConsoleOutputTa, 1000, 300);
+    lv_obj_set_size(mConsoleOutputTa, 1000, 250);
     lv_obj_align(mConsoleOutputTa, LV_ALIGN_TOP_MID, 0, 10);
     lv_obj_set_style_bg_color(mConsoleOutputTa, lv_color_hex(0x111111), 0);
     lv_obj_set_style_text_color(mConsoleOutputTa, lv_color_hex(0x00FF00), 0); // Green terminal text
@@ -17701,7 +17701,7 @@ void UIManager::openConsoleModal() {
     
     mConsoleInputTa = lv_textarea_create(mConsoleModal);
     lv_obj_set_size(mConsoleInputTa, 1000, 50);
-    lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 320);
+    lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 270);
     
     // Explicitly style ALL states so LV_STATE_EDITED doesn't make it invisible
     lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), 0);
