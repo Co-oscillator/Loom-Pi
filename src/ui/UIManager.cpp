@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.0");
+    lv_label_set_text(versionLbl, "Version: v3.1.1");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -17695,8 +17695,14 @@ void UIManager::openConsoleModal() {
     mConsoleInputTa = lv_textarea_create(mConsoleModal);
     lv_obj_set_size(mConsoleInputTa, 780, 40);
     lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 220);
+    
+    // Explicitly style both DEFAULT and FOCUSED states
     lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), LV_STATE_FOCUSED);
     lv_obj_set_style_text_color(mConsoleInputTa, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(mConsoleInputTa, lv_color_hex(0xFFFFFF), LV_STATE_FOCUSED);
+    lv_obj_set_style_border_color(mConsoleInputTa, lv_color_hex(0xFF0000), 0);
+    lv_obj_set_style_border_width(mConsoleInputTa, 2, 0);
     lv_obj_set_style_text_font(mConsoleInputTa, &lv_font_montserrat_12, 0);
     lv_textarea_set_one_line(mConsoleInputTa, true);
     
