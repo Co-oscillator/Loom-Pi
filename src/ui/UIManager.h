@@ -27,6 +27,7 @@ public:
     // Public accessors for main loop keyboard handling
     int getActiveTrack() const { return mActiveTrack; }
     void setActiveTrack(int track) { mActiveTrack = track; }
+    int getActiveDrumIdx() const { return mActiveDrumIdx; }
     bool isKeyboardModeEnabled() const { return mSettingsKeyboardMode; }
     bool isFileBrowserOpen() const { return mSeqModal != nullptr; }
     bool isConsoleModalOpen() const { return mConsoleModal != nullptr; }

@@ -5531,10 +5531,10 @@ void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
     bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
                   (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
     
-    std::vector<Step> currentSteps = isDrum ? engine->getDrumSequencerSteps(activeTrack, ui->mActiveDrumIdx)
+    std::vector<Step> currentSteps = isDrum ? engine->getDrumSequencerSteps(activeTrack, ui->getActiveDrumIdx())
                                             : engine->getSequencerSteps(activeTrack);
     
-    int seqLength = isDrum ? track.drumSequencers[ui->mActiveDrumIdx].getSteps().size()
+    int seqLength = isDrum ? track.drumSequencers[ui->getActiveDrumIdx()].getSteps().size()
                            : track.sequencer.getSteps().size();
                            
     if (seqLength == 0) seqLength = 16;
@@ -5546,7 +5546,7 @@ void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
             isActive = currentSteps[seqIdx].active;
         }
         
-        bool isPlaying = (engine->getIsPlaying() && (engine->getCurrentStep(activeTrack, isDrum ? ui->mActiveDrumIdx : -1)) == seqIdx);
+        bool isPlaying = (engine->getIsPlaying() && (engine->getCurrentStep(activeTrack, isDrum ? ui->getActiveDrumIdx() : -1)) == seqIdx);
         
         // Novation colors: 0=Off, 5=Red, 21=Green, 13=Yellow, 3=White
         uint8_t color = 0;

@@ -944,7 +944,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
                               (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
                 
-                auto& steps = isDrum ? track.drumSequencers[data->ui->mActiveDrumIdx].getStepsMutable()
+                auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
                                      : track.sequencer.getStepsMutable();
                 
                 if (seqIdx < (int)steps.size()) {
