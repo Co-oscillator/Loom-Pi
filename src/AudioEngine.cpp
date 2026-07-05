@@ -5455,11 +5455,17 @@ void AudioEngine::sendMidiOut(int trackIdx, uint8_t status, uint8_t d1, uint8_t 
         bool sentAny = false;
         for (const auto& dev : mMidiDevices) {
             if (dev.client < 0 || dev.port < 0) continue;
+            
             if (track.targetMidiDevice != "ALL" && track.targetMidiDevice != dev.name) {
+                std::cout << "ALSA Skip: Target mismatch. Track wants " << track.targetMidiDevice << " but dev is " << dev.name << std::endl;
                 continue;
             }
-            if (dev.muteOutgoing) continue;
+            if (dev.muteOutgoing) {
+                std::cout << "ALSA Skip: Device " << dev.name << " is muted for outgoing." << std::endl;
+                continue;
+            }
             if (dev.sendChannel > 0 && dev.sendChannel != outChan) {
+                std::cout << "ALSA Skip: Channel mismatch on " << dev.name << ". Track chan=" << outChan << ", Dev chan=" << dev.sendChannel << std::endl;
                 continue;
             }
             

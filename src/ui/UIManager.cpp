@@ -3051,7 +3051,7 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
 
     lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v2.3.0");
+    lv_label_set_text(versionLbl, "Version: v3.1.0");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
@@ -17697,7 +17697,7 @@ void UIManager::openConsoleModal() {
     lv_obj_align(mConsoleInputTa, LV_ALIGN_TOP_MID, 0, 220);
     lv_obj_set_style_bg_color(mConsoleInputTa, lv_color_hex(0x222222), 0);
     lv_obj_set_style_text_color(mConsoleInputTa, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(mConsoleInputTa, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(mConsoleInputTa, &lv_font_montserrat_12, 0);
     lv_textarea_set_one_line(mConsoleInputTa, true);
     
     mConsoleKb = lv_keyboard_create(mConsoleModal);
@@ -17711,7 +17711,7 @@ void UIManager::openConsoleModal() {
     lv_group_t* g = lv_group_create();
     lv_group_add_obj(g, mConsoleInputTa);
     lv_group_focus_obj(mConsoleInputTa); // explicitly focus it for the hardware keyboard
-    lv_obj_add_state(mConsoleInputTa, LV_STATE_FOCUSED); // explicitly focus it for the onscreen keyboard
+    lv_obj_add_state(mConsoleInputTa, LV_STATE_FOCUSED | LV_STATE_EDITED); // explicitly focus it for the onscreen keyboard
     
     lv_indev_t* kb_indev = lv_indev_get_next(NULL);
     while(kb_indev) {
