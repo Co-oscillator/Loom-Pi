@@ -89,6 +89,11 @@ public:
     bool mNeedsScreenRebuild = false;
 
     // Controller Setup state
+    bool mRemapLearnActive = false;
+    lv_obj_t* mRemapCcSpinner = nullptr;
+    lv_obj_t* mRemapChannelDd = nullptr;
+    lv_obj_t* mRemapCcValLbl = nullptr;
+    lv_obj_t* mRemapLearnBtnLbl = nullptr;
     bool mControllerSetupActive = false;
     int mControllerSetupTargetIndex = -1;
     lv_obj_t* mControllerSetupBtnLabel = nullptr;
@@ -352,9 +357,7 @@ private:
     int mActiveDrumIdx = 0;
     float mLastWtSelectVal[8] = {-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
     lv_obj_t* mRemapModal = nullptr;
-    int mRemapTargetIndex = 0; // 0-7 for knobs, 8-15 for faders
-    lv_obj_t* mRemapCcSpinner = nullptr;
-    lv_obj_t* mRemapChannelDd = nullptr;
+    int mRemapTargetIndex = 0; // 0-39 for knobs, 40-79 for faders
     lv_obj_t* mModDestModal = nullptr;
     lv_obj_t* mModDestBtnLabel = nullptr;
     lv_obj_t* mPedalPickerModal = nullptr;

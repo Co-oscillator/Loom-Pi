@@ -636,6 +636,25 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                         int activeTrack = data->ui->getActiveTrack();
                         float floatVal = val / 127.0f;
 
+                        if (data->ui->mRemapLearnActive) {
+                            if (data->ui->mRemapCcSpinner) {
+                                lv_slider_set_value(data->ui->mRemapCcSpinner, cc, LV_ANIM_OFF);
+                            }
+                            if (data->ui->mRemapCcValLbl) {
+                                lv_label_set_text_fmt(data->ui->mRemapCcValLbl, "%d", cc);
+                            }
+                            if (data->ui->mRemapChannelDd) {
+                                lv_dropdown_set_selected(data->ui->mRemapChannelDd, channel + 1); // Index 0 is "All", 1 is Ch 1
+                            }
+                            if (data->ui->mRemapLearnBtnLbl) {
+                                lv_label_set_text(data->ui->mRemapLearnBtnLbl, "LEARN");
+                                lv_obj_set_style_bg_color(lv_obj_get_parent(data->ui->mRemapLearnBtnLbl), lv_color_hex(0x2D2D2D), 0);
+                            }
+                            data->ui->mRemapLearnActive = false;
+                            b += 3;
+                            continue;
+                        }
+
                         if (data->ui->mMidiLearnActive && data->ui->mMidiLearnTargetParamId >= 0) {
                             int targetParamId = data->ui->mMidiLearnTargetParamId;
                             
@@ -1421,6 +1440,24 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             // MIDI Learn or Dynamic CC mapping update
             int activeTrack = data->ui->getActiveTrack();
             float floatVal = val / 127.0f;
+
+            if (data->ui->mRemapLearnActive) {
+                if (data->ui->mRemapCcSpinner) {
+                    lv_slider_set_value(data->ui->mRemapCcSpinner, cc, LV_ANIM_OFF);
+                }
+                if (data->ui->mRemapCcValLbl) {
+                    lv_label_set_text_fmt(data->ui->mRemapCcValLbl, "%d", cc);
+                }
+                if (data->ui->mRemapChannelDd) {
+                    lv_dropdown_set_selected(data->ui->mRemapChannelDd, channel + 1); // Index 0 is "All", 1 is Ch 1
+                }
+                if (data->ui->mRemapLearnBtnLbl) {
+                    lv_label_set_text(data->ui->mRemapLearnBtnLbl, "LEARN");
+                    lv_obj_set_style_bg_color(lv_obj_get_parent(data->ui->mRemapLearnBtnLbl), lv_color_hex(0x2D2D2D), 0);
+                }
+                data->ui->mRemapLearnActive = false;
+                return;
+            }
 
             if (data->ui->mMidiLearnActive && data->ui->mMidiLearnTargetParamId >= 0) {
                 int targetParamId = data->ui->mMidiLearnTargetParamId;

@@ -8707,6 +8707,31 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(title, trackColor, 0);
 
+    // LEARN Button
+    lv_obj_t* learnBtn = lv_button_create(ui->mRemapModal);
+    lv_obj_set_size(learnBtn, 120, 32);
+    lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_radius(learnBtn, 6, 0);
+    lv_obj_t* learnLbl = lv_label_create(learnBtn);
+    lv_label_set_text(learnLbl, "LEARN");
+    lv_obj_set_style_text_font(learnLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(learnLbl);
+    ui->mRemapLearnBtnLbl = learnLbl;
+    ui->mRemapLearnActive = false;
+
+    auto learnCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->mRemapLearnActive = !ui->mRemapLearnActive;
+        if (ui->mRemapLearnActive) {
+            lv_label_set_text(ui->mRemapLearnBtnLbl, "LISTENING...");
+            lv_obj_set_style_bg_color(lv_obj_get_parent(ui->mRemapLearnBtnLbl), lv_color_hex(0xFF0000), 0);
+        } else {
+            lv_label_set_text(ui->mRemapLearnBtnLbl, "LEARN");
+            lv_obj_set_style_bg_color(lv_obj_get_parent(ui->mRemapLearnBtnLbl), lv_color_hex(0x2D2D2D), 0);
+        }
+    };
+    lv_obj_add_event_cb(learnBtn, learnCb, LV_EVENT_CLICKED, ui);
+
     // CC number input spinner row
     lv_obj_t* ccRow = lv_obj_create(ui->mRemapModal);
     lv_obj_set_size(ccRow, 380, 45);
@@ -8766,6 +8791,7 @@ void UIManager::openRemapModalEventCb(lv_event_t* e) {
     lv_obj_t* ccValLbl = lv_label_create(ccCtrlCont);
     lv_label_set_text_fmt(ccValLbl, "%d", currentCc);
     lv_obj_set_style_text_font(ccValLbl, &lv_font_montserrat_12, 0);
+    ui->mRemapCcValLbl = ccValLbl;
 
     auto spinnerCb = [](lv_event_t* e) {
         lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
@@ -8954,9 +8980,12 @@ void UIManager::saveRemapModalEventCb(lv_event_t* e) {
 void UIManager::closeRemapModalEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (ui && ui->mRemapModal) {
+        ui->mRemapLearnActive = false;
         lv_obj_delete(ui->mRemapModal);
         ui->mRemapModal = nullptr;
         ui->mRemapChannelDd = nullptr;
+        ui->mRemapCcValLbl = nullptr;
+        ui->mRemapLearnBtnLbl = nullptr;
     }
 }
 
