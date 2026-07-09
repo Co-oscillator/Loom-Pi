@@ -132,9 +132,9 @@ You can now connect to your Loom Pi from your main computer:
 * **Windows:** Open File Explorer and type `\\loompi.local` in the address bar.
 *(Log in using the username `loom` and the Samba password you just created).*
 
-## 9. Initial Configuration (Audio, Settings, & MIDI Wizard)
+## 9. Initial Configuration (Audio & MIDI Wizard)
 Once Loom Pi is installed and running on your display, you should perform an initial configuration so the software remembers your hardware setup across reboots.
 
-1. **Configure Audio & Display Settings:** Navigate to the **Settings** tab in the Loom UI. Select your preferred high-quality USB audio output device, configure your display orientation, and adjust your performance settings.
-2. **Save Settings (Init File):** At the bottom of the Settings tab, click **Save Settings**. This creates an `init.ls` configuration file on the Pi that automatically loads your audio device and preferences every time Loom boots up!
+1. **Configure Audio Settings:** Navigate to the **Settings** tab in the Loom UI. Select your preferred high-quality USB audio output device.
+2. **Save Settings (Init File):** Navigate to the **Project** tab. Click **Save Project** and name it `init`. This tells Loom to save your current setup as the default configuration (`init.ls` and settings). It will automatically load your audio device and preferences every time Loom boots up!
 3. **MIDI Hardware Wizard:** Plug in your USB MIDI controllers. Navigate to the **Settings** tab and tap the **Hardware Setup Wizard**. This interactive wizard will guide you through mapping your specific MIDI keyboard, drum pads, and faders so they are instantly recognized by Loom's audio engine.
