@@ -96,3 +96,38 @@ To run Loom Pi automatically when the Raspberry Pi turns on (and run it in the b
    ```
    
 *Note: Now that it runs as a service, the console logs will automatically be saved by the system. You can view the live logs anytime over SSH by running: `journalctl -u loompi.service -f`*
+
+## 8. Network File Sharing (Samba)
+To easily transfer audio samples, projects, and configurations from your main computer to the Loom Pi using your standard file browser (macOS Finder, Windows Explorer), you can set up a Samba share.
+
+1. Install Samba on the Raspberry Pi:
+   ```bash
+   sudo apt install -y samba samba-common-bin
+   ```
+2. Open the Samba configuration file:
+   ```bash
+   sudo nano /etc/samba/smb.conf
+   ```
+3. Scroll all the way to the bottom and paste this configuration block (replace `loom` with your actual username if different):
+   ```ini
+   [LoomPi]
+   path = /home/loom/Loom-Pi
+   writeable = yes
+   create mask = 0777
+   directory mask = 0777
+   public = no
+   ```
+4. Save (`Ctrl+O`, `Enter`) and Exit (`Ctrl+X`).
+5. Set a Samba password for your user (you will be prompted to type it twice):
+   ```bash
+   sudo smbpasswd -a loom
+   ```
+6. Restart the Samba service to apply the changes:
+   ```bash
+   sudo systemctl restart smbd
+   ```
+
+You can now connect to your Loom Pi from your main computer:
+* **macOS:** Open Finder, press `Cmd + K`, and connect to `smb://loompi.local`.
+* **Windows:** Open File Explorer and type `\\loompi.local` in the address bar.
+*(Log in using the username `loom` and the Samba password you just created).*
