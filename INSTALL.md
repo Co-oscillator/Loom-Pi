@@ -13,6 +13,8 @@ This guide walks you through installing and building **Loom Pi** from scratch on
 5. On your main computer, open a terminal and SSH into the Pi using the hostname you created:
    `ssh pi@loompi.local` (or whatever username/hostname you set).
    *Note: If the hostname doesn't resolve, you can find the Pi's IP address by logging into your router's admin page or using a network scanner app like Fing.*
+   
+**Important Hardware Note:** While a keyboard is never required to use or install Loom Pi, the device **must have either a touchscreen display or a USB mouse attached** out of the box in order for you to interact with the Loom interface!
 
 ## 2. Update the System
 Open a terminal and update your package lists to ensure everything is current:
