@@ -17521,8 +17521,8 @@ void UIManager::startBluetoothScan() {
         std::system("bluetoothctl agent on 2>/dev/null");
         std::system("bluetoothctl default-agent 2>/dev/null");
 
-        // Run LE scan with line-buffering to ensure output is written to file before process is terminated
-        std::system("timeout 10 stdbuf -oL bluetoothctl scan le > /tmp/bt_scan.log 2>&1");
+        // Run scan with line-buffering to ensure output is written to file before process is terminated
+        std::system("timeout 10 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
 
         std::vector<BtDevice> foundDevices;
         
