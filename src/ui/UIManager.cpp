@@ -17016,7 +17016,10 @@ void UIManager::loadSettings(const std::string& path) {
             else if (key == "VELOCITY_SENSITIVITY") mEngine.setVelocitySensitivityEnabled(std::stoi(val) != 0);
             else if (key == "FAST_GRANULAR") mEngine.setFastGranularEnabled(std::stoi(val) != 0);
             else if (key == "AUDIO_OUTPUT_MODE") mEngine.setAudioOutputMode(std::stoi(val));
-            else if (key == "AUDIO_DEVICE") mSettingsAudioDevice = val;
+            else if (key == "AUDIO_DEVICE") {
+                mSettingsAudioDevice = val;
+                switchAudioDevice(val);
+            }
             else if (key == "AUDIO_MIC_DEVICE") {
                 mSettingsAudioMicDevice = val;
                 if (mEngine.mRecordingSource.load() == 0) {
