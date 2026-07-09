@@ -74,7 +74,7 @@ To run Loom Pi automatically when the Raspberry Pi turns on (and run it in the b
    ```bash
    sudo nano /etc/systemd/system/loompi.service
    ```
-2. Paste the following configuration (adjust `/home/pi/Loom-Pi` if your username is different):
+2. Paste the following configuration. **IMPORTANT: Replace `pi` with your actual username (e.g. `loom`) in the three places below!**
    ```ini
    [Unit]
    Description=Loom Pi
