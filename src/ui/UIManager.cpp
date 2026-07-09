@@ -17226,7 +17226,7 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 
         ui->mUpdateInstallProgressPercent = 50;
         ui->mUpdateInstallStatusStr = "Generating build configuration...";
-        ret = std::system("cmake -Bbuild -DCMAKE_BUILD_TYPE=Release");
+        ret = std::system("cmake -S .. -B . -DCMAKE_BUILD_TYPE=Release");
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "CMake build generation failed.";
             ui->mUpdateInstallFinished = true;
@@ -17236,7 +17236,7 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 
         ui->mUpdateInstallProgressPercent = 70;
         ui->mUpdateInstallStatusStr = "Compiling system (takes ~2 mins)...";
-        ret = std::system("cmake --build build --config Release -j1");
+        ret = std::system("cmake --build . --config Release -j4");
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "Compilation failed.";
             ui->mUpdateInstallFinished = true;
@@ -17263,7 +17263,18 @@ void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
 // --- Bluetooth Pairing Manager ---
 // =========================================================================
 
-static bool parseBtLine(const std::string& line, std::string& mac, std::string& name) {
+static bool parseBtLine(const std::string& rawLine, std::string& mac, std::string& name) {
+    std::string line;
+    bool inEscape = false;
+    for (char c : rawLine) {
+        if (c == '\x1B') inEscape = true;
+        else if (inEscape) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) inEscape = false;
+        } else {
+            line += c;
+        }
+    }
+
     if (line.length() < 17) return false;
     for (size_t i = 0; i <= line.length() - 17; ++i) {
         bool isMac = true;
@@ -17480,7 +17491,7 @@ void UIManager::startBluetoothScan() {
         std::system("bluetoothctl default-agent 2>/dev/null");
 
         // Run scan with line-buffering to ensure output is written to file before process is terminated
-        std::system("timeout 6 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
+        std::system("timeout 10 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
 
         std::vector<BtDevice> foundDevices;
         
