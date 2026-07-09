@@ -56,3 +56,37 @@ You can run it using:
 ## Troubleshooting
 * **Audio/MIDI not working:** Ensure your USB audio interface or MIDI controller is plugged in before starting the application. ALSA will automatically detect connected MIDI hardware.
 * **Display Issues:** Loom Pi uses SDL2 for its graphical backend. If you are running headless (without a desktop environment), you may need to configure SDL2 to use the KMS/DRM framebuffer drivers, but running it from the standard Raspberry Pi OS Desktop environment is fully supported out of the box.
+
+## 7. Auto-Start on Boot (Optional)
+To run Loom Pi automatically when the Raspberry Pi turns on (and run it in the background without tying up your SSH session), you can create a systemd service.
+
+1. Open a new service file:
+   ```bash
+   sudo nano /etc/systemd/system/loompi.service
+   ```
+2. Paste the following configuration (adjust `/home/pi/Loom-Pi` if your username is different):
+   ```ini
+   [Unit]
+   Description=Loom Pi
+   After=sound.target network.target bluetooth.target
+
+   [Service]
+   Type=simple
+   User=pi
+   WorkingDirectory=/home/pi/Loom-Pi/build
+   ExecStart=/home/pi/Loom-Pi/build/LoomPi
+   Restart=always
+   RestartSec=3
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+3. Save (`Ctrl+O`, `Enter`) and Exit (`Ctrl+X`).
+4. Enable the service so it starts on boot, and start it right now:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable loompi.service
+   sudo systemctl start loompi.service
+   ```
+   
+*Note: Now that it runs as a service, the console logs will automatically be saved by the system. You can view the live logs anytime over SSH by running: `journalctl -u loompi.service -f`*
