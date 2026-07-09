@@ -4514,26 +4514,29 @@ void UIManager::update() {
         // Update MIDI console monitor
         if (mMidiMonitorConsoleLabel != nullptr) {
             std::lock_guard<std::mutex> lock(mMidiLogMutex);
-            if (mMidiLog.empty()) {
-                lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
-            } else {
-                std::string consoleText = "";
-                // Display latest events at the bottom, or reverse to show newest at top (newest at top is better for scrolling)
-                for (auto it = mMidiLog.rbegin(); it != mMidiLog.rend(); ++it) {
-                    if (it->typeStr == "CC") {
-                        consoleText += "Ch " + std::to_string(it->channel) + ": CC " + std::to_string(it->data1) + 
-                                       " (Val " + std::to_string(it->data2) + ")\n";
-                    } else if (it->typeStr == "Note On") {
-                        consoleText += "Ch " + std::to_string(it->channel) + ": Note On " + std::to_string(it->data1) + 
-                                       " (Vel " + std::to_string(it->data2) + ")\n";
-                    } else if (it->typeStr == "Note Off") {
-                        consoleText += "Ch " + std::to_string(it->channel) + ": Note Off " + std::to_string(it->data1) + "\n";
+            if (mMidiLogDirty) {
+                if (mMidiLog.empty()) {
+                    lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
+                } else {
+                    std::string consoleText = "";
+                    // Display latest events at the bottom, or reverse to show newest at top (newest at top is better for scrolling)
+                    for (auto it = mMidiLog.rbegin(); it != mMidiLog.rend(); ++it) {
+                        if (it->typeStr == "CC") {
+                            consoleText += "Ch " + std::to_string(it->channel) + ": CC " + std::to_string(it->data1) + 
+                                           " (Val " + std::to_string(it->data2) + ")\n";
+                        } else if (it->typeStr == "Note On") {
+                            consoleText += "Ch " + std::to_string(it->channel) + ": Note On " + std::to_string(it->data1) + 
+                                           " (Vel " + std::to_string(it->data2) + ")\n";
+                        } else if (it->typeStr == "Note Off") {
+                            consoleText += "Ch " + std::to_string(it->channel) + ": Note Off " + std::to_string(it->data1) + "\n";
+                        }
                     }
+                    if (!consoleText.empty() && consoleText.back() == '\n') {
+                        consoleText.pop_back();
+                    }
+                    lv_label_set_text(mMidiMonitorConsoleLabel, consoleText.c_str());
                 }
-                if (!consoleText.empty() && consoleText.back() == '\n') {
-                    consoleText.pop_back();
-                }
-                lv_label_set_text(mMidiMonitorConsoleLabel, consoleText.c_str());
+                mMidiLogDirty = false;
             }
         }
     } else if (mActiveNav == 2) {
@@ -17170,6 +17173,7 @@ void UIManager::addMidiLog(const std::string& type, int channel, int d1, int d2)
     if (mMidiLog.size() > 12) {
         mMidiLog.erase(mMidiLog.begin());
     }
+    mMidiLogDirty = true;
 }
 
 static std::vector<std::string> runCommandAndGetLines(const std::string& cmd);

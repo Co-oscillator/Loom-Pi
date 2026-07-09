@@ -709,6 +709,7 @@ public:
     };
     std::vector<MidiLogMessage> mMidiLog;
     std::mutex mMidiLogMutex;
+    bool mMidiLogDirty = true;
     void addMidiLog(const std::string& type, int channel, int d1, int d2);
 
     // Diagnostic console UI handles
