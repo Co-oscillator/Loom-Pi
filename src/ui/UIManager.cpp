@@ -4691,7 +4691,12 @@ void UIManager::update() {
                         lv_obj_set_style_border_width(btn, 1, 0);
                         
                         lv_obj_t* btnLbl = lv_label_create(btn);
-                        lv_label_set_text_fmt(btnLbl, "%s   [%s]", dev.name.c_str(), dev.mac.c_str());
+                        std::string displayName = dev.name.empty() ? "Unknown Device" : dev.name;
+                        if (dev.rssi != -100) {
+                            lv_label_set_text_fmt(btnLbl, "%s   [%s]   RSSI: %d dBm", displayName.c_str(), dev.mac.c_str(), dev.rssi);
+                        } else {
+                            lv_label_set_text_fmt(btnLbl, "%s   [%s]", displayName.c_str(), dev.mac.c_str());
+                        }
                         lv_obj_set_style_text_font(btnLbl, &lv_font_montserrat_12, 0);
                         lv_obj_center(btnLbl);
                         
@@ -17266,7 +17271,7 @@ void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
 // --- Bluetooth Pairing Manager ---
 // =========================================================================
 
-static bool parseBtLine(const std::string& rawLine, std::string& mac, std::string& name, bool& isNameUpdate) {
+static bool parseBtLine(const std::string& rawLine, std::string& mac, std::string& name, bool& isNameUpdate, int& rssi) {
     std::string line;
     bool inEscape = false;
     for (char c : rawLine) {
@@ -17279,6 +17284,19 @@ static bool parseBtLine(const std::string& rawLine, std::string& mac, std::strin
     }
 
     isNameUpdate = false;
+    rssi = -100;
+    
+    std::string::size_type rssiPos = line.find("RSSI: ");
+    if (rssiPos != std::string::npos) {
+        std::string::size_type parenStart = line.find("(", rssiPos);
+        std::string::size_type parenEnd = line.find(")", parenStart);
+        if (parenStart != std::string::npos && parenEnd != std::string::npos) {
+            try {
+                rssi = std::stoi(line.substr(parenStart + 1, parenEnd - parenStart - 1));
+            } catch (...) {}
+        }
+    }
+
     if (line.length() < 17) return false;
     for (size_t i = 0; i <= line.length() - 17; ++i) {
         bool isMac = true;
@@ -17310,6 +17328,14 @@ static bool parseBtLine(const std::string& rawLine, std::string& mac, std::strin
             } else {
                 name = "";
             }
+            
+            // Clean up MAC-as-name
+            std::string hyphenMac = mac;
+            std::replace(hyphenMac.begin(), hyphenMac.end(), ':', '-');
+            if (name == hyphenMac) {
+                name = "";
+            }
+            
             return true;
         }
     }
@@ -17500,15 +17526,13 @@ void UIManager::startBluetoothScan() {
 
         std::vector<BtDevice> foundDevices;
         
-        // Retrieve all known/paired/discovered devices after scanning (updates the cache)
         auto pairedLines = runCommandAndGetLines("bluetoothctl devices");
         for (const auto& line : pairedLines) {
             std::string mac, name;
             bool isNameUpdate = false;
-            if (parseBtLine(line, mac, name, isNameUpdate)) {
-                if (!name.empty() && name != mac) {
-                    foundDevices.push_back({mac, name});
-                }
+            int rssi = -100;
+            if (parseBtLine(line, mac, name, isNameUpdate, rssi)) {
+                foundDevices.push_back({mac, name, rssi});
             }
         }
 
@@ -17517,23 +17541,29 @@ void UIManager::startBluetoothScan() {
         for (const auto& line : scanLines) {
             std::string mac, name;
             bool isNameUpdate = false;
-            if (parseBtLine(line, mac, name, isNameUpdate)) {
-                if (!name.empty() && name != mac) {
-                    // Check if MAC is already in list
-                    auto it = std::find_if(foundDevices.begin(), foundDevices.end(), [&](const BtDevice& d) {
-                        return d.mac == mac;
-                    });
-                    if (it == foundDevices.end()) {
-                        foundDevices.push_back({mac, name});
-                    } else if (isNameUpdate) {
-                        // If we received a new name that isn't empty and isn't a numeric hardware ID
-                        if (!name.empty() && name.find("-") == std::string::npos && name != mac) {
-                            it->name = name;
-                        }
+            int rssi = -100;
+            if (parseBtLine(line, mac, name, isNameUpdate, rssi)) {
+                // Check if MAC is already in list
+                auto it = std::find_if(foundDevices.begin(), foundDevices.end(), [&](const BtDevice& d) {
+                    return d.mac == mac;
+                });
+                if (it == foundDevices.end()) {
+                    foundDevices.push_back({mac, name, rssi});
+                } else {
+                    if (isNameUpdate && !name.empty() && name.find("-") == std::string::npos && name != mac) {
+                        it->name = name;
+                    }
+                    if (rssi != -100) {
+                        it->rssi = rssi;
                     }
                 }
             }
         }
+
+        // Sort found devices by RSSI
+        std::sort(foundDevices.begin(), foundDevices.end(), [](const BtDevice& a, const BtDevice& b) {
+            return a.rssi > b.rssi;
+        });
 
         {
             std::lock_guard<std::mutex> lock(mBtMutex);

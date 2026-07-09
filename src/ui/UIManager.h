@@ -720,6 +720,7 @@ public:
     struct BtDevice {
         std::string mac;
         std::string name;
+        int rssi = -100;
     };
     std::vector<BtDevice> mBtDevices;
     std::mutex mBtMutex;
