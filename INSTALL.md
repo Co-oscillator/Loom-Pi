@@ -22,9 +22,9 @@ sudo apt upgrade -y
 ```
 
 ## 3. Install Dependencies
-Loom Pi relies on CMake, SDL2 (for windowing/graphics), and ALSA (for audio and MIDI on Linux). Install all required build tools and libraries with the following command:
+Loom Pi relies on CMake, SDL2 (for windowing/graphics), and ALSA (for audio and MIDI on Linux). Install all required build tools, libraries, and Bluetooth drivers with the following command:
 ```bash
-sudo apt install -y build-essential cmake git libsdl2-dev libasound2-dev
+sudo apt install -y build-essential cmake git libsdl2-dev libasound2-dev pi-bluetooth bluez
 ```
 
 ## 4. Clone the Repository

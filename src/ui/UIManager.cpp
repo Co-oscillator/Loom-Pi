@@ -3143,24 +3143,33 @@ void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(diagTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(diagTitle, trackColor, 0);
 
-    lv_obj_t* listTitle = lv_label_create(diagCard);
+    lv_obj_t* logContainer = lv_obj_create(diagCard);
+    lv_obj_set_flex_grow(logContainer, 1);
+    lv_obj_set_width(logContainer, lv_pct(100));
+    lv_obj_set_style_bg_opa(logContainer, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(logContainer, 0, 0);
+    lv_obj_set_style_pad_all(logContainer, 0, 0);
+    lv_obj_set_flex_flow(logContainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_flag(logContainer, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* listTitle = lv_label_create(logContainer);
     lv_label_set_text(listTitle, "Detected USB & MIDI:");
     lv_obj_set_style_text_font(listTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(listTitle, lv_color_hex(0x888888), 0);
 
-    mMidiDeviceListLabel = lv_label_create(diagCard);
+    mMidiDeviceListLabel = lv_label_create(logContainer);
     lv_label_set_text(mMidiDeviceListLabel, "Scanning...");
     lv_obj_set_style_text_font(mMidiDeviceListLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mMidiDeviceListLabel, lv_color_hex(0xCCCCCC), 0);
     lv_label_set_long_mode(mMidiDeviceListLabel, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(mMidiDeviceListLabel, 210);
 
-    lv_obj_t* monitorTitle = lv_label_create(diagCard);
+    lv_obj_t* monitorTitle = lv_label_create(logContainer);
     lv_label_set_text(monitorTitle, "Real-time MIDI Log:");
     lv_obj_set_style_text_font(monitorTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(monitorTitle, lv_color_hex(0x888888), 0);
 
-    mMidiMonitorConsoleLabel = lv_label_create(diagCard);
+    mMidiMonitorConsoleLabel = lv_label_create(logContainer);
     lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
     lv_obj_set_style_text_font(mMidiMonitorConsoleLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mMidiMonitorConsoleLabel, lv_color_hex(0x00FF88), 0); // Retro green console text
