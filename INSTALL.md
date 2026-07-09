@@ -56,6 +56,14 @@ You can run it using:
 ## Troubleshooting
 * **Audio/MIDI not working:** Ensure your USB audio interface or MIDI controller is plugged in before starting the application. ALSA will automatically detect connected MIDI hardware.
 * **Display Issues:** Loom Pi uses SDL2 for its graphical backend. If you are running headless (without a desktop environment), you may need to configure SDL2 to use the KMS/DRM framebuffer drivers, but running it from the standard Raspberry Pi OS Desktop environment is fully supported out of the box.
+* **Squashed UI / Unused Screen Space:** Most 7-inch portable displays have a native resolution of 1024x600. However, this is not a standard HDMI resolution, so the Raspberry Pi often defaults to 1024x768 or 1280x720, which squashes the UI and leaves unused black bars. To fix this, you need to force the Pi to output exactly 1024x600.
+  Run `sudo nano /boot/firmware/config.txt` (or `/boot/config.txt` on older OS versions) and add these lines to the bottom:
+  ```ini
+  hdmi_group=2
+  hdmi_mode=87
+  hdmi_cvt 1024 600 60 6 0 0 0
+  ```
+  *(Then reboot your Pi).*
 
 ## 7. Auto-Start on Boot (Optional)
 To run Loom Pi automatically when the Raspberry Pi turns on (and run it in the background without tying up your SSH session), you can create a systemd service.
