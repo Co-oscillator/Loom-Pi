@@ -17263,7 +17263,7 @@ void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
 // --- Bluetooth Pairing Manager ---
 // =========================================================================
 
-static bool parseBtLine(const std::string& rawLine, std::string& mac, std::string& name) {
+static bool parseBtLine(const std::string& rawLine, std::string& mac, std::string& name, bool& isNameUpdate) {
     std::string line;
     bool inEscape = false;
     for (char c : rawLine) {
@@ -17275,6 +17275,7 @@ static bool parseBtLine(const std::string& rawLine, std::string& mac, std::strin
         }
     }
 
+    isNameUpdate = false;
     if (line.length() < 17) return false;
     for (size_t i = 0; i <= line.length() - 17; ++i) {
         bool isMac = true;
@@ -17293,6 +17294,9 @@ static bool parseBtLine(const std::string& rawLine, std::string& mac, std::strin
                 name = line.substr(nameStart);
                 if (name.rfind("Name: ", 0) == 0) {
                     name = name.substr(6);
+                    isNameUpdate = true;
+                } else if (line.find("[NEW]") != std::string::npos) {
+                    isNameUpdate = true;
                 }
                 name.erase(name.begin(), std::find_if(name.begin(), name.end(), [](unsigned char ch) {
                     return !std::isspace(ch);
@@ -17313,13 +17317,11 @@ static std::vector<std::string> runCommandAndGetLines(const std::string& cmd) {
     std::vector<std::string> lines;
     FILE* fp = popen(cmd.c_str(), "r");
     if (!fp) return lines;
-    char buf[512];
-    while (fgets(buf, sizeof(buf), fp)) {
-        std::string line(buf);
-        while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
-            line.pop_back();
-        }
-        lines.push_back(line);
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
+        std::string s(buffer);
+        if (!s.empty() && s.back() == '\n') s.pop_back();
+        lines.push_back(s);
     }
     pclose(fp);
     return lines;
@@ -17490,8 +17492,8 @@ void UIManager::startBluetoothScan() {
         std::system("bluetoothctl agent on 2>/dev/null");
         std::system("bluetoothctl default-agent 2>/dev/null");
 
-        // Run scan with line-buffering to ensure output is written to file before process is terminated
-        std::system("timeout 10 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
+        // Run LE scan with line-buffering to ensure output is written to file before process is terminated
+        std::system("timeout 10 stdbuf -oL bluetoothctl scan le > /tmp/bt_scan.log 2>&1");
 
         std::vector<BtDevice> foundDevices;
         
@@ -17499,7 +17501,8 @@ void UIManager::startBluetoothScan() {
         auto pairedLines = runCommandAndGetLines("bluetoothctl devices");
         for (const auto& line : pairedLines) {
             std::string mac, name;
-            if (parseBtLine(line, mac, name)) {
+            bool isNameUpdate = false;
+            if (parseBtLine(line, mac, name, isNameUpdate)) {
                 if (!name.empty() && name != mac) {
                     foundDevices.push_back({mac, name});
                 }
@@ -17510,7 +17513,8 @@ void UIManager::startBluetoothScan() {
         auto scanLines = runCommandAndGetLines("cat /tmp/bt_scan.log");
         for (const auto& line : scanLines) {
             std::string mac, name;
-            if (parseBtLine(line, mac, name)) {
+            bool isNameUpdate = false;
+            if (parseBtLine(line, mac, name, isNameUpdate)) {
                 if (!name.empty() && name != mac) {
                     // Check if MAC is already in list
                     auto it = std::find_if(foundDevices.begin(), foundDevices.end(), [&](const BtDevice& d) {
@@ -17518,7 +17522,7 @@ void UIManager::startBluetoothScan() {
                     });
                     if (it == foundDevices.end()) {
                         foundDevices.push_back({mac, name});
-                    } else {
+                    } else if (isNameUpdate) {
                         // If we received a new name that isn't empty and isn't a numeric hardware ID
                         if (!name.empty() && name.find("-") == std::string::npos && name != mac) {
                             it->name = name;
