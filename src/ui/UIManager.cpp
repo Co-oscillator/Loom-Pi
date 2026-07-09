@@ -17186,7 +17186,7 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 
     std::thread updateThread([ui]() {
         ui->mUpdateInstallStatusStr = "Checking for updates...";
-        int ret = std::system("git fetch origin main");
+        int ret = std::system("git fetch origin");
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "Network error: Could not check for updates.";
             ui->mUpdateInstallFinished = true;
