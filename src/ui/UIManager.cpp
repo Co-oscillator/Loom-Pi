@@ -17503,6 +17503,11 @@ void UIManager::startBluetoothScan() {
                     });
                     if (it == foundDevices.end()) {
                         foundDevices.push_back({mac, name});
+                    } else {
+                        // If we received a new name that isn't empty and isn't a numeric hardware ID
+                        if (!name.empty() && name.find("-") == std::string::npos && name != mac) {
+                            it->name = name;
+                        }
                     }
                 }
             }
@@ -17526,18 +17531,19 @@ void UIManager::connectBluetoothDevice(const std::string& mac) {
     mBtStatusChanged = true;
 
     std::thread connThread([this, mac]() {
-        std::string cmdPair = "bluetoothctl pair " + mac;
-        std::string cmdTrust = "bluetoothctl trust " + mac;
-        std::string cmdConnect = "bluetoothctl connect " + mac;
-
-        std::cout << "BT: Executing: " << cmdPair << std::endl;
-        std::system(cmdPair.c_str());
+        std::cout << "BT: Attempting to pair, trust, and connect: " << mac << std::endl;
         
-        std::cout << "BT: Executing: " << cmdTrust << std::endl;
-        std::system(cmdTrust.c_str());
-        
-        std::cout << "BT: Executing: " << cmdConnect << std::endl;
-        int retConnect = std::system(cmdConnect.c_str());
+        std::string script = 
+            "timeout 15 stdbuf -oL bluetoothctl <<EOF\n"
+            "agent NoInputNoOutput\n"
+            "default-agent\n"
+            "pair " + mac + "\n"
+            "trust " + mac + "\n"
+            "connect " + mac + "\n"
+            "quit\n"
+            "EOF\n";
+            
+        int retConnect = std::system(script.c_str());
 
         if (retConnect == 0) {
             mBtStatusStr = "Connected successfully!";
