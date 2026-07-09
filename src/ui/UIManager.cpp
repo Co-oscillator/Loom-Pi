@@ -17249,8 +17249,10 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 }
 
 void UIManager::settingsRestartBtnEventCb(lv_event_t* e) {
-    std::cout << "Settings: Restart requested. Exiting process..." << std::endl;
-    std::exit(0);
+    std::cout << "Settings: Restart requested. Exiting process gracefully..." << std::endl;
+    SDL_Event quit_event;
+    quit_event.type = SDL_QUIT;
+    SDL_PushEvent(&quit_event);
 }
 
 // =========================================================================
