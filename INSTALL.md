@@ -3,8 +3,16 @@
 This guide walks you through installing and building **Loom Pi** from scratch on a fresh Raspberry Pi OS installation.
 
 ## 1. Prepare the Raspberry Pi
-1. Flash your microSD card with **Raspberry Pi OS** (Bookworm or Bullseye, 64-bit recommended) using the Raspberry Pi Imager. 
-2. Boot up the Pi, complete the initial setup (Wi-Fi, localization, password), and ensure it has internet access.
+1. Open the **Raspberry Pi Imager** on your main computer.
+2. Select your OS (Raspberry Pi OS Lite 64-bit is recommended for a dedicated appliance).
+3. **Headless Setup (No Keyboard Required):** Before hitting "Write", click the **Gear Icon** (OS Customization settings) in the Imager. 
+    * Set the hostname (e.g., `loompi`).
+    * Check **Enable SSH** and use password authentication.
+    * Enter your Wi-Fi network name and password.
+4. Flash the microSD card, put it in your Pi, and power it on. It will automatically connect to your Wi-Fi!
+5. On your main computer, open a terminal and SSH into the Pi using the hostname you created:
+   `ssh pi@loompi.local` (or whatever username/hostname you set).
+   *Note: If the hostname doesn't resolve, you can find the Pi's IP address by logging into your router's admin page or using a network scanner app like Fing.*
 
 ## 2. Update the System
 Open a terminal and update your package lists to ensure everything is current:
