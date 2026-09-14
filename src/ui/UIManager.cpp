@@ -149,10 +149,16 @@ float UIManager::scaleParamFromNormalized(int paramId, float normValue) {
         paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
         return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "R");
     }
+    if (paramId >= 2410 && paramId <= 2417) {
+        return 20.0f + normValue * 100.0f;
+    }
     return normValue;
 }
 
 float UIManager::normalizeParamValue(int paramId, float scaledValue) {
+    if (paramId >= 2410 && paramId <= 2417) {
+        return std::max(0.0f, std::min(1.0f, (scaledValue - 20.0f) / 100.0f));
+    }
     // Attack parameters across all engines (0.001f to 4.0f)
     if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471 ||
         paramId == 161 || paramId == 167 || paramId == 173 || paramId == 179 || paramId == 185 || paramId == 191) {
@@ -2598,7 +2604,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(drumRowTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(drumRowTitle, trackColor, 0);
 
-    // Target Track Selector Row
+    // Target Track Selector Row with MIDI Learn Button
     lv_obj_t* trkRow = lv_obj_create(drumRowPanel);
     lv_obj_set_size(trkRow, lv_pct(100), 36);
     lv_obj_set_style_bg_opa(trkRow, LV_OPA_TRANSP, 0);
@@ -2609,19 +2615,49 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(trkRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(trkRow, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t* trkLbl = lv_label_create(trkRow);
+    lv_obj_t* trkLeft = lv_obj_create(trkRow);
+    lv_obj_set_size(trkLeft, 250, 36);
+    lv_obj_set_style_bg_opa(trkLeft, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(trkLeft, 0, 0);
+    lv_obj_set_style_pad_all(trkLeft, 0, 0);
+    lv_obj_set_layout(trkLeft, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(trkLeft, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(trkLeft, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(trkLeft, 8, 0);
+    lv_obj_remove_flag(trkLeft, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* trkLbl = lv_label_create(trkLeft);
     lv_label_set_text(trkLbl, "Target Track:");
     lv_obj_set_style_text_font(trkLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(trkLbl, lv_color_hex(0xCCCCCC), 0);
 
-    mDrumRowTrackDd = lv_dropdown_create(trkRow);
-    lv_obj_set_size(mDrumRowTrackDd, 140, 32);
+    mDrumRowTrackDd = lv_dropdown_create(trkLeft);
+    lv_obj_set_size(mDrumRowTrackDd, 130, 32);
     lv_dropdown_set_options(mDrumRowTrackDd, "Track 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
     lv_dropdown_set_selected(mDrumRowTrackDd, mDrumRowTargetTrack);
     lv_obj_set_style_text_font(mDrumRowTrackDd, &lv_font_montserrat_10, 0);
     lv_obj_add_event_cb(mDrumRowTrackDd, drumRowTrackDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Sub-header explaining columns: Key | Note Value (20-120) | Ratchet
+    // MIDI Learn button for Drum Row knobs
+    mDrumRowLearnBtn = lv_button_create(trkRow);
+    lv_obj_set_size(mDrumRowLearnBtn, 130, 32);
+    if (mDrumRowLearnActive) {
+        lv_obj_set_style_bg_color(mDrumRowLearnBtn, lv_color_hex(0xD32F2F), 0);
+        lv_obj_set_style_border_color(mDrumRowLearnBtn, lv_color_hex(0xFF5252), 0);
+    } else {
+        lv_obj_set_style_bg_color(mDrumRowLearnBtn, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_border_color(mDrumRowLearnBtn, lv_color_hex(0x555555), 0);
+    }
+    lv_obj_set_style_border_width(mDrumRowLearnBtn, 1, 0);
+    lv_obj_set_style_radius(mDrumRowLearnBtn, 6, 0);
+    mDrumRowLearnBtnLbl = lv_label_create(mDrumRowLearnBtn);
+    lv_label_set_text(mDrumRowLearnBtnLbl, mDrumRowLearnActive ? (mDrumRowLearnTargetKey >= 0 ? "TAP & WIGGLE" : "TAP KNOB") : "MIDI LEARN");
+    lv_obj_set_style_text_font(mDrumRowLearnBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mDrumRowLearnBtnLbl, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_center(mDrumRowLearnBtnLbl);
+    lv_obj_add_event_cb(mDrumRowLearnBtn, drumRowLearnBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Sub-header explaining columns: Key | Note Value (20-120) | Scrub / Learn | Ratchet
     lv_obj_t* subHdr = lv_obj_create(drumRowPanel);
     lv_obj_set_size(subHdr, lv_pct(100), 20);
     lv_obj_set_style_bg_opa(subHdr, LV_OPA_TRANSP, 0);
@@ -2638,9 +2674,14 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(hdrKey, lv_color_hex(0x888888), 0);
 
     lv_obj_t* hdrNote = lv_label_create(subHdr);
-    lv_label_set_text(hdrNote, "Assigned Note (20-120)");
+    lv_label_set_text(hdrNote, "Assigned Note");
     lv_obj_set_style_text_font(hdrNote, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(hdrNote, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* hdrScrub = lv_label_create(subHdr);
+    lv_label_set_text(hdrScrub, "Scrub / Learn");
+    lv_obj_set_style_text_font(hdrScrub, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrScrub, lv_color_hex(0x888888), 0);
 
     lv_obj_t* hdrRatch = lv_label_create(subHdr);
     lv_label_set_text(hdrRatch, "Ratchet");
@@ -2680,13 +2721,40 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
 
         // Note Dropdown (20 to 120)
         mDrumRowNoteDd[i] = lv_dropdown_create(row);
-        lv_obj_set_size(mDrumRowNoteDd[i], 160, 34);
+        lv_obj_set_size(mDrumRowNoteDd[i], 135, 34);
         lv_dropdown_set_options(mDrumRowNoteDd[i], noteOptions.c_str());
         int selIdx = std::max(0, std::min(100, mDrumRowNotes[i] - 20));
         lv_dropdown_set_selected(mDrumRowNoteDd[i], selIdx);
         lv_obj_set_style_text_font(mDrumRowNoteDd[i], &lv_font_montserrat_10, 0);
         lv_obj_set_user_data(mDrumRowNoteDd[i], (void*)(intptr_t)i);
         lv_obj_add_event_cb(mDrumRowNoteDd[i], drumRowNoteDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+        // Scrub Arc Knob
+        lv_obj_t* scrubArc = lv_arc_create(row);
+        mDrumRowScrubArc[i] = scrubArc;
+        lv_obj_set_size(scrubArc, 40, 40);
+        lv_arc_set_range(scrubArc, 20, 120);
+        lv_arc_set_rotation(scrubArc, 135);
+        lv_arc_set_bg_angles(scrubArc, 0, 270);
+        lv_arc_set_value(scrubArc, mDrumRowNotes[i]);
+        lv_obj_set_style_bg_opa(scrubArc, LV_OPA_TRANSP, LV_PART_KNOB);
+        lv_obj_set_style_border_width(scrubArc, 0, LV_PART_KNOB);
+        lv_obj_set_style_pad_all(scrubArc, 0, LV_PART_KNOB);
+        lv_obj_set_style_arc_width(scrubArc, 3, LV_PART_MAIN);
+        lv_obj_set_style_arc_width(scrubArc, 4, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(scrubArc, lv_color_hex(0x2D2D2D), LV_PART_MAIN);
+        bool isThisLearning = (mDrumRowLearnActive && mDrumRowLearnTargetKey == i);
+        lv_obj_set_style_arc_color(scrubArc, isThisLearning ? lv_color_hex(0xFF3333) : trackColor, LV_PART_INDICATOR);
+
+        mDrumRowScrubLbl[i] = lv_label_create(scrubArc);
+        lv_label_set_text_fmt(mDrumRowScrubLbl[i], "%d", mDrumRowNotes[i]);
+        lv_obj_set_style_text_font(mDrumRowScrubLbl[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(mDrumRowScrubLbl[i], lv_color_hex(0xCCCCCC), 0);
+        lv_obj_center(mDrumRowScrubLbl[i]);
+
+        lv_obj_set_user_data(scrubArc, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(scrubArc, drumRowScrubArcEventCb, LV_EVENT_VALUE_CHANGED, this);
+        lv_obj_add_event_cb(scrubArc, drumRowScrubArcEventCb, LV_EVENT_CLICKED, this);
 
         // Ratchet Button
         mDrumRowRatchetBtn[i] = lv_button_create(row);
@@ -3559,7 +3627,97 @@ void UIManager::drumRowNoteDdEventCb(lv_event_t* e) {
     int keyIdx = (int)(intptr_t)lv_obj_get_user_data(dd);
     if (keyIdx >= 0 && keyIdx < 8) {
         int sel = lv_dropdown_get_selected(dd);
-        ui->mDrumRowNotes[keyIdx] = 20 + sel;
+        int note = 20 + sel;
+        if (note != ui->mDrumRowNotes[keyIdx]) {
+            int oldNote = ui->mDrumRowNotes[keyIdx];
+            ui->mDrumRowNotes[keyIdx] = note;
+            if (ui->mDrumRowScrubArc[keyIdx]) {
+                lv_arc_set_value(ui->mDrumRowScrubArc[keyIdx], note);
+            }
+            if (ui->mDrumRowScrubLbl[keyIdx]) {
+                lv_label_set_text_fmt(ui->mDrumRowScrubLbl[keyIdx], "%d", note);
+            }
+            int trk = ui->mDrumRowTargetTrack;
+            ui->mEngine.releaseNote(trk, oldNote);
+            ui->mEngine.triggerNote(trk, note, 100);
+        }
+    }
+}
+
+void UIManager::drumRowScrubArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    int keyIdx = (int)(intptr_t)lv_obj_get_user_data(arc);
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_CLICKED || code == LV_EVENT_PRESSED) {
+        if (ui->mDrumRowLearnActive) {
+            ui->mDrumRowLearnTargetKey = keyIdx;
+            ui->mMidiLearnActive = true;
+            ui->mMidiLearnTargetParamId = 2410 + keyIdx;
+            ui->mMidiLearnTargetTrack = ui->mDrumRowTargetTrack;
+            if (ui->mDrumRowLearnBtnLbl) {
+                lv_label_set_text_fmt(ui->mDrumRowLearnBtnLbl, "WIGGLE CC (KEY %d)", keyIdx + 1);
+            }
+            for (int k = 0; k < 8; ++k) {
+                if (ui->mDrumRowScrubArc[k]) {
+                    lv_obj_set_style_arc_color(ui->mDrumRowScrubArc[k],
+                        (k == keyIdx) ? lv_color_hex(0xFF3333) : ui->getTrackColor(ui->mDrumRowTargetTrack),
+                        LV_PART_INDICATOR);
+                }
+            }
+            return;
+        }
+    }
+
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        int note = (int)lv_arc_get_value(arc);
+        note = std::max(20, std::min(120, note));
+        if (keyIdx >= 0 && keyIdx < 8 && note != ui->mDrumRowNotes[keyIdx]) {
+            int oldNote = ui->mDrumRowNotes[keyIdx];
+            ui->mDrumRowNotes[keyIdx] = note;
+            if (ui->mDrumRowScrubLbl[keyIdx]) {
+                lv_label_set_text_fmt(ui->mDrumRowScrubLbl[keyIdx], "%d", note);
+            }
+            if (ui->mDrumRowNoteDd[keyIdx]) {
+                lv_dropdown_set_selected(ui->mDrumRowNoteDd[keyIdx], note - 20);
+            }
+            int trk = ui->mDrumRowTargetTrack;
+            ui->mEngine.releaseNote(trk, oldNote);
+            ui->mEngine.triggerNote(trk, note, 100);
+        }
+    }
+}
+
+void UIManager::drumRowLearnBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->mDrumRowLearnActive = !ui->mDrumRowLearnActive;
+    ui->mDrumRowLearnTargetKey = -1;
+    if (!ui->mDrumRowLearnActive) {
+        if (ui->mMidiLearnTargetParamId >= 2410 && ui->mMidiLearnTargetParamId <= 2417) {
+            ui->mMidiLearnTargetParamId = -1;
+            ui->mMidiLearnActive = false;
+        }
+        if (ui->mDrumRowLearnBtnLbl) {
+            lv_label_set_text(ui->mDrumRowLearnBtnLbl, "MIDI LEARN");
+        }
+        if (ui->mDrumRowLearnBtn) {
+            lv_obj_set_style_bg_color(ui->mDrumRowLearnBtn, lv_color_hex(0x2D2D2D), 0);
+            lv_obj_set_style_border_color(ui->mDrumRowLearnBtn, lv_color_hex(0x555555), 0);
+        }
+        for (int k = 0; k < 8; ++k) {
+            if (ui->mDrumRowScrubArc[k]) {
+                lv_obj_set_style_arc_color(ui->mDrumRowScrubArc[k], ui->getTrackColor(ui->mDrumRowTargetTrack), LV_PART_INDICATOR);
+            }
+        }
+    } else {
+        if (ui->mDrumRowLearnBtnLbl) {
+            lv_label_set_text(ui->mDrumRowLearnBtnLbl, "TAP KNOB");
+        }
+        if (ui->mDrumRowLearnBtn) {
+            lv_obj_set_style_bg_color(ui->mDrumRowLearnBtn, lv_color_hex(0xD32F2F), 0);
+            lv_obj_set_style_border_color(ui->mDrumRowLearnBtn, lv_color_hex(0xFF5252), 0);
+        }
     }
 }
 
@@ -4219,6 +4377,24 @@ void UIManager::update() {
                             int octave = (noteVal / 12) - 1;
                             lv_label_set_text_fmt(label, "Note: %s%d (%d)", noteNames[noteVal % 12], octave, noteVal);
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // Sync Drum Number Row 1-8 scrub knobs in Settings screen
+    if (mActiveNav == 5) {
+        for (int i = 0; i < 8; ++i) {
+            if (mDrumRowScrubArc[i]) {
+                int note = mDrumRowNotes[i];
+                if ((int)lv_arc_get_value(mDrumRowScrubArc[i]) != note) {
+                    lv_arc_set_value(mDrumRowScrubArc[i], note);
+                    if (mDrumRowScrubLbl[i]) {
+                        lv_label_set_text_fmt(mDrumRowScrubLbl[i], "%d", note);
+                    }
+                    if (mDrumRowNoteDd[i]) {
+                        lv_dropdown_set_selected(mDrumRowNoteDd[i], note - 20);
                     }
                 }
             }
@@ -6994,6 +7170,9 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
     if (paramId == 0) return prefix + "Volume";
     if (paramId == 9) return prefix + "Pan";
     if (paramId == 2400) return prefix + "Ratchet";
+    if (paramId >= 2410 && paramId <= 2417) {
+        return "Drum Key " + std::to_string(paramId - 2409) + " Note";
+    }
     
     int engineType = 0; // Default: Subtractive
     if (engine && trackIdx >= 0 && trackIdx < 8) {

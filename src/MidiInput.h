@@ -766,6 +766,10 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                             // Exit learn mode thread-safely
                             data->ui->mMidiLearnActive = false;
                             data->ui->mMidiLearnTargetParamId = -1;
+                            if (data->ui->mDrumRowLearnActive) {
+                                data->ui->mDrumRowLearnActive = false;
+                                data->ui->mDrumRowLearnTargetKey = -1;
+                            }
                             data->ui->mNeedsScreenRebuild = true;
                         } else {
                             bool ccMatched = false;
@@ -805,7 +809,9 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                                 if (dt == 0) dt = 1; // prevent division by zero
 
                                                 float multiplier = 1.0f;
-                                                if (dt < 100) {
+                                                if (paramId >= 2410 && paramId <= 2417) {
+                                                    multiplier = 0.5f; // Smooth, controlled scrubbing through notes
+                                                } else if (dt < 100) {
                                                     // High-speed quadratic spin acceleration (half as aggressive)
                                                     float speedFactor = 100.0f / (float)dt;
                                                     multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
@@ -828,6 +834,19 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
 
                                                 data->engine->setParameter(activeTrack, paramId, scaledVal);
                                                 data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+
+                                                if (paramId >= 2410 && paramId <= 2417) {
+                                                    int keyIdx = paramId - 2410;
+                                                    int note = (int)roundf(scaledVal);
+                                                    note = std::max(20, std::min(120, note));
+                                                    int oldNote = data->ui->getDrumRowNote(keyIdx);
+                                                    if (note != oldNote) {
+                                                        data->ui->setDrumRowNote(keyIdx, note);
+                                                        int trk = data->ui->getDrumRowTargetTrack();
+                                                        data->engine->releaseNote(trk, oldNote);
+                                                        data->engine->triggerNote(trk, note, 100);
+                                                    }
+                                                }
                                             } else {
                                                 // First knob move: synchronize visual state to current soft param
                                                 data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
@@ -851,6 +870,18 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                                                 float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
                                                 float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
                                                 data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                                if (paramId >= 2410 && paramId <= 2417) {
+                                                    int keyIdx = paramId - 2410;
+                                                    int note = (int)roundf(scaledVal);
+                                                    note = std::max(20, std::min(120, note));
+                                                    int oldNote = data->ui->getDrumRowNote(keyIdx);
+                                                    if (note != oldNote) {
+                                                        data->ui->setDrumRowNote(keyIdx, note);
+                                                        int trk = data->ui->getDrumRowTargetTrack();
+                                                        data->engine->releaseNote(trk, oldNote);
+                                                        data->engine->triggerNote(trk, note, 100);
+                                                    }
+                                                }
                                             }
                                             break;
                                         }
@@ -1584,6 +1615,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 // Exit learn mode thread-safely
                 data->ui->mMidiLearnActive = false;
                 data->ui->mMidiLearnTargetParamId = -1;
+                if (data->ui->mDrumRowLearnActive) {
+                    data->ui->mDrumRowLearnActive = false;
+                    data->ui->mDrumRowLearnTargetKey = -1;
+                }
                 data->ui->mNeedsScreenRebuild = true;
             } else {
                 bool ccMatched = false;
@@ -1623,7 +1658,9 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                                     if (dt == 0) dt = 1; // prevent division by zero
 
                                     float multiplier = 1.0f;
-                                    if (dt < 100) {
+                                    if (paramId >= 2410 && paramId <= 2417) {
+                                        multiplier = 0.5f; // Smooth, controlled scrubbing through notes
+                                    } else if (dt < 100) {
                                         // High-speed quadratic spin acceleration (half as aggressive)
                                         float speedFactor = 100.0f / (float)dt;
                                         multiplier = 1.0f + 0.5f * (speedFactor * speedFactor - 1.0f);
@@ -1646,6 +1683,19 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
 
                                     data->engine->setParameter(activeTrack, paramId, scaledVal);
                                     data->ui->mSeqMidiKnobValue[activeTrack][k] = newNormVal;
+
+                                    if (paramId >= 2410 && paramId <= 2417) {
+                                        int keyIdx = paramId - 2410;
+                                        int note = (int)roundf(scaledVal);
+                                        note = std::max(20, std::min(120, note));
+                                        int oldNote = data->ui->getDrumRowNote(keyIdx);
+                                        if (note != oldNote) {
+                                            data->ui->setDrumRowNote(keyIdx, note);
+                                            int trk = data->ui->getDrumRowTargetTrack();
+                                            data->engine->releaseNote(trk, oldNote);
+                                            data->engine->triggerNote(trk, note, 100);
+                                        }
+                                    }
                                 } else {
                                     // First knob move: synchronize visual state to current soft param
                                     data->ui->mSeqMidiKnobValue[activeTrack][k] = data->ui->normalizeParamValue(paramId, paramVal);
@@ -1669,6 +1719,18 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                                     float finalVal = data->ui->mSeqMidiFaderInverted[activeTrack][f] ? (1.0f - floatVal) : floatVal;
                                     float scaledVal = data->ui->scaleParamFromNormalized(paramId, finalVal);
                                     data->engine->setParameter(activeTrack, paramId, scaledVal);
+                                    if (paramId >= 2410 && paramId <= 2417) {
+                                        int keyIdx = paramId - 2410;
+                                        int note = (int)roundf(scaledVal);
+                                        note = std::max(20, std::min(120, note));
+                                        int oldNote = data->ui->getDrumRowNote(keyIdx);
+                                        if (note != oldNote) {
+                                            data->ui->setDrumRowNote(keyIdx, note);
+                                            int trk = data->ui->getDrumRowTargetTrack();
+                                            data->engine->releaseNote(trk, oldNote);
+                                            data->engine->triggerNote(trk, note, 100);
+                                        }
+                                    }
                                 }
                                 break;
                             }

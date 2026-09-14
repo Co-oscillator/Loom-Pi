@@ -641,9 +641,17 @@ public:
     lv_obj_t* mDrumRowTrackDd = nullptr;
     lv_obj_t* mDrumRowNoteDd[8] = {};
     lv_obj_t* mDrumRowRatchetBtn[8] = {};
+    lv_obj_t* mDrumRowScrubArc[8] = {};
+    lv_obj_t* mDrumRowScrubLbl[8] = {};
+    bool mDrumRowLearnActive = false;
+    int mDrumRowLearnTargetKey = -1;
+    lv_obj_t* mDrumRowLearnBtn = nullptr;
+    lv_obj_t* mDrumRowLearnBtnLbl = nullptr;
     static void drumRowTrackDdEventCb(lv_event_t* e);
     static void drumRowNoteDdEventCb(lv_event_t* e);
     static void drumRowRatchetBtnEventCb(lv_event_t* e);
+    static void drumRowScrubArcEventCb(lv_event_t* e);
+    static void drumRowLearnBtnEventCb(lv_event_t* e);
 
     // Hardware MIDI Mapping Wizard state
     bool mWizardActive = false;
