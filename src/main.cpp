@@ -140,11 +140,16 @@ int main() {
         std::cerr << "Failed to open default SDL Capture Device." << std::endl;
     }
     
-    // 3. Init LVGL
+    // 3. Init LVGL & Video Subsystem
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "CRITICAL ERROR: SDL Video Init Failed! " << SDL_GetError() << std::endl;
+    } else {
+        std::cout << "SDL Video Init Success. Driver: " << SDL_GetCurrentVideoDriver() << std::endl;
+    }
     lv_init();
     
-    // Create a 1024x600 window using LVGL's SDL driver
-    lv_display_t * disp = lv_sdl_window_create(1024, 600);
+    // Create a 1280x800 window using LVGL's SDL driver
+    lv_display_t * disp = lv_sdl_window_create(UIManager::SCREEN_WIDTH, UIManager::SCREEN_HEIGHT);
     lv_indev_t * indev = lv_sdl_mouse_create();
     lv_sdl_keyboard_create();
     
@@ -274,8 +279,25 @@ int main() {
         if (!ui.isFileBrowserOpen() && !ui.isConsoleModalOpen()) {
             numKeys = SDL_PeepEvents(keyEvents, 32, SDL_GETEVENT, SDL_KEYDOWN, SDL_KEYUP);
         }
+        // Drum Number Row 1-8 key mapper
+        auto symToDrumKey = [](SDL_Keycode key) -> int {
+            switch (key) {
+                case SDLK_1: case SDLK_KP_1: return 0;
+                case SDLK_2: case SDLK_KP_2: return 1;
+                case SDLK_3: case SDLK_KP_3: return 2;
+                case SDLK_4: case SDLK_KP_4: return 3;
+                case SDLK_5: case SDLK_KP_5: return 4;
+                case SDLK_6: case SDLK_KP_6: return 5;
+                case SDLK_7: case SDLK_KP_7: return 6;
+                case SDLK_8: case SDLK_KP_8: return 7;
+                default: return -1;
+            }
+        };
+
         for (int k = 0; k < numKeys; ++k) {
             SDL_Keycode sym = keyEvents[k].key.keysym.sym;
+            int drumIdx = symToDrumKey(sym);
+
             if (keyEvents[k].type == SDL_KEYDOWN) {
                 if (sym == SDLK_ESCAPE) {
                     if (gCaptureDeviceID != 0) {
@@ -293,6 +315,13 @@ int main() {
                     if (recState) {
                         gEngine.setPlaying(true);
                     }
+                } else if (drumIdx >= 0) {
+                    if (!keyEvents[k].key.repeat) {
+                        int track = ui.getDrumRowTargetTrack();
+                        int note = ui.getDrumRowNote(drumIdx);
+                        int ratchet = ui.getDrumRowRatchet(drumIdx);
+                        gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, true);
+                    }
                 } else if (ui.isKeyboardModeEnabled()) {
                     // Ignore repeats for note triggering
                     if (!keyEvents[k].key.repeat && activeKeyNotes.count(sym) == 0) {
@@ -306,6 +335,11 @@ int main() {
             } else if (keyEvents[k].type == SDL_KEYUP) {
                 if (sym == SDLK_SPACE || sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) {
                     // Transport keys no-op on key up
+                } else if (drumIdx >= 0) {
+                    int track = ui.getDrumRowTargetTrack();
+                    int note = ui.getDrumRowNote(drumIdx);
+                    int ratchet = ui.getDrumRowRatchet(drumIdx);
+                    gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, false);
                 } else {
                     if (activeKeyNotes.count(sym) > 0) {
                         int note = activeKeyNotes[sym];

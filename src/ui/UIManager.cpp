@@ -261,7 +261,7 @@ void UIManager::init() {
 
     // Create the main flex container that holds the 3 columns
     lv_obj_t* mainFlex = lv_obj_create(mMainScreen);
-    lv_obj_set_size(mainFlex, 1024, 600);
+    lv_obj_set_size(mainFlex, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_style_pad_all(mainFlex, 0, 0);
     lv_obj_set_style_border_width(mainFlex, 0, 0);
     lv_obj_set_style_bg_opa(mainFlex, LV_OPA_TRANSP, 0);
@@ -271,10 +271,10 @@ void UIManager::init() {
     lv_obj_set_flex_flow(mainFlex, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(mainFlex, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
 
-    // 1. Create Left Mixer Bar (Fixed Width)
+    // 1. Create Left Mixer Bar (Fixed Width 90px, Full 800px Height)
     mLeftBar = lv_obj_create(mainFlex);
-    lv_obj_set_size(mLeftBar, 80, 600); // Narrower
-    lv_obj_set_style_pad_all(mLeftBar, 5, 0);
+    lv_obj_set_size(mLeftBar, 90, SCREEN_HEIGHT);
+    lv_obj_set_style_pad_all(mLeftBar, 6, 0);
     lv_obj_set_style_border_width(mLeftBar, 0, 0);
     lv_obj_set_style_bg_color(mLeftBar, lv_color_hex(0x1e1e1e), 0);
     lv_obj_set_style_radius(mLeftBar, 0, 0);
@@ -282,19 +282,19 @@ void UIManager::init() {
     lv_obj_set_flex_flow(mLeftBar, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(mLeftBar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // 2. Create Center Content Area (Flexible Width)
+    // 2. Create Center Content Area (Flexible Width, Full 800px Height)
     mCenterArea = lv_obj_create(mainFlex);
-    lv_obj_set_flex_grow(mCenterArea, 1); // Grow to take remaining space
-    lv_obj_set_height(mCenterArea, 600);
+    lv_obj_set_flex_grow(mCenterArea, 1); // Grow to take remaining space (~1090px)
+    lv_obj_set_height(mCenterArea, SCREEN_HEIGHT);
     lv_obj_set_style_pad_all(mCenterArea, 0, 0);
     lv_obj_set_style_border_width(mCenterArea, 0, 0);
     lv_obj_set_style_bg_color(mCenterArea, lv_color_hex(0x121212), 0); // Pure dark mode
     lv_obj_set_style_radius(mCenterArea, 0, 0);
 
-    // 3. Create Right Nav Bar (Fixed Width)
+    // 3. Create Right Nav Bar (Fixed Width 100px, Full 800px Height)
     mRightBar = lv_obj_create(mainFlex);
-    lv_obj_set_size(mRightBar, 100, 600); // Narrower
-    lv_obj_set_style_pad_all(mRightBar, 5, 0);
+    lv_obj_set_size(mRightBar, 100, SCREEN_HEIGHT);
+    lv_obj_set_style_pad_all(mRightBar, 6, 0);
     lv_obj_set_style_border_width(mRightBar, 0, 0);
     lv_obj_set_style_bg_color(mRightBar, lv_color_hex(0x1e1e1e), 0);
     lv_obj_set_style_radius(mRightBar, 0, 0);
@@ -383,7 +383,7 @@ void UIManager::init() {
 
     // 2-second vector/text-based splash screen overlay
     lv_obj_t* splash = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(splash, 1024, 600);
+    lv_obj_set_size(splash, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(splash, 0, 0);
     lv_obj_set_style_bg_color(splash, lv_color_hex(0x0a0a0a), 0);
     lv_obj_set_style_bg_opa(splash, LV_OPA_COVER, 0);
@@ -407,19 +407,20 @@ void UIManager::init() {
         lv_color_hex(0xFF3300)  // Orange/Red
     };
 
-    // Center coords for grid (centered at x=512, y=200, stretched 3x horizontally)
-    int gridX = 242;
-    int gridY = 110;
-    int gridSizeX = 540;
-    int gridSizeY = 180;
-    int stepSizeX = 108;
-    int stepSizeY = 36;
-    int numPts = 10;
+    // Center coords for grid (centered at x=640, y=320 on 1280x800 display)
+    int gridSizeX = 720;
+    int gridSizeY = 260;
+    int gridX = (SCREEN_WIDTH - gridSizeX) / 2; // 280
+    int gridY = 170;
+    int stepSizeX = gridSizeX / 5; // 144
+    int stepSizeY = gridSizeY / 5; // 52
+    int numPts = 12;
+    float squigglyLen = 75.0f;
 
     // Draw the 6 horizontal grid lines with a nice gradient
     for (int i = 0; i < 6; ++i) {
         lv_obj_t* hLine = lv_obj_create(splash);
-        lv_obj_set_size(hLine, gridSizeX, 2);
+        lv_obj_set_size(hLine, gridSizeX, 3);
         lv_obj_set_pos(hLine, gridX, gridY + i * stepSizeY);
         lv_obj_set_style_bg_color(hLine, colors[0], 0);
         lv_obj_set_style_bg_grad_color(hLine, colors[5], 0);
@@ -430,7 +431,7 @@ void UIManager::init() {
     // Draw the 6 vertical grid lines
     for (int i = 0; i < 6; ++i) {
         lv_obj_t* vLine = lv_obj_create(splash);
-        lv_obj_set_size(vLine, 2, gridSizeY);
+        lv_obj_set_size(vLine, 3, gridSizeY);
         lv_obj_set_pos(vLine, gridX + i * stepSizeX, gridY);
         lv_obj_set_style_bg_color(vLine, colors[i], 0);
         lv_obj_set_style_bg_opa(vLine, LV_OPA_COVER, 0);
@@ -446,16 +447,16 @@ void UIManager::init() {
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
-            float amp = 15.0f + i * 5.0f;
+            float amp = 20.0f + i * 6.0f;
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
-                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
-                pts[p].y = gridY - (int)(t * 55.0f);
+                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 35.0f);
+                pts[p].y = gridY - (int)(t * squigglyLen);
             }
             lv_obj_t* line = lv_line_create(splash);
             lv_line_set_points(line, pts, numPts);
             lv_obj_set_style_line_color(line, colors[i], 0);
-            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_set_style_line_width(line, 3, 0);
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
 
@@ -463,16 +464,16 @@ void UIManager::init() {
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
-            float amp = 15.0f + (5 - i) * 5.0f;
+            float amp = 20.0f + (5 - i) * 6.0f;
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
-                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
-                pts[p].y = (gridY + gridSizeY) + (int)(t * 55.0f);
+                pts[p].x = x_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 35.0f);
+                pts[p].y = (gridY + gridSizeY) + (int)(t * squigglyLen);
             }
             lv_obj_t* line = lv_line_create(splash);
             lv_line_set_points(line, pts, numPts);
             lv_obj_set_style_line_color(line, colors[i], 0);
-            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_set_style_line_width(line, 3, 0);
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
 
@@ -480,16 +481,16 @@ void UIManager::init() {
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
-            float amp = 15.0f + i * 5.0f;
+            float amp = 20.0f + i * 6.0f;
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
-                pts[p].x = gridX - (int)(t * 55.0f);
-                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+                pts[p].x = gridX - (int)(t * squigglyLen);
+                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 35.0f);
             }
             lv_obj_t* line = lv_line_create(splash);
             lv_line_set_points(line, pts, numPts);
             lv_obj_set_style_line_color(line, colors[i], 0);
-            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_set_style_line_width(line, 3, 0);
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
 
@@ -497,24 +498,24 @@ void UIManager::init() {
         {
             lv_point_precise_t* pts = new lv_point_precise_t[numPts];
             float direction = (i < 3) ? -1.0f : 1.0f;
-            float amp = 15.0f + (5 - i) * 5.0f;
+            float amp = 20.0f + (5 - i) * 6.0f;
             for (int p = 0; p < numPts; ++p) {
                 float t = (float)p / (numPts - 1);
-                pts[p].x = (gridX + gridSizeX) + (int)(t * 55.0f);
-                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 25.0f);
+                pts[p].x = (gridX + gridSizeX) + (int)(t * squigglyLen);
+                pts[p].y = y_val + (int)(sinf(t * 3.14159f) * direction * amp + t * direction * 35.0f);
             }
             lv_obj_t* line = lv_line_create(splash);
             lv_line_set_points(line, pts, numPts);
             lv_obj_set_style_line_color(line, colors[i], 0);
-            lv_obj_set_style_line_width(line, 2, 0);
+            lv_obj_set_style_line_width(line, 3, 0);
             lv_obj_add_event_cb(line, lineDeleteCb, LV_EVENT_DELETE, pts);
         }
     }
 
-    // Text labels container below the graphic (y = 370)
+    // Text labels container below the graphic
     lv_obj_t* textCont = lv_obj_create(splash);
-    lv_obj_set_size(textCont, 500, 150);
-    lv_obj_align(textCont, LV_ALIGN_TOP_MID, 0, 370);
+    lv_obj_set_size(textCont, 600, 160);
+    lv_obj_align(textCont, LV_ALIGN_TOP_MID, 0, 540);
     lv_obj_set_style_bg_opa(textCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(textCont, 0, 0);
     lv_obj_remove_flag(textCont, LV_OBJ_FLAG_SCROLLABLE);
@@ -524,7 +525,7 @@ void UIManager::init() {
 
     // Glowing orange accent line under text
     lv_obj_t* bar = lv_obj_create(textCont);
-    lv_obj_set_size(bar, 100, 3);
+    lv_obj_set_size(bar, 140, 4);
     lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4500), 0); // Loom Orange
     lv_obj_set_style_border_width(bar, 0, 0);
     lv_obj_set_style_radius(bar, 2, 0);
@@ -533,11 +534,11 @@ void UIManager::init() {
     lv_label_set_text(title, "LOOM");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_letter_space(title, 12, 0);
+    lv_obj_set_style_text_letter_space(title, 18, 0);
 
     lv_obj_t* subtitle = lv_label_create(textCont);
     lv_label_set_text(subtitle, "G R O O V E B O X");
-    lv_obj_set_style_text_font(subtitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(subtitle, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(subtitle, lv_color_hex(0x888888), 0);
 
     // LVGL timer to auto-delete splash screen after 2 seconds
@@ -566,7 +567,7 @@ lv_color_t UIManager::getTrackColor(int trackIndex) {
 void UIManager::createLeftMixerBar() {
     for (int i = 0; i < 8; ++i) {
         lv_obj_t* btn = lv_button_create(mLeftBar);
-        lv_obj_set_size(btn, 70, 65);
+        lv_obj_set_size(btn, 78, 88); // Enlarged for 10" 800px vertical space
         lv_obj_set_style_bg_color(btn, getTrackColor(i), 0);
         lv_obj_set_style_bg_opa(btn, mTrackEnabled[i] ? LV_OPA_50 : LV_OPA_10, 0);
         lv_obj_set_style_radius(btn, 8, 0);
@@ -599,10 +600,10 @@ void UIManager::createLeftMixerBar() {
 }
 
 void UIManager::createRightNavBar() {
-    const char* navLabels[] = {"Param", "FX", "Seq", "Arp", "Assign", LV_SYMBOL_SETTINGS, "Mix/Rec"};
-    for (int i = 0; i < 7; ++i) {
+    const char* navLabels[] = {"Param", "FX", "Seq", "Arp", "Assign", LV_SYMBOL_SETTINGS, "Mix/Rec", "Play"};
+    for (int i = 0; i < 8; ++i) {
         lv_obj_t* btn = lv_button_create(mRightBar);
-        lv_obj_set_size(btn, 90, 75); // Slightly smaller to fit 7
+        lv_obj_set_size(btn, 88, 86); // Enlarged for 10" 800px vertical space
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x333333), 0);
         lv_obj_set_style_radius(btn, 8, 0);
         
@@ -614,6 +615,8 @@ void UIManager::createRightNavBar() {
         lv_label_set_text(label, navLabels[i]);
         if (i == 5) {
             lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+        } else {
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
         }
         lv_obj_center(label);
         
@@ -672,6 +675,8 @@ void UIManager::updateHighlighting() {
     for (int i = 0; i < 8; ++i) {
         const auto& track = mEngine.getTracks()[i];
         bool isPlaying = isTrackPlaying(i);
+
+        lv_obj_set_style_bg_color(mTrackButtons[i], getTrackColor(i), 0);
 
         if (i == mActiveTrack) {
             lv_obj_set_style_border_width(mTrackButtons[i], 3, 0);
@@ -732,7 +737,7 @@ void UIManager::updateHighlighting() {
         }
     }
     
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 8; ++i) {
         if (i == mActiveNav) {
             lv_obj_set_style_border_width(mNavButtons[i], 3, 0);
             lv_obj_set_style_bg_color(mNavButtons[i], lv_color_hex(0x555555), 0);
@@ -785,8 +790,7 @@ void UIManager::trackBtnEventCb(lv_event_t* e) {
         ui->mActiveTrack = clickedTrack;
         ui->updateHighlighting();
         // Refresh the active screen so step colors + themed elements match the new track
-        if (ui->mActiveNav == 0 || ui->mActiveNav == 1 || ui->mActiveNav == 2 ||
-            ui->mActiveNav == 3 || ui->mActiveNav == 4 || ui->mActiveNav == 5) {
+        if (ui->mActiveNav >= 0 && ui->mActiveNav < 8) {
             ui->createCenterContentArea();
         }
     } else if (code == LV_EVENT_LONG_PRESSED) {
@@ -798,7 +802,7 @@ void UIManager::trackBtnEventCb(lv_event_t* e) {
 void UIManager::navBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 8; ++i) {
         if (ui->mNavButtons[i] == btn) {
             if (i != 5) {
                 ui->mSettingsActiveTabIdx = 0;
@@ -848,7 +852,7 @@ void UIManager::createCenterContentArea() {
 
     for (int c = 0; c < 16; ++c) {
         mArpColumns[c] = nullptr;
-        for (int r = 0; r < 4; ++r) {
+        for (int r = 0; r < 7; ++r) {
             mArpButtons[r][c] = nullptr;
         }
     }
@@ -927,6 +931,11 @@ void UIManager::createCenterContentArea() {
         return;
     }
 
+    if (mActiveNav == 7) { // Play
+        populatePlayScreen();
+        return;
+    }
+
     // Default tabview for other screens
     lv_obj_t* tabview = lv_tabview_create(mCenterArea);
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
@@ -941,88 +950,99 @@ void UIManager::createCenterContentArea() {
 }
 
 void UIManager::populateArpScreen() {
-    lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-    lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-    lv_tabview_set_tab_bar_size(tabview, 40);
-    
-    // Set active track theme color for the tab indicator line
-    lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-    lv_obj_set_style_bg_color(tab_bar, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
-    
-    // Set modern dark look for the tabview
-    lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-    lv_obj_set_style_border_width(tabview, 0, 0);
-
-    lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "Settings");
-    lv_obj_t* tab3 = lv_tabview_add_tab(tabview, "Pattern");
-
-    // Style the individual tab buttons in the tab bar
-    for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
-        lv_obj_t* btn = lv_obj_get_child(tab_bar, i);
-        lv_obj_set_style_text_font(btn, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(btn, lv_color_hex(0x888888), 0);
-        lv_obj_set_style_text_color(btn, getTrackColor(mActiveTrack), LV_STATE_CHECKED);
-    }
-
-    // Clear standard tab padding to give us full screen area
-    lv_obj_set_style_pad_all(tab1, 10, 0);
-    lv_obj_set_style_pad_all(tab3, 10, 0);
-
-    // =========================================================================
-    // --- Tab 1: Settings (3-Column Dashboard Card Layout) ---
-    // =========================================================================
-    lv_obj_set_flex_flow(tab1, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(tab1, 20, 0);
-
     lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    lv_obj_t* arpRoot = lv_obj_create(mCenterArea);
+    lv_obj_set_size(arpRoot, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_color(arpRoot, lv_color_hex(0x121212), 0);
+    lv_obj_set_style_border_width(arpRoot, 0, 0);
+    lv_obj_set_style_pad_all(arpRoot, 8, 0);
+    lv_obj_remove_flag(arpRoot, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(arpRoot, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(arpRoot, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(arpRoot, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    const auto& arp = mEngine.getTracks()[mActiveTrack].arpeggiator;
+    bool isArpOn = arp.getMode() != ArpMode::OFF;
+
     // Card background & border style helper
     auto applyCardStyle = [trackColor](lv_obj_t* card) {
         lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 15, 0);
+        lv_obj_set_style_radius(card, 10, 0);
+        lv_obj_set_style_pad_all(card, 6, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_layout(card, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     };
 
-    // --- Column 1: Note Arpeggiator ---
-    lv_obj_t* col1 = lv_obj_create(tab1);
-    lv_obj_set_size(col1, 240, 460);
+    // =========================================================================
+    // --- ROW 1: TOP SETTINGS CARDS (Height: 215px) ---
+    // =========================================================================
+    lv_obj_t* topSettingsRow = lv_obj_create(arpRoot);
+    lv_obj_set_size(topSettingsRow, lv_pct(100), 215);
+    lv_obj_set_style_bg_opa(topSettingsRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(topSettingsRow, 0, 0);
+    lv_obj_set_style_pad_all(topSettingsRow, 0, 0);
+    lv_obj_remove_flag(topSettingsRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(topSettingsRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(topSettingsRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(topSettingsRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // --- Card 1: Note Arpeggiator ---
+    lv_obj_t* col1 = lv_obj_create(topSettingsRow);
+    lv_obj_set_size(col1, 350, 215);
     applyCardStyle(col1);
 
-    lv_obj_t* title1 = lv_label_create(col1);
+    // Header row: Title + Arp On/Off Button
+    lv_obj_t* c1Header = lv_obj_create(col1);
+    lv_obj_set_size(c1Header, 335, 34);
+    lv_obj_set_style_bg_opa(c1Header, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c1Header, 0, 0);
+    lv_obj_set_style_pad_all(c1Header, 0, 0);
+    lv_obj_remove_flag(c1Header, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c1Header, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c1Header, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c1Header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* title1 = lv_label_create(c1Header);
     lv_label_set_text(title1, "NOTE ARPEGGIATOR");
-    lv_obj_set_style_text_font(title1, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title1, getTrackColor(mActiveTrack), 0); // Active track theme color
+    lv_obj_set_style_text_font(title1, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(title1, trackColor, 0);
 
-    const auto& arp = mEngine.getTracks()[mActiveTrack].arpeggiator;
-    bool isArpOn = arp.getMode() != ArpMode::OFF;
-
-    // Arp ON/OFF Toggle Button
-    mArpToggleBtn = lv_button_create(col1);
-    lv_obj_set_size(mArpToggleBtn, 200, 38);
+    mArpToggleBtn = lv_button_create(c1Header);
+    lv_obj_set_size(mArpToggleBtn, 120, 30);
     lv_obj_add_flag(mArpToggleBtn, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_radius(mArpToggleBtn, 8, 0);
+    lv_obj_set_style_radius(mArpToggleBtn, 6, 0);
     lv_obj_t* toggleLbl = lv_label_create(mArpToggleBtn);
     if (isArpOn) {
         lv_obj_add_state(mArpToggleBtn, LV_STATE_CHECKED);
-        lv_label_set_text(toggleLbl, "Arpeggiator: ON");
-        lv_obj_set_style_bg_color(mArpToggleBtn, getTrackColor(mActiveTrack), 0);
+        lv_label_set_text(toggleLbl, "Arp: ON");
+        lv_obj_set_style_bg_color(mArpToggleBtn, trackColor, 0);
     } else {
         lv_obj_set_style_bg_color(mArpToggleBtn, lv_color_hex(0x444444), 0);
-        lv_label_set_text(toggleLbl, "Arpeggiator: OFF");
+        lv_label_set_text(toggleLbl, "Arp: OFF");
     }
+    lv_obj_set_style_text_font(toggleLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(toggleLbl);
     lv_obj_add_event_cb(mArpToggleBtn, arpToggleBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Note Pattern
-    lv_obj_t* patternGrp = lv_obj_create(col1);
-    lv_obj_set_size(patternGrp, 210, 75);
+    // Dropdowns Row (Pattern + Rate)
+    lv_obj_t* c1DdRow = lv_obj_create(col1);
+    lv_obj_set_size(c1DdRow, 335, 78);
+    lv_obj_set_style_bg_opa(c1DdRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c1DdRow, 0, 0);
+    lv_obj_set_style_pad_all(c1DdRow, 0, 0);
+    lv_obj_remove_flag(c1DdRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c1DdRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c1DdRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c1DdRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* patternGrp = lv_obj_create(c1DdRow);
+    lv_obj_set_size(patternGrp, 162, 75);
     lv_obj_set_style_bg_opa(patternGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(patternGrp, 0, 0);
     lv_obj_set_style_pad_all(patternGrp, 0, 0);
@@ -1032,12 +1052,12 @@ void UIManager::populateArpScreen() {
 
     lv_obj_t* patternLbl = lv_label_create(patternGrp);
     lv_label_set_text(patternLbl, "Pattern");
-    lv_obj_set_style_text_font(patternLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(patternLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(patternLbl, lv_color_hex(0x888888), 0);
     
     mArpPatternDd = lv_dropdown_create(patternGrp);
     lv_dropdown_set_options(mArpPatternDd, "Up\nDown\nUp/Down\nStagger Up\nStagger Down\nRandom\nBach\nBrownian\nConverge\nDiverge");
-    lv_obj_set_width(mArpPatternDd, 200);
+    lv_obj_set_width(mArpPatternDd, 155);
     lv_obj_t* patternList = lv_dropdown_get_list(mArpPatternDd);
     lv_obj_set_style_max_height(patternList, 200, 0);
     int activeMode = static_cast<int>(arp.getMode());
@@ -1048,9 +1068,8 @@ void UIManager::populateArpScreen() {
     }
     lv_obj_add_event_cb(mArpPatternDd, arpPatternDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Rate / Division
-    lv_obj_t* rateGrp = lv_obj_create(col1);
-    lv_obj_set_size(rateGrp, 210, 75);
+    lv_obj_t* rateGrp = lv_obj_create(c1DdRow);
+    lv_obj_set_size(rateGrp, 162, 75);
     lv_obj_set_style_bg_opa(rateGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(rateGrp, 0, 0);
     lv_obj_set_style_pad_all(rateGrp, 0, 0);
@@ -1060,20 +1079,37 @@ void UIManager::populateArpScreen() {
 
     lv_obj_t* rateLbl = lv_label_create(rateGrp);
     lv_label_set_text(rateLbl, "Rate / Division");
-    lv_obj_set_style_text_font(rateLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(rateLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(rateLbl, lv_color_hex(0x888888), 0);
 
     mArpRateDd = lv_dropdown_create(rateGrp);
     lv_dropdown_set_options(mArpRateDd, "1/2.\n1/2\n1/2T\n1/4.\n1/4\n1/4T\n1/8.\n1/8\n1/8T\n1/16.\n1/16\n1/16T\n1/32.\n1/32\n1/32T\n1/48\n1/64");
-    lv_obj_set_width(mArpRateDd, 200);
-    lv_dropdown_set_selected(mArpRateDd, 4); // Default 1/4
+    lv_obj_set_width(mArpRateDd, 155);
+    const auto& trackRef = mEngine.getTracks()[mActiveTrack];
+    float curRate = trackRef.mArpRate;
+    int curDivMode = trackRef.mArpDivisionMode;
+    int selectedRateIdx = 4; // Default 1/4
+    if (std::abs(curRate - 8.0f) < 0.01f) {
+        selectedRateIdx = (curDivMode == 1) ? 0 : (curDivMode == 2 ? 2 : 1);
+    } else if (std::abs(curRate - 4.0f) < 0.01f) {
+        selectedRateIdx = (curDivMode == 1) ? 3 : (curDivMode == 2 ? 5 : 4);
+    } else if (std::abs(curRate - 2.0f) < 0.01f) {
+        selectedRateIdx = (curDivMode == 1) ? 6 : (curDivMode == 2 ? 8 : 7);
+    } else if (std::abs(curRate - 1.0f) < 0.01f) {
+        selectedRateIdx = (curDivMode == 1) ? 9 : (curDivMode == 2 ? 11 : 10);
+    } else if (std::abs(curRate - 0.5f) < 0.01f) {
+        selectedRateIdx = (curDivMode == 1) ? 12 : (curDivMode == 2 ? 14 : 13);
+    } else if (std::abs(curRate - 0.25f) < 0.01f) {
+        selectedRateIdx = 16;
+    }
+    lv_dropdown_set_selected(mArpRateDd, selectedRateIdx);
     lv_obj_t* rateList = lv_dropdown_get_list(mArpRateDd);
     lv_obj_set_style_max_height(rateList, 200, 0);
     lv_obj_add_event_cb(mArpRateDd, arpRateDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Octaves Slider
+    // Octaves Slider Row
     lv_obj_t* octGrp = lv_obj_create(col1);
-    lv_obj_set_size(octGrp, 210, 75);
+    lv_obj_set_size(octGrp, 335, 52);
     lv_obj_set_style_bg_opa(octGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(octGrp, 0, 0);
     lv_obj_set_style_pad_all(octGrp, 0, 0);
@@ -1084,50 +1120,70 @@ void UIManager::populateArpScreen() {
     lv_obj_t* octLbl = lv_label_create(octGrp);
     int activeOctaves = arp.getOctaves();
     lv_label_set_text_fmt(octLbl, "Octaves: %+d", activeOctaves);
-    lv_obj_set_style_text_font(octLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(octLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(octLbl, lv_color_hex(0x888888), 0);
 
     mArpOctavesSlider = lv_slider_create(octGrp);
-    lv_obj_set_size(mArpOctavesSlider, 185, 12);
+    lv_obj_set_size(mArpOctavesSlider, 280, 12);
     lv_slider_set_range(mArpOctavesSlider, -3, 3);
     lv_slider_set_value(mArpOctavesSlider, activeOctaves, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mArpOctavesSlider, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mArpOctavesSlider, getTrackColor(mActiveTrack), LV_PART_KNOB);
-    lv_obj_set_style_pad_hor(mArpOctavesSlider, 10, 0); // Prevent handle cutout at extremes
+    lv_obj_set_style_bg_color(mArpOctavesSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mArpOctavesSlider, trackColor, LV_PART_KNOB);
+    lv_obj_set_style_pad_hor(mArpOctavesSlider, 8, 0);
     lv_obj_set_user_data(mArpOctavesSlider, octLbl);
     lv_obj_add_event_cb(mArpOctavesSlider, octavesSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-
-    // --- Column 2: Playback & Rhythm ---
-    lv_obj_t* col2 = lv_obj_create(tab1);
-    lv_obj_set_size(col2, 240, 460);
+    // --- Card 2: Playback & Rhythm ---
+    lv_obj_t* col2 = lv_obj_create(topSettingsRow);
+    lv_obj_set_size(col2, 350, 215);
     applyCardStyle(col2);
 
-    lv_obj_t* title2 = lv_label_create(col2);
-    lv_label_set_text(title2, "PLAYBACK");
-    lv_obj_set_style_text_font(title2, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title2, getTrackColor(mActiveTrack), 0); // Active track theme color
+    // Header row: Title + Latch Toggle
+    lv_obj_t* c2Header = lv_obj_create(col2);
+    lv_obj_set_size(c2Header, 335, 34);
+    lv_obj_set_style_bg_opa(c2Header, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c2Header, 0, 0);
+    lv_obj_set_style_pad_all(c2Header, 0, 0);
+    lv_obj_remove_flag(c2Header, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c2Header, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c2Header, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c2Header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Latch Button
-    mArpLatchBtn = lv_button_create(col2);
-    lv_obj_set_size(mArpLatchBtn, 200, 45);
+    lv_obj_t* title2 = lv_label_create(c2Header);
+    lv_label_set_text(title2, "PLAYBACK & TIMING");
+    lv_obj_set_style_text_font(title2, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(title2, trackColor, 0);
+
+    mArpLatchBtn = lv_button_create(c2Header);
+    lv_obj_set_size(mArpLatchBtn, 120, 30);
     lv_obj_add_flag(mArpLatchBtn, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_radius(mArpLatchBtn, 8, 0);
+    lv_obj_set_style_radius(mArpLatchBtn, 6, 0);
     lv_obj_t* latchLbl = lv_label_create(mArpLatchBtn);
     if (arp.isLatched()) {
         lv_obj_add_state(mArpLatchBtn, LV_STATE_CHECKED);
         lv_label_set_text(latchLbl, "Latch: ON");
-        lv_obj_set_style_bg_color(mArpLatchBtn, getTrackColor(mActiveTrack), 0);
+        lv_obj_set_style_bg_color(mArpLatchBtn, trackColor, 0);
     } else {
         lv_obj_set_style_bg_color(mArpLatchBtn, lv_color_hex(0x444444), 0);
         lv_label_set_text(latchLbl, "Latch: OFF");
     }
+    lv_obj_set_style_text_font(latchLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(latchLbl);
     lv_obj_add_event_cb(mArpLatchBtn, latchBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Strum Arc
-    lv_obj_t* strumGrp = lv_obj_create(col2);
-    lv_obj_set_size(strumGrp, 210, 120);
+    // Arcs Row (Strum + Probability)
+    lv_obj_t* c2ArcsRow = lv_obj_create(col2);
+    lv_obj_set_size(c2ArcsRow, 335, 140);
+    lv_obj_set_style_bg_opa(c2ArcsRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c2ArcsRow, 0, 0);
+    lv_obj_set_style_pad_all(c2ArcsRow, 0, 0);
+    lv_obj_remove_flag(c2ArcsRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c2ArcsRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c2ArcsRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c2ArcsRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* strumGrp = lv_obj_create(c2ArcsRow);
+    lv_obj_set_size(strumGrp, 140, 135);
     lv_obj_set_style_bg_opa(strumGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(strumGrp, 0, 0);
     lv_obj_set_style_pad_all(strumGrp, 0, 0);
@@ -1137,13 +1193,13 @@ void UIManager::populateArpScreen() {
 
     lv_obj_t* strumLbl = lv_label_create(strumGrp);
     lv_label_set_text(strumLbl, "Strum");
-    lv_obj_set_style_text_font(strumLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(strumLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(strumLbl, lv_color_hex(0x888888), 0);
 
     mArpStrumArc = lv_arc_create(strumGrp);
-    lv_obj_set_size(mArpStrumArc, 90, 90);
+    lv_obj_set_size(mArpStrumArc, 80, 80);
     lv_arc_set_range(mArpStrumArc, 0, 100);
-    lv_obj_set_style_arc_color(mArpStrumArc, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(mArpStrumArc, trackColor, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(mArpStrumArc, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_style_border_width(mArpStrumArc, 0, LV_PART_KNOB);
     lv_obj_set_style_pad_all(mArpStrumArc, 0, LV_PART_KNOB);
@@ -1152,14 +1208,13 @@ void UIManager::populateArpScreen() {
     
     lv_obj_t* strumValLbl = lv_label_create(mArpStrumArc);
     lv_label_set_text_fmt(strumValLbl, "%d%%", activeStrum);
-    lv_obj_set_style_text_font(strumValLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(strumValLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(strumValLbl);
     lv_obj_set_user_data(mArpStrumArc, strumValLbl);
     lv_obj_add_event_cb(mArpStrumArc, strumArcEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Probability Arc
-    lv_obj_t* probGrp = lv_obj_create(col2);
-    lv_obj_set_size(probGrp, 210, 120);
+    lv_obj_t* probGrp = lv_obj_create(c2ArcsRow);
+    lv_obj_set_size(probGrp, 140, 135);
     lv_obj_set_style_bg_opa(probGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(probGrp, 0, 0);
     lv_obj_set_style_pad_all(probGrp, 0, 0);
@@ -1169,13 +1224,13 @@ void UIManager::populateArpScreen() {
 
     lv_obj_t* probLbl = lv_label_create(probGrp);
     lv_label_set_text(probLbl, "Probability");
-    lv_obj_set_style_text_font(probLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(probLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(probLbl, lv_color_hex(0x888888), 0);
 
     mArpProbArc = lv_arc_create(probGrp);
-    lv_obj_set_size(mArpProbArc, 90, 90);
+    lv_obj_set_size(mArpProbArc, 80, 80);
     lv_arc_set_range(mArpProbArc, 0, 100);
-    lv_obj_set_style_arc_color(mArpProbArc, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(mArpProbArc, trackColor, LV_PART_INDICATOR);
     lv_obj_set_style_bg_opa(mArpProbArc, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_style_border_width(mArpProbArc, 0, LV_PART_KNOB);
     lv_obj_set_style_pad_all(mArpProbArc, 0, LV_PART_KNOB);
@@ -1184,42 +1239,62 @@ void UIManager::populateArpScreen() {
 
     lv_obj_t* probValLbl = lv_label_create(mArpProbArc);
     lv_label_set_text_fmt(probValLbl, "%d%%", activeProb);
-    lv_obj_set_style_text_font(probValLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(probValLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(probValLbl);
     lv_obj_set_user_data(mArpProbArc, probValLbl);
     lv_obj_add_event_cb(mArpProbArc, probArcEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-
-    // --- Column 3: Chord Generator ---
-    lv_obj_t* col3 = lv_obj_create(tab1);
-    lv_obj_set_size(col3, 240, 460);
+    // --- Card 3: Chord Generator ---
+    lv_obj_t* col3 = lv_obj_create(topSettingsRow);
+    lv_obj_set_size(col3, 350, 215);
     applyCardStyle(col3);
 
-    lv_obj_t* title3 = lv_label_create(col3);
-    lv_label_set_text(title3, "CHORD GENERATOR");
-    lv_obj_set_style_text_font(title3, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title3, getTrackColor(mActiveTrack), 0); // Active track theme color
+    // Header row: Title + Chord Gen Button
+    lv_obj_t* c3Header = lv_obj_create(col3);
+    lv_obj_set_size(c3Header, 335, 34);
+    lv_obj_set_style_bg_opa(c3Header, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c3Header, 0, 0);
+    lv_obj_set_style_pad_all(c3Header, 0, 0);
+    lv_obj_remove_flag(c3Header, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c3Header, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c3Header, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c3Header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Chord Gen Button
-    mArpChordGenBtn = lv_button_create(col3);
-    lv_obj_set_size(mArpChordGenBtn, 200, 45);
+    lv_obj_t* title3 = lv_label_create(c3Header);
+    lv_label_set_text(title3, "CHORD GENERATOR");
+    lv_obj_set_style_text_font(title3, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(title3, trackColor, 0);
+
+    mArpChordGenBtn = lv_button_create(c3Header);
+    lv_obj_set_size(mArpChordGenBtn, 120, 30);
     lv_obj_add_flag(mArpChordGenBtn, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_radius(mArpChordGenBtn, 8, 0);
+    lv_obj_set_style_radius(mArpChordGenBtn, 6, 0);
     lv_obj_t* chEnLbl = lv_label_create(mArpChordGenBtn);
     if (arp.isChordProgEnabled()) {
         lv_obj_add_state(mArpChordGenBtn, LV_STATE_CHECKED);
-        lv_label_set_text(chEnLbl, "Chord Gen: ON");
-        lv_obj_set_style_bg_color(mArpChordGenBtn, getTrackColor(mActiveTrack), 0);
+        lv_label_set_text(chEnLbl, "Chord: ON");
+        lv_obj_set_style_bg_color(mArpChordGenBtn, trackColor, 0);
     } else {
         lv_obj_set_style_bg_color(mArpChordGenBtn, lv_color_hex(0x444444), 0);
-        lv_label_set_text(chEnLbl, "Chord Gen: OFF");
+        lv_label_set_text(chEnLbl, "Chord: OFF");
     }
+    lv_obj_set_style_text_font(chEnLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(chEnLbl);
     lv_obj_add_event_cb(mArpChordGenBtn, chEnBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Mood Dropdown
-    lv_obj_t* moodGrp = lv_obj_create(col3);
-    lv_obj_set_size(moodGrp, 210, 75);
+    // Dropdowns Row (Mood + Complexity)
+    lv_obj_t* c3DdRow = lv_obj_create(col3);
+    lv_obj_set_size(c3DdRow, 335, 78);
+    lv_obj_set_style_bg_opa(c3DdRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(c3DdRow, 0, 0);
+    lv_obj_set_style_pad_all(c3DdRow, 0, 0);
+    lv_obj_remove_flag(c3DdRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(c3DdRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(c3DdRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c3DdRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* moodGrp = lv_obj_create(c3DdRow);
+    lv_obj_set_size(moodGrp, 162, 75);
     lv_obj_set_style_bg_opa(moodGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(moodGrp, 0, 0);
     lv_obj_set_style_pad_all(moodGrp, 0, 0);
@@ -1228,21 +1303,20 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_align(moodGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* moodLbl = lv_label_create(moodGrp);
-    lv_label_set_text(moodLbl, "Chord Mood");
-    lv_obj_set_style_text_font(moodLbl, &lv_font_montserrat_12, 0);
+    lv_label_set_text(moodLbl, "Mood");
+    lv_obj_set_style_text_font(moodLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(moodLbl, lv_color_hex(0x888888), 0);
 
     mArpChordMoodDd = lv_dropdown_create(moodGrp);
     lv_dropdown_set_options(mArpChordMoodDd, "Calm\nHappy\nSad\nSpooky\nAngry\nExcited\nGrandiose\nTense\nEthereal\nRomantic\nMysterious\nUplifting\nMelancholy\nDark\nDreamy\nMajestic");
-    lv_obj_set_width(mArpChordMoodDd, 200);
+    lv_obj_set_width(mArpChordMoodDd, 155);
     lv_dropdown_set_selected(mArpChordMoodDd, arp.getChordProgMood());
     lv_obj_t* chMoodList = lv_dropdown_get_list(mArpChordMoodDd);
     lv_obj_set_style_max_height(chMoodList, 200, 0);
     lv_obj_add_event_cb(mArpChordMoodDd, arpChordMoodDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Complexity Dropdown
-    lv_obj_t* compGrp = lv_obj_create(col3);
-    lv_obj_set_size(compGrp, 210, 75);
+    lv_obj_t* compGrp = lv_obj_create(c3DdRow);
+    lv_obj_set_size(compGrp, 162, 75);
     lv_obj_set_style_bg_opa(compGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(compGrp, 0, 0);
     lv_obj_set_style_pad_all(compGrp, 0, 0);
@@ -1251,21 +1325,21 @@ void UIManager::populateArpScreen() {
     lv_obj_set_flex_align(compGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* compLbl = lv_label_create(compGrp);
-    lv_label_set_text(compLbl, "Chord Complexity");
-    lv_obj_set_style_text_font(compLbl, &lv_font_montserrat_12, 0);
+    lv_label_set_text(compLbl, "Complexity");
+    lv_obj_set_style_text_font(compLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(compLbl, lv_color_hex(0x888888), 0);
 
     mArpChordComplexityDd = lv_dropdown_create(compGrp);
     lv_dropdown_set_options(mArpChordComplexityDd, "Simple\nComplex\nColtrane");
-    lv_obj_set_width(mArpChordComplexityDd, 200);
+    lv_obj_set_width(mArpChordComplexityDd, 155);
     lv_dropdown_set_selected(mArpChordComplexityDd, arp.getChordProgComplexity());
     lv_obj_t* chCompList = lv_dropdown_get_list(mArpChordComplexityDd);
     lv_obj_set_style_max_height(chCompList, 200, 0);
     lv_obj_add_event_cb(mArpChordComplexityDd, arpChordComplexityDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Inversions Slider
+    // Inversions Slider Row
     lv_obj_t* invGrp = lv_obj_create(col3);
-    lv_obj_set_size(invGrp, 210, 75);
+    lv_obj_set_size(invGrp, 335, 52);
     lv_obj_set_style_bg_opa(invGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(invGrp, 0, 0);
     lv_obj_set_style_pad_all(invGrp, 0, 0);
@@ -1276,50 +1350,44 @@ void UIManager::populateArpScreen() {
     lv_obj_t* invLbl = lv_label_create(invGrp);
     int activeInversion = arp.getInversion();
     lv_label_set_text_fmt(invLbl, "Inversions: %+d", activeInversion);
-    lv_obj_set_style_text_font(invLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(invLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(invLbl, lv_color_hex(0x888888), 0);
 
     mArpInversionsSlider = lv_slider_create(invGrp);
-    lv_obj_set_size(mArpInversionsSlider, 185, 12);
+    lv_obj_set_size(mArpInversionsSlider, 280, 12);
     lv_slider_set_range(mArpInversionsSlider, -3, 3);
     lv_slider_set_value(mArpInversionsSlider, activeInversion, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mArpInversionsSlider, getTrackColor(mActiveTrack), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mArpInversionsSlider, getTrackColor(mActiveTrack), LV_PART_KNOB);
-    lv_obj_set_style_pad_hor(mArpInversionsSlider, 10, 0); // Prevent handle cutout at extremes
+    lv_obj_set_style_bg_color(mArpInversionsSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mArpInversionsSlider, trackColor, LV_PART_KNOB);
+    lv_obj_set_style_pad_hor(mArpInversionsSlider, 8, 0);
     lv_obj_set_user_data(mArpInversionsSlider, invLbl);
     lv_obj_add_event_cb(mArpInversionsSlider, inversionsSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-
     // =========================================================================
-    // --- Tab 3: Pattern (Custom 16-Step Column Grid with Dividers) ---
+    // --- ROW 2: 16-STEP PATTERN GRID (Height: ~430px) ---
     // =========================================================================
-    lv_obj_set_layout(tab3, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab3, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab3, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab3, 20, 0);
-
-    // 1. Grid Row Container (Holds labels + columns, increased height to 315)
-    lv_obj_t* gridRow = lv_obj_create(tab3);
-    lv_obj_set_size(gridRow, 760, 315);
+    lv_obj_t* gridRow = lv_obj_create(arpRoot);
+    lv_obj_set_size(gridRow, 1060, 440);
     lv_obj_set_style_bg_opa(gridRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(gridRow, 0, 0);
     lv_obj_set_style_pad_all(gridRow, 0, 0);
-    lv_obj_set_style_pad_column(gridRow, 6, 0);
+    lv_obj_set_style_pad_column(gridRow, 4, 0);
+    lv_obj_remove_flag(gridRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(gridRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(gridRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(gridRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Create Row Label Column (Rt, +1, -1, etc.) at leftmost index (increased height to 315)
+    // Row Label Column (Rt, +1, -1, etc.)
     lv_obj_t* lblCol = lv_obj_create(gridRow);
-    lv_obj_set_size(lblCol, 30, 315);
+    lv_obj_set_size(lblCol, 40, 435);
     lv_obj_set_style_bg_opa(lblCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lblCol, 0, 0);
     lv_obj_set_style_pad_all(lblCol, 0, 0);
+    lv_obj_remove_flag(lblCol, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(lblCol, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(lblCol, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(lblCol, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(lblCol, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER);
 
-    // 0-spacer at top matching column number height
     lv_obj_t* topSpacer = lv_label_create(lblCol);
     lv_label_set_text(topSpacer, " ");
     lv_obj_set_style_text_font(topSpacer, &lv_font_montserrat_12, 0);
@@ -1329,41 +1397,42 @@ void UIManager::populateArpScreen() {
         lv_obj_t* rl = lv_label_create(lblCol);
         lv_label_set_text(rl, rowLabels[r]);
         lv_obj_set_style_text_font(rl, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(rl, lv_color_hex(0xAAAAAA), 0);
+        lv_obj_set_style_text_color(rl, lv_color_hex(0xCCCCCC), 0);
     }
 
-    // 2. Add the 16 step columns
+    // 16 Step Columns (Button size: 48x48px)
     for (int c = 0; c < 16; ++c) {
         lv_obj_t* colCont = lv_obj_create(gridRow);
         mArpColumns[c] = colCont;
-        lv_obj_set_size(colCont, 38, 315);
+        lv_obj_set_size(colCont, 56, 435);
         lv_obj_set_style_bg_opa(colCont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(colCont, 0, 0);
         lv_obj_set_style_pad_all(colCont, 0, 0);
+        lv_obj_remove_flag(colCont, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_layout(colCont, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(colCont, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(colCont, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-        // Column label 1-16; beat-start columns (1,5,9,13) are bolder
+        // Column label 1-16
         lv_obj_t* colNum = lv_label_create(colCont);
         lv_label_set_text_fmt(colNum, "%d", c + 1);
         bool isBeatStart = (c == 0 || c == 4 || c == 8 || c == 12);
-        lv_obj_set_style_text_font(colNum, isBeatStart ? &lv_font_montserrat_14 : &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(colNum, isBeatStart ? lv_color_hex(0xCCCCCC) : lv_color_hex(0x666666), 0);
+        lv_obj_set_style_text_font(colNum, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(colNum, isBeatStart ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x777777), 0);
 
-        // Create 7 buttons for the 7 rows (uncompressed 36x36px size)
+        // 7 buttons for the 7 rows
         for (int r = 0; r < 7; ++r) {
             lv_obj_t* btn = lv_button_create(colCont);
-            lv_obj_set_size(btn, 36, 36);
+            lv_obj_set_size(btn, 48, 48);
             lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE);
-            lv_obj_set_style_radius(btn, 6, 0); // Soft rounded rectangle
+            lv_obj_set_style_radius(btn, 6, 0);
             lv_obj_set_style_border_width(btn, 0, 0);
 
             // Inactive (default) background
-            lv_obj_set_style_bg_color(btn, lv_color_hex(0x252525), 0);
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x242424), 0);
             lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
 
-            // Row-specific checked colors (7-row scale)
+            // Row-specific checked colors
             lv_color_t checkedColor;
             if (r == 0) checkedColor = lv_color_hex(0x4B0082);      // +3 (Indigo)
             else if (r == 1) checkedColor = lv_color_hex(0x8A2BE2); // +2 (Blue Violet)
@@ -1385,100 +1454,157 @@ void UIManager::populateArpScreen() {
             lv_obj_set_style_bg_color(btn, checkedColor, LV_STATE_CHECKED);
             lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, LV_STATE_CHECKED);
 
-            // Event Callback
             lv_obj_set_user_data(btn, (void*)(uintptr_t)(r * 16 + c));
             lv_obj_add_event_cb(btn, arpButtonEventCb, LV_EVENT_VALUE_CHANGED, this);
             
             mArpButtons[r][c] = btn;
         }
-
     }
 
-    // 3. Bottom Row: Legend (Left) & Randomize Rhythm (Right)
-    lv_obj_t* bottomRow = lv_obj_create(tab3);
-    lv_obj_set_size(bottomRow, 760, 50);
+    // =========================================================================
+    // --- ROW 3: BOTTOM ACTIONS (Height: ~45px) ---
+    // =========================================================================
+    lv_obj_t* bottomRow = lv_obj_create(arpRoot);
+    lv_obj_set_size(bottomRow, lv_pct(100), 45);
     lv_obj_set_style_bg_opa(bottomRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bottomRow, 0, 0);
     lv_obj_set_style_pad_all(bottomRow, 0, 0);
+    lv_obj_remove_flag(bottomRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(bottomRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(bottomRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(bottomRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Legend container (increased width to 520 for 7 items)
+    // Left: Legend
     lv_obj_t* legendCont = lv_obj_create(bottomRow);
-    lv_obj_set_size(legendCont, 520, 40);
+    lv_obj_set_size(legendCont, 420, 40);
     lv_obj_set_style_bg_opa(legendCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(legendCont, 0, 0);
     lv_obj_set_style_pad_all(legendCont, 0, 0);
+    lv_obj_remove_flag(legendCont, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(legendCont, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(legendCont, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(legendCont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(legendCont, 10, 0);
+    lv_obj_set_style_pad_column(legendCont, 8, 0);
 
     const char* legendTexts[] = {"-3", "-2", "-1", "Rt", "+1", "+2", "+3"};
     lv_color_t legendColors[] = {
-        lv_color_hex(0xDC143C), // -3 (Crimson)
-        lv_color_hex(0xFF4500), // -2 (Orange Red)
-        lv_color_hex(0xFF8C00), // -1 (Dark Orange)
-        lv_color_hex(0x1E90FF), // Rt (Dodger Blue)
-        lv_color_hex(0x32CD32), // +1 (Lime Green)
-        lv_color_hex(0x8A2BE2), // +2 (Blue Violet)
-        lv_color_hex(0x4B0082)  // +3 (Indigo)
+        lv_color_hex(0xDC143C),
+        lv_color_hex(0xFF4500),
+        lv_color_hex(0xFF8C00),
+        lv_color_hex(0x1E90FF),
+        lv_color_hex(0x32CD32),
+        lv_color_hex(0x8A2BE2),
+        lv_color_hex(0x4B0082)
     };
 
     for (int i = 0; i < 7; ++i) {
-        // Draw tiny color dot
-        lv_obj_t* dot = lv_obj_create(legendCont);
-        lv_obj_set_size(dot, 8, 8);
+        lv_obj_t* legItem = lv_obj_create(legendCont);
+        lv_obj_set_size(legItem, 52, 34);
+        lv_obj_set_style_bg_opa(legItem, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(legItem, 0, 0);
+        lv_obj_set_style_pad_all(legItem, 0, 0);
+        lv_obj_remove_flag(legItem, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_layout(legItem, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(legItem, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(legItem, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_column(legItem, 4, 0);
+
+        lv_obj_t* dot = lv_obj_create(legItem);
+        lv_obj_set_size(dot, 10, 10);
         lv_obj_set_style_bg_color(dot, legendColors[i], 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_border_width(dot, 0, 0);
 
-        lv_obj_t* txt = lv_label_create(legendCont);
+        lv_obj_t* txt = lv_label_create(legItem);
         lv_label_set_text(txt, legendTexts[i]);
-        lv_obj_set_style_text_font(txt, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(txt, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(txt, legendColors[i], 0);
-        lv_obj_set_style_text_decor(txt, LV_TEXT_DECOR_NONE, 0);
     }
 
-    // Randomize Buttons Container (Right, slightly reduced to fit)
-    lv_obj_t* randCont = lv_obj_create(bottomRow);
-    lv_obj_set_size(randCont, 220, 40);
-    lv_obj_set_style_bg_opa(randCont, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(randCont, 0, 0);
-    lv_obj_set_style_pad_all(randCont, 0, 0);
-    lv_obj_set_layout(randCont, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(randCont, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(randCont, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    // Center/Right Controls: Copy To Dropdown, Rand Rhythm, Rand Notes, MIDI Learn
+    lv_obj_t* rightActCont = lv_obj_create(bottomRow);
+    lv_obj_set_size(rightActCont, 620, 42);
+    lv_obj_set_style_bg_opa(rightActCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(rightActCont, 0, 0);
+    lv_obj_set_style_pad_all(rightActCont, 0, 0);
+    lv_obj_remove_flag(rightActCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(rightActCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(rightActCont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(rightActCont, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(rightActCont, 10, 0);
+
+    // "Copy To..." Track Dropdown
+    mArpCopyToDd = lv_dropdown_create(rightActCont);
+    lv_dropdown_set_options(mArpCopyToDd, "Copy To...\nTrack 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
+    lv_obj_set_size(mArpCopyToDd, 120, 36);
+    lv_obj_set_style_text_font(mArpCopyToDd, &lv_font_montserrat_10, 0);
+    lv_dropdown_set_selected(mArpCopyToDd, 0);
+    lv_obj_add_event_cb(mArpCopyToDd, arpCopyToDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
     // Rand Rhythm Button
-    lv_obj_t* randRhyBtn = lv_button_create(randCont);
-    lv_obj_set_size(randRhyBtn, 105, 40);
-    lv_obj_set_style_bg_color(randRhyBtn, lv_color_hex(0x333333), 0);
+    lv_obj_t* randRhyBtn = lv_button_create(rightActCont);
+    lv_obj_set_size(randRhyBtn, 110, 36);
+    lv_obj_set_style_bg_color(randRhyBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(randRhyBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_border_width(randRhyBtn, 1, 0);
-    lv_obj_set_style_radius(randRhyBtn, 8, 0);
-    
+    lv_obj_set_style_radius(randRhyBtn, 6, 0);
     lv_obj_t* randRhyLbl = lv_label_create(randRhyBtn);
     lv_label_set_text(randRhyLbl, "Rand Rhythm");
-    lv_obj_set_style_text_font(randRhyLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(randRhyLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(randRhyLbl);
     lv_obj_add_event_cb(randRhyBtn, randRhythmBtnEventCb, LV_EVENT_CLICKED, this);
 
     // Rand Notes Button
-    lv_obj_t* randNotBtn = lv_button_create(randCont);
-    lv_obj_set_size(randNotBtn, 105, 40);
-    lv_obj_set_style_bg_color(randNotBtn, lv_color_hex(0x333333), 0);
+    lv_obj_t* randNotBtn = lv_button_create(rightActCont);
+    lv_obj_set_size(randNotBtn, 110, 36);
+    lv_obj_set_style_bg_color(randNotBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(randNotBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_border_width(randNotBtn, 1, 0);
-    lv_obj_set_style_radius(randNotBtn, 8, 0);
-    
+    lv_obj_set_style_radius(randNotBtn, 6, 0);
     lv_obj_t* randNotLbl = lv_label_create(randNotBtn);
     lv_label_set_text(randNotLbl, "Rand Notes");
-    lv_obj_set_style_text_font(randNotLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(randNotLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(randNotLbl);
     lv_obj_add_event_cb(randNotBtn, randNotesBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // MIDI Learn Button for Arpeggiator
+    lv_obj_t* learnBtn = lv_button_create(rightActCont);
+    lv_obj_set_size(learnBtn, 120, 36);
+    if (mMidiLearnActive) {
+        lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0xD32F2F), 0);
+        lv_obj_set_style_border_color(learnBtn, lv_color_hex(0xFF5252), 0);
+    } else {
+        lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0x222222), 0);
+        lv_obj_set_style_border_color(learnBtn, trackColor, 0);
+    }
+    lv_obj_set_style_border_width(learnBtn, 1, 0);
+    lv_obj_set_style_radius(learnBtn, 6, 0);
+
+    lv_obj_t* learnLbl = lv_label_create(learnBtn);
+    mMidiLearnBtnLabel = learnLbl;
+    if (mMidiLearnActive) {
+        if (mMidiLearnTargetParamId >= 0) {
+            lv_label_set_text(learnLbl, "TAP & WIGGLE");
+        } else {
+            lv_label_set_text(learnLbl, "TAP PARAMETER");
+        }
+    } else {
+        lv_label_set_text(learnLbl, "MIDI LEARN");
+    }
+    lv_obj_set_style_text_font(learnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(learnLbl, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_center(learnLbl);
+
+    auto learnClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->mMidiLearnActive = !ui->mMidiLearnActive;
+        if (!ui->mMidiLearnActive) {
+            ui->mMidiLearnTargetParamId = -1;
+        }
+        ui->createCenterContentArea();
+    };
+    lv_obj_add_event_cb(learnBtn, learnClickCb, LV_EVENT_CLICKED, this);
 }
 
 // =========================================================================
@@ -1585,8 +1711,11 @@ void UIManager::updateArpConfig() {
             }
         }
     }
+    const auto& currentArp = mEngine.getTracks()[mActiveTrack].arpeggiator;
     mEngine.setArpConfig(mActiveTrack, mode, octaves, inversion, isLatched, false,
-                         rhythms, {}, std::vector<float>(16, 0.5f), probability, 0.0f);
+                         rhythms, currentArp.getRandomSequence(),
+                         currentArp.getGateLengths().empty() ? std::vector<float>(16, 0.5f) : currentArp.getGateLengths(),
+                         probability, currentArp.getWeird());
 }
 
 void UIManager::updateChordConfig() {
@@ -1699,6 +1828,7 @@ void UIManager::randomizeRhythm() {
             lv_obj_add_state(mArpButtons[3][col], LV_STATE_CHECKED); // Root note row is row index 3
         }
     }
+    updateArpConfig();
 }
 
 void UIManager::randomizeNotes() {
@@ -1711,6 +1841,28 @@ void UIManager::randomizeNotes() {
             lv_obj_add_state(mArpButtons[activeRow][col], LV_STATE_CHECKED);
         }
     }
+    updateArpConfig();
+}
+
+void UIManager::arpCopyToDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    int selected = lv_dropdown_get_selected(dd);
+    if (selected <= 0 || selected > 8) return; // 0 is "Copy To..." placeholder
+    int targetTrack = selected - 1;
+
+    // Reset dropdown back to 0
+    lv_dropdown_set_selected(dd, 0);
+
+    if (targetTrack == ui->mActiveTrack) return;
+
+    // Deep copy entire arpeggiator (including held notes, generated progressions, rates, state) to target track
+    ui->mEngine.copyArpeggiator(ui->mActiveTrack, targetTrack);
+    ui->mTrackEnabled[targetTrack] = true;
+    ui->updateHighlighting();
+
+    std::cout << "Copied Arp & Chord settings and playback from Track " << (ui->mActiveTrack + 1)
+              << " to Track " << (targetTrack + 1) << std::endl;
 }
 
 void UIManager::populateSettingsScreen() {
@@ -1737,11 +1889,10 @@ void UIManager::populateSettingsScreen() {
     lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(tab_bar, 1, LV_PART_MAIN);
 
-    lv_obj_t* tab1 = lv_tabview_add_tab(mSettingsTabview, "General");
+    lv_obj_t* tab1 = lv_tabview_add_tab(mSettingsTabview, "System & Audio");
     lv_obj_t* tab2 = lv_tabview_add_tab(mSettingsTabview, "MIDI Pads");
     lv_obj_t* tab3 = lv_tabview_add_tab(mSettingsTabview, "Knobs/Faders");
-    lv_obj_t* tab4 = lv_tabview_add_tab(mSettingsTabview, "System");
-    lv_obj_t* tab5 = lv_tabview_add_tab(mSettingsTabview, "USB MIDI");
+    lv_obj_t* tab4 = lv_tabview_add_tab(mSettingsTabview, "USB MIDI");
 
     // Style the individual tab buttons in the tab bar
     for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
@@ -1755,49 +1906,46 @@ void UIManager::populateSettingsScreen() {
     lv_obj_set_style_pad_all(tab2, 8, 0);
     lv_obj_set_style_pad_all(tab3, 8, 0);
     lv_obj_set_style_pad_all(tab4, 8, 0);
-    lv_obj_set_style_pad_all(tab5, 8, 0);
     lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab3, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(tab4, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(tab5, LV_OBJ_FLAG_SCROLLABLE);
 
     populateSettingsGeneralTab(tab1);
     populateSettingsMidiPadsTab(tab2);
     populateSettingsKnobsFadersTab(tab3);
-    populateSettingsSystemTab(tab4);
-    populateSettingsUsbMidiTab(tab5);
+    populateSettingsUsbMidiTab(tab4);
 
-    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 5) {
+    if (mSettingsActiveTabIdx > 0 && mSettingsActiveTabIdx < 4) {
         lv_tabview_set_active(mSettingsTabview, mSettingsActiveTabIdx, LV_ANIM_OFF);
     }
 }
 
 // ==========================================================================
-// Tab 1: General
+// Tab 1: System & Audio (Unified)
 // ==========================================================================
 void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     auto applyCardStyle = [trackColor](lv_obj_t* card) {
-        lv_obj_set_size(card, 260, 480);
+        lv_obj_set_size(card, 260, 680);
         lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 15, 0);
+        lv_obj_set_style_pad_all(card, 12, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_row(card, 10, 0);
+        lv_obj_set_style_pad_row(card, 8, 0);
     };
 
-    // --- Column 1: Audio Engine ---
+    // --- Column 1: Audio Engine & Devices ---
     lv_obj_t* audioCard = lv_obj_create(tab);
     applyCardStyle(audioCard);
 
@@ -1806,17 +1954,62 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(audioTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(audioTitle, trackColor, 0);
 
+    // SDL Audio Device
     lv_obj_t* deviceLabel = lv_label_create(audioCard);
-    lv_label_set_text(deviceLabel, "Device: SDL Default");
-    lv_obj_set_style_text_font(deviceLabel, &lv_font_montserrat_12, 0);
+    lv_label_set_text(deviceLabel, "Active Audio Device:");
+    lv_obj_set_style_text_font(deviceLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(deviceLabel, lv_color_hex(0xBBBBBB), 0);
 
+    std::string deviceOptions = "Default\n";
+    int numDevs = SDL_GetNumAudioDevices(0);
+    std::vector<std::string> devNames;
+    devNames.push_back("Default");
+    int activeDevIdx = 0;
+    for (int i = 0; i < numDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        if (name) {
+            deviceOptions += std::string(name) + "\n";
+            devNames.push_back(name);
+            if (gCurrentAudioDevice == name) activeDevIdx = devNames.size() - 1;
+        }
+    }
+    if (!deviceOptions.empty() && deviceOptions.back() == '\n') deviceOptions.pop_back();
+
+    lv_obj_t* deviceDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(deviceDd, 230, 36);
+    lv_dropdown_set_options(deviceDd, deviceOptions.c_str());
+    lv_obj_set_style_bg_color(deviceDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_text_font(deviceDd, &lv_font_montserrat_12, 0);
+    lv_dropdown_set_selected(deviceDd, activeDevIdx);
+
+    struct DeviceChangeData {
+        UIManager* ui;
+        std::vector<std::string> names;
+    };
+    DeviceChangeData* devData = new DeviceChangeData{this, devNames};
+    auto devCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            if (switchAudioDevice(selectedName)) {
+                d->ui->mSettingsAudioDevice = selectedName;
+                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            }
+        }
+    };
+    lv_obj_add_event_cb(deviceDd, devCb, LV_EVENT_VALUE_CHANGED, devData);
+    auto devFreeCb = [](lv_event_t* e) { delete (DeviceChangeData*)lv_event_get_user_data(e); };
+    lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
+
+    // Sample Rate
     lv_obj_t* srLbl = lv_label_create(audioCard);
     lv_label_set_text(srLbl, "Sample Rate:");
     lv_obj_set_style_text_font(srLbl, &lv_font_montserrat_10, 0);
 
     lv_obj_t* srDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(srDd, 180, 36);
+    lv_obj_set_size(srDd, 230, 36);
     lv_dropdown_set_options(srDd, "44100 Hz\n48000 Hz");
     lv_obj_set_style_bg_color(srDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(srDd, 1, 0);
@@ -1826,19 +2019,37 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_dropdown_set_selected(srDd, (std::abs(currentSr - 48000.0f) < 100.0f) ? 1 : 0);
     lv_obj_add_event_cb(srDd, settingsSampleRateDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
+    // Audio Output Mode Dropdown
+    lv_obj_t* outModeLbl = lv_label_create(audioCard);
+    lv_label_set_text(outModeLbl, "Output Channel Mode:");
+    lv_obj_set_style_text_font(outModeLbl, &lv_font_montserrat_10, 0);
+
+    lv_obj_t* outModeDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(outModeDd, 230, 36);
+    lv_dropdown_set_options(outModeDd, "Stereo\nMono (L-Only)\nPseudo-Stereo\nPhase-Invert");
+    lv_obj_set_style_bg_color(outModeDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(outModeDd, 1, 0);
+    lv_obj_set_style_text_font(outModeDd, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_radius(outModeDd, 6, 0);
+    lv_dropdown_set_selected(outModeDd, mEngine.getAudioOutputMode());
+
+    auto outModeDdCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        ui->mEngine.setAudioOutputMode(selected);
+    };
+    lv_obj_add_event_cb(outModeDd, outModeDdCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Buffer & Latency info
     lv_obj_t* bufferLabel = lv_label_create(audioCard);
-    lv_label_set_text(bufferLabel, "Buffer: 256 samples\nLatency: ~5.3 ms");
+    lv_label_set_text(bufferLabel, "Buffer: 256 samples | Latency: ~5.3 ms");
     lv_obj_set_style_text_font(bufferLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(bufferLabel, lv_color_hex(0xBBBBBB), 0);
 
-    mCpuLoadLabel = lv_label_create(audioCard);
-    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
-    lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0x00FFCC), 0);
-
     // PANIC button
     lv_obj_t* panicBtn = lv_button_create(audioCard);
-    lv_obj_set_size(panicBtn, 180, 36);
+    lv_obj_set_size(panicBtn, 230, 38);
     lv_obj_set_style_bg_color(panicBtn, lv_color_hex(0xCC3333), 0);
     lv_obj_set_style_border_color(panicBtn, lv_color_hex(0xFF5555), 0);
     lv_obj_set_style_border_width(panicBtn, 1, 0);
@@ -1851,7 +2062,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
 
     // RESET MIDI / PATCHING button
     lv_obj_t* resetMidiBtn = lv_button_create(audioCard);
-    lv_obj_set_size(resetMidiBtn, 180, 36);
+    lv_obj_set_size(resetMidiBtn, 230, 38);
     lv_obj_set_style_bg_color(resetMidiBtn, lv_color_hex(0x996633), 0);
     lv_obj_set_style_border_color(resetMidiBtn, lv_color_hex(0xCC9944), 0);
     lv_obj_set_style_border_width(resetMidiBtn, 1, 0);
@@ -1861,76 +2072,6 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(resetMidiLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(resetMidiLbl);
     lv_obj_add_event_cb(resetMidiBtn, settingsResetMidiBtnEventCb, LV_EVENT_CLICKED, this);
-
-    // Audio Output Mode Dropdown
-    lv_obj_t* outModeLbl = lv_label_create(audioCard);
-    lv_label_set_text(outModeLbl, "Audio Output Mode:");
-    lv_obj_set_style_text_font(outModeLbl, &lv_font_montserrat_10, 0);
-
-    lv_obj_t* outModeDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(outModeDd, 180, 36);
-    lv_dropdown_set_options(outModeDd, "Stereo\nMono (L-Only)\nPseudo-Stereo\nPhase-Invert");
-    lv_obj_set_style_bg_color(outModeDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(outModeDd, 1, 0);
-    lv_obj_set_style_text_font(outModeDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(outModeDd, 6, 0);
-    lv_dropdown_set_selected(outModeDd, mEngine.getAudioOutputMode());
-
-    // Description of selected mode
-    lv_obj_t* outModeDesc = lv_label_create(audioCard);
-    lv_obj_set_style_text_font(outModeDesc, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(outModeDesc, lv_color_hex(0x888888), 0);
-    
-    // Store label pointer in the dropdown so the callback can access it without capturing
-    lv_obj_set_user_data(outModeDd, outModeDesc);
-
-    auto updateOutModeDesc = [](lv_obj_t* label, int mode) {
-        switch (mode) {
-            case 0:
-                lv_label_set_text(label, "Stereo: Standard output\nfor headphones / stereo.");
-                break;
-            case 1:
-                lv_label_set_text(label, "Mono (L-Only): Sums to L,\nmutes R. Prevents cancellation\non mono mixer channels.");
-                break;
-            case 2:
-                lv_label_set_text(label, "Pseudo-Stereo: Adds 4ms\ndelay to R. Stereo width,\nno balanced cancellation.");
-                break;
-            case 3:
-                lv_label_set_text(label, "Phase-Invert: Inverts R.\nDoubles volume on balanced\nmono TRS-to-TRS cables.");
-                break;
-        }
-    };
-
-    updateOutModeDesc(outModeDesc, mEngine.getAudioOutputMode());
-
-    // Event callback for dropdown (capture-free, converts to standard C pointer)
-    auto outModeDdCb = [](lv_event_t* e) {
-        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
-        lv_obj_t* descLabel = (lv_obj_t*)lv_obj_get_user_data(dd);
-        int selected = lv_dropdown_get_selected(dd);
-        
-        ui->mEngine.setAudioOutputMode(selected);
-        
-        if (descLabel) {
-            switch (selected) {
-                case 0:
-                    lv_label_set_text(descLabel, "Stereo: Standard output\nfor headphones / stereo.");
-                    break;
-                case 1:
-                    lv_label_set_text(descLabel, "Mono (L-Only): Sums to L,\nmutes R. Prevents cancellation\non mono mixer channels.");
-                    break;
-                case 2:
-                    lv_label_set_text(descLabel, "Pseudo-Stereo: Adds 4ms\ndelay to R. Stereo width,\nno balanced cancellation.");
-                    break;
-                case 3:
-                    lv_label_set_text(descLabel, "Phase-Invert: Inverts R.\nDoubles volume on balanced\nmono TRS-to-TRS cables.");
-                    break;
-            }
-        }
-    };
-    
-    lv_obj_add_event_cb(outModeDd, outModeDdCb, LV_EVENT_VALUE_CHANGED, this);
 
     // --- Column 2: MIDI Routing ---
     lv_obj_t* midiCard = lv_obj_create(tab);
@@ -1947,7 +2088,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(trkLbl, &lv_font_montserrat_10, 0);
 
     mSettingsMidiTrackDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiTrackDd, 180, 36);
+    lv_obj_set_size(mSettingsMidiTrackDd, 230, 36);
     lv_dropdown_set_options(mSettingsMidiTrackDd, "Track 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
     lv_obj_set_style_bg_color(mSettingsMidiTrackDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(mSettingsMidiTrackDd, 1, 0);
@@ -1963,7 +2104,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(midiInLbl, &lv_font_montserrat_10, 0);
 
     mSettingsMidiInDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiInDd, 180, 36);
+    lv_obj_set_size(mSettingsMidiInDd, 230, 36);
     lv_dropdown_set_options(mSettingsMidiInDd, "NONE\nChannel 1\nChannel 2\nChannel 3\nChannel 4\nChannel 5\nChannel 6\nChannel 7\nChannel 8\nChannel 9\nChannel 10\nChannel 11\nChannel 12\nChannel 13\nChannel 14\nChannel 15\nChannel 16\nALL");
     lv_obj_set_style_bg_color(mSettingsMidiInDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(mSettingsMidiInDd, 1, 0);
@@ -1977,7 +2118,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
 
     // Routing description
     lv_obj_t* routeDesc = lv_label_create(midiCard);
-    lv_label_set_text(routeDesc, "ALL = respond when\ntrack is selected.\nSpecific ch = always\nrespond on that ch.");
+    lv_label_set_text(routeDesc, "ALL = respond when selected.\nSpecific ch = always respond.");
     lv_obj_set_style_text_font(routeDesc, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(routeDesc, lv_color_hex(0x888888), 0);
 
@@ -1987,7 +2128,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(midiOutLbl, &lv_font_montserrat_10, 0);
 
     mSettingsMidiOutDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiOutDd, 180, 36);
+    lv_obj_set_size(mSettingsMidiOutDd, 230, 36);
     lv_dropdown_set_options(mSettingsMidiOutDd, "NONE\nChannel 1\nChannel 2\nChannel 3\nChannel 4\nChannel 5\nChannel 6\nChannel 7\nChannel 8\nChannel 9\nChannel 10\nChannel 11\nChannel 12\nChannel 13\nChannel 14\nChannel 15\nChannel 16");
     lv_obj_set_style_bg_color(mSettingsMidiOutDd, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(mSettingsMidiOutDd, 1, 0);
@@ -2001,7 +2142,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
 
     // Velocity Sensitivity switch
     lv_obj_t* velSensRow = lv_obj_create(midiCard);
-    lv_obj_set_size(velSensRow, 220, 36);
+    lv_obj_set_size(velSensRow, 230, 36);
     lv_obj_set_style_bg_opa(velSensRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(velSensRow, 0, 0);
     lv_obj_set_style_pad_all(velSensRow, 0, 0);
@@ -2017,11 +2158,8 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
 
     lv_obj_t* velSensSw = lv_switch_create(velSensRow);
     lv_obj_set_size(velSensSw, 40, 20);
-    if (mEngine.getVelocitySensitivityEnabled()) {
-        lv_obj_add_state(velSensSw, LV_STATE_CHECKED);
-    }
+    if (mEngine.getVelocitySensitivityEnabled()) lv_obj_add_state(velSensSw, LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(velSensSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
-    
     auto velSensCb = [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         bool isChecked = lv_obj_has_state((lv_obj_t*)lv_event_get_target(e), LV_STATE_CHECKED);
@@ -2034,14 +2172,13 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     applyCardStyle(systemCard);
 
     lv_obj_t* systemTitle = lv_label_create(systemCard);
-    lv_label_set_text(systemTitle, "PROJECT FILES");
+    lv_label_set_text(systemTitle, "PROJECT & CONTROLS");
     lv_obj_set_style_text_font(systemTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(systemTitle, trackColor, 0);
 
-    // Stacked buttons for project management in the top half
     auto makeFileBtn = [trackColor](lv_obj_t* parent, const char* text, lv_event_cb_t cb, void* userData) {
         lv_obj_t* btn = lv_button_create(parent);
-        lv_obj_set_size(btn, 180, 36);
+        lv_obj_set_size(btn, 230, 38);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_color(btn, trackColor, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
@@ -2058,15 +2195,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     makeFileBtn(systemCard, LV_SYMBOL_SAVE " SAVE PROJECT", settingsSaveBtnEventCb, this);
     makeFileBtn(systemCard, LV_SYMBOL_DIRECTORY " LOAD PROJECT", settingsLoadBtnEventCb, this);
 
-    // Small space for QWERTY keyboard mode
-    lv_obj_t* kbTitle = lv_label_create(systemCard);
-    lv_label_set_text(kbTitle, "QWERTY KEYBOARD");
-    lv_obj_set_style_text_font(kbTitle, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(kbTitle, trackColor, 0);
-    lv_obj_set_style_margin_top(kbTitle, 10, 0);
-
+    // QWERTY keyboard mode
     lv_obj_t* kbRow = lv_obj_create(systemCard);
-    lv_obj_set_size(kbRow, 220, 36);
+    lv_obj_set_size(kbRow, 230, 36);
     lv_obj_set_style_bg_opa(kbRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(kbRow, 0, 0);
     lv_obj_set_style_pad_all(kbRow, 0, 0);
@@ -2086,9 +2217,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_bg_color(kbSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_add_event_cb(kbSw, settingsKeyboardModeSwitchEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Fast Granular (Linear) switch
+    // Fast Granular switch
     lv_obj_t* fastGranRow = lv_obj_create(systemCard);
-    lv_obj_set_size(fastGranRow, 220, 36);
+    lv_obj_set_size(fastGranRow, 230, 36);
     lv_obj_set_style_bg_opa(fastGranRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(fastGranRow, 0, 0);
     lv_obj_set_style_pad_all(fastGranRow, 0, 0);
@@ -2106,7 +2237,6 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_size(fastGranSw, 40, 20);
     if (mEngine.getFastGranularEnabled()) lv_obj_add_state(fastGranSw, LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(fastGranSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
-    
     auto fastGranSwCb = [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         bool isChecked = lv_obj_has_state((lv_obj_t*)lv_event_get_target(e), LV_STATE_CHECKED);
@@ -2114,19 +2244,96 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(fastGranSw, fastGranSwCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Credits/Privacy button at the bottom right/center
+    // Credits/Privacy button
     lv_obj_t* credBtn = lv_button_create(systemCard);
-    lv_obj_set_size(credBtn, 180, 36);
+    lv_obj_set_size(credBtn, 230, 36);
     lv_obj_set_style_bg_color(credBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(credBtn, trackColor, 0);
     lv_obj_set_style_border_width(credBtn, 1, 0);
     lv_obj_set_style_radius(credBtn, 8, 0);
-    lv_obj_set_style_margin_top(credBtn, 10, 0);
     lv_obj_t* credBtnLbl = lv_label_create(credBtn);
     lv_label_set_text(credBtnLbl, LV_SYMBOL_LIST " CREDITS / PRIVACY");
     lv_obj_set_style_text_font(credBtnLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(credBtnLbl);
     lv_obj_add_event_cb(credBtn, settingsCreditsBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // --- Column 4: System Performance, Network & Updates ---
+    lv_obj_t* perfCard = lv_obj_create(tab);
+    applyCardStyle(perfCard);
+
+    lv_obj_t* perfTitle = lv_label_create(perfCard);
+    lv_label_set_text(perfTitle, "PERFORMANCE & UPDATES");
+    lv_obj_set_style_text_font(perfTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(perfTitle, trackColor, 0);
+
+    mCpuLoadLabel = lv_label_create(perfCard);
+    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+    lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0x00FFCC), 0);
+
+    mIpAddressLbl = lv_label_create(perfCard);
+    std::string ip = getLocalIPAddress();
+    lv_label_set_text_fmt(mIpAddressLbl, "IP: %s", ip.c_str());
+    lv_obj_set_style_text_font(mIpAddressLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0);
+
+    lv_obj_t* versionLbl = lv_label_create(perfCard);
+    lv_label_set_text(versionLbl, "Version: v3.1.25 (10\" Edition)");
+    lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
+
+    mSettingsUpdateStatus = lv_label_create(perfCard);
+    lv_label_set_text(mSettingsUpdateStatus, "Status: Idle");
+    lv_obj_set_style_text_font(mSettingsUpdateStatus, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mSettingsUpdateStatus, lv_color_hex(0xAAAAAA), 0);
+
+    lv_obj_t* updateBtn = lv_button_create(perfCard);
+    lv_obj_set_size(updateBtn, 230, 36);
+    lv_obj_set_style_bg_color(updateBtn, trackColor, 0);
+    lv_obj_set_style_radius(updateBtn, 8, 0);
+    lv_obj_t* updateBtnLbl = lv_label_create(updateBtn);
+    lv_label_set_text(updateBtnLbl, "CHECK & UPDATE");
+    lv_obj_set_style_text_font(updateBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(updateBtnLbl);
+    lv_obj_add_event_cb(updateBtn, settingsUpdateBtnEventCb, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* restartBtn = lv_button_create(perfCard);
+    lv_obj_set_size(restartBtn, 230, 36);
+    lv_obj_set_style_bg_color(restartBtn, lv_color_hex(0xE06C75), 0);
+    lv_obj_set_style_radius(restartBtn, 8, 0);
+    lv_obj_t* restartBtnLbl = lv_label_create(restartBtn);
+    lv_label_set_text(restartBtnLbl, "RESTART LOOM");
+    lv_obj_set_style_text_font(restartBtnLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(restartBtnLbl);
+    lv_obj_add_event_cb(restartBtn, settingsRestartBtnEventCb, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* renewNetBtn = lv_button_create(perfCard);
+    lv_obj_set_size(renewNetBtn, 230, 36);
+    lv_obj_set_style_bg_color(renewNetBtn, lv_color_hex(0x28A745), 0);
+    lv_obj_set_style_radius(renewNetBtn, 8, 0);
+    lv_obj_t* renewNetLbl = lv_label_create(renewNetBtn);
+    lv_label_set_text(renewNetLbl, "RENEW IP ADDRESS");
+    lv_obj_set_style_text_font(renewNetLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(renewNetLbl);
+    lv_obj_add_event_cb(renewNetBtn, [](lv_event_t* e) {
+        int r = system("sudo dhcpcd -n wlan0 2>/dev/null || sudo dhcpcd -n eth0 2>/dev/null || "
+                       "sudo systemctl restart dhcpcd 2>/dev/null || "
+                       "sudo systemctl restart NetworkManager 2>/dev/null");
+        (void)r;
+    }, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* exitConsoleBtn = lv_button_create(perfCard);
+    lv_obj_set_size(exitConsoleBtn, 230, 36);
+    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0xD32F2F), 0);
+    lv_obj_set_style_radius(exitConsoleBtn, 8, 0);
+    lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
+    lv_label_set_text(exitConsoleLbl, "EXIT TO CONSOLE");
+    lv_obj_set_style_text_font(exitConsoleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(exitConsoleLbl);
+    lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openConsoleModal();
+    }, LV_EVENT_CLICKED, this);
 }
 
 // ==========================================================================
@@ -2271,19 +2478,67 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
         lv_obj_add_event_cb(fxBehSw, settingsFxPadBehaviorSwitchEventCb, LV_EVENT_VALUE_CHANGED, this);
     }
 
-    // --- Pad Grid Area ---
-    mSettingsPadGrid = lv_obj_create(tab);
-    lv_obj_set_size(mSettingsPadGrid, lv_pct(100), 465);
+    // Helper to generate notes list from 20 to 120
+    auto buildNoteOptions = []() -> std::string {
+        static const char* kNotes[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+        std::string opt;
+        for (int n = 20; n <= 120; ++n) {
+            int oct = (n / 12) - 1;
+            int idx = n % 12;
+            opt += std::to_string(n) + " (" + kNotes[idx] + std::to_string(oct) + ")";
+            if (n < 120) opt += "\n";
+        }
+        return opt;
+    };
+
+    // --- Content Row: Left (Square Pads Grid) + Right (Drum Number Row 1-8) ---
+    lv_obj_t* contentRow = lv_obj_create(tab);
+    lv_obj_set_size(contentRow, lv_pct(100), 615);
+    lv_obj_set_style_bg_opa(contentRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(contentRow, 0, 0);
+    lv_obj_set_style_pad_all(contentRow, 0, 0);
+    lv_obj_set_layout(contentRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(contentRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(contentRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_column(contentRow, 14, 0);
+    lv_obj_remove_flag(contentRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Left container for Pad Grid and bottom buttons
+    lv_obj_t* padGridWrapper = lv_obj_create(contentRow);
+    lv_obj_set_size(padGridWrapper, 580, 610);
+    lv_obj_set_style_bg_opa(padGridWrapper, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(padGridWrapper, 0, 0);
+    lv_obj_set_style_pad_all(padGridWrapper, 0, 0);
+    lv_obj_remove_flag(padGridWrapper, LV_OBJ_FLAG_SCROLLABLE);
+
+    mSettingsPadGrid = lv_obj_create(padGridWrapper);
+    lv_obj_set_size(mSettingsPadGrid, 580, 560);
     lv_obj_set_style_bg_opa(mSettingsPadGrid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(mSettingsPadGrid, 0, 0);
-    lv_obj_set_style_pad_all(mSettingsPadGrid, 8, 0);
+    lv_obj_set_style_pad_all(mSettingsPadGrid, 2, 0);
     lv_obj_remove_flag(mSettingsPadGrid, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Pad Learn Button in the lower right
-    lv_obj_t* padLearnBtn = lv_button_create(tab);
-    lv_obj_set_size(padLearnBtn, 150, 40);
-    lv_obj_add_flag(padLearnBtn, LV_OBJ_FLAG_FLOATING);
-    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
+    // Floating Pads Wizard Button (anchored at bottom left of pad area)
+    lv_obj_t* padsWizardBtn = lv_button_create(padGridWrapper);
+    lv_obj_set_size(padsWizardBtn, 140, 36);
+    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_LEFT, 10, 0);
+    lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_radius(padsWizardBtn, 6, 0);
+    lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
+    lv_label_set_text(padsWizardLbl, "PADS WIZARD");
+    lv_obj_set_style_text_font(padsWizardLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(padsWizardLbl);
+    
+    auto padsWizardClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openWizard(1); // 1 = MIDI Pads
+    };
+    lv_obj_add_event_cb(padsWizardBtn, padsWizardClickCb, LV_EVENT_CLICKED, this);
+
+    // Pad Learn Button (next to wizard button)
+    lv_obj_t* padLearnBtn = lv_button_create(padGridWrapper);
+    lv_obj_set_size(padLearnBtn, 150, 36);
+    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_LEFT, 160, 0);
     if (mPadLearnActive) {
         lv_obj_set_style_bg_color(padLearnBtn, trackColor, 0);
     } else {
@@ -2319,23 +2574,137 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(padLearnBtn, padLearnCb, LV_EVENT_CLICKED, this);
 
-    // Floating Pads Wizard Button in the bottom right
-    lv_obj_t* padsWizardBtn = lv_button_create(tab);
-    lv_obj_set_size(padsWizardBtn, 150, 40);
-    lv_obj_add_flag(padsWizardBtn, LV_OBJ_FLAG_FLOATING);
-    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_RIGHT, -180, -10);
-    lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_radius(padsWizardBtn, 6, 0);
-    lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
-    lv_label_set_text(padsWizardLbl, "PADS WIZARD");
-    lv_obj_set_style_text_font(padsWizardLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(padsWizardLbl);
-    
-    auto padsWizardClickCb = [](lv_event_t* e) {
-        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-        ui->openWizard(1); // 1 = MIDI Pads
-    };
-    lv_obj_add_event_cb(padsWizardBtn, padsWizardClickCb, LV_EVENT_CLICKED, this);
+    // -------------------------------------------------------------------------
+    // RIGHT PANEL: DRUM NUMBER ROW 1-8 (Hardware Custom Keyboard & Drum Trigger)
+    // -------------------------------------------------------------------------
+    lv_obj_t* drumRowPanel = lv_obj_create(contentRow);
+    lv_obj_set_flex_grow(drumRowPanel, 1);
+    lv_obj_set_height(drumRowPanel, 608);
+    lv_obj_set_style_bg_color(drumRowPanel, lv_color_hex(0x181818), 0);
+    lv_obj_set_style_bg_opa(drumRowPanel, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(drumRowPanel, lv_color_hex(0x2E2E2E), 0);
+    lv_obj_set_style_border_width(drumRowPanel, 1, 0);
+    lv_obj_set_style_radius(drumRowPanel, 8, 0);
+    lv_obj_set_style_pad_all(drumRowPanel, 8, 0);
+    lv_obj_set_layout(drumRowPanel, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(drumRowPanel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(drumRowPanel, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(drumRowPanel, 4, 0);
+    lv_obj_remove_flag(drumRowPanel, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Title
+    lv_obj_t* drumRowTitle = lv_label_create(drumRowPanel);
+    lv_label_set_text(drumRowTitle, "DRUM NUMBER ROW 1-8");
+    lv_obj_set_style_text_font(drumRowTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(drumRowTitle, trackColor, 0);
+
+    // Target Track Selector Row
+    lv_obj_t* trkRow = lv_obj_create(drumRowPanel);
+    lv_obj_set_size(trkRow, lv_pct(100), 36);
+    lv_obj_set_style_bg_opa(trkRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(trkRow, 0, 0);
+    lv_obj_set_style_pad_all(trkRow, 0, 0);
+    lv_obj_set_layout(trkRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(trkRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(trkRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(trkRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* trkLbl = lv_label_create(trkRow);
+    lv_label_set_text(trkLbl, "Target Track:");
+    lv_obj_set_style_text_font(trkLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(trkLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mDrumRowTrackDd = lv_dropdown_create(trkRow);
+    lv_obj_set_size(mDrumRowTrackDd, 140, 32);
+    lv_dropdown_set_options(mDrumRowTrackDd, "Track 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
+    lv_dropdown_set_selected(mDrumRowTrackDd, mDrumRowTargetTrack);
+    lv_obj_set_style_text_font(mDrumRowTrackDd, &lv_font_montserrat_10, 0);
+    lv_obj_add_event_cb(mDrumRowTrackDd, drumRowTrackDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Sub-header explaining columns: Key | Note Value (20-120) | Ratchet
+    lv_obj_t* subHdr = lv_obj_create(drumRowPanel);
+    lv_obj_set_size(subHdr, lv_pct(100), 20);
+    lv_obj_set_style_bg_opa(subHdr, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(subHdr, 0, 0);
+    lv_obj_set_style_pad_all(subHdr, 0, 0);
+    lv_obj_set_layout(subHdr, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(subHdr, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(subHdr, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(subHdr, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* hdrKey = lv_label_create(subHdr);
+    lv_label_set_text(hdrKey, "Key");
+    lv_obj_set_style_text_font(hdrKey, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrKey, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* hdrNote = lv_label_create(subHdr);
+    lv_label_set_text(hdrNote, "Assigned Note (20-120)");
+    lv_obj_set_style_text_font(hdrNote, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrNote, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* hdrRatch = lv_label_create(subHdr);
+    lv_label_set_text(hdrRatch, "Ratchet");
+    lv_obj_set_style_text_font(hdrRatch, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrRatch, lv_color_hex(0x888888), 0);
+
+    std::string noteOptions = buildNoteOptions();
+
+    for (int i = 0; i < 8; ++i) {
+        lv_obj_t* row = lv_obj_create(drumRowPanel);
+        lv_obj_set_size(row, lv_pct(100), 48);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x1F1F1F), 0);
+        lv_obj_set_style_border_color(row, lv_color_hex(0x2E2E2E), 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_radius(row, 6, 0);
+        lv_obj_set_style_pad_hor(row, 6, 0);
+        lv_obj_set_style_pad_ver(row, 4, 0);
+        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        // Key badge
+        lv_obj_t* badge = lv_obj_create(row);
+        lv_obj_set_size(badge, 28, 28);
+        lv_obj_set_style_bg_color(badge, lv_color_hex(0x141414), 0);
+        lv_obj_set_style_border_color(badge, trackColor, 0);
+        lv_obj_set_style_border_width(badge, 1, 0);
+        lv_obj_set_style_radius(badge, 4, 0);
+        lv_obj_set_style_pad_all(badge, 0, 0);
+        lv_obj_remove_flag(badge, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_t* badgeLbl = lv_label_create(badge);
+        lv_label_set_text_fmt(badgeLbl, "%d", i + 1);
+        lv_obj_set_style_text_font(badgeLbl, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(badgeLbl, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_center(badgeLbl);
+
+        // Note Dropdown (20 to 120)
+        mDrumRowNoteDd[i] = lv_dropdown_create(row);
+        lv_obj_set_size(mDrumRowNoteDd[i], 160, 34);
+        lv_dropdown_set_options(mDrumRowNoteDd[i], noteOptions.c_str());
+        int selIdx = std::max(0, std::min(100, mDrumRowNotes[i] - 20));
+        lv_dropdown_set_selected(mDrumRowNoteDd[i], selIdx);
+        lv_obj_set_style_text_font(mDrumRowNoteDd[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_user_data(mDrumRowNoteDd[i], (void*)(intptr_t)i);
+        lv_obj_add_event_cb(mDrumRowNoteDd[i], drumRowNoteDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+        // Ratchet Button
+        mDrumRowRatchetBtn[i] = lv_button_create(row);
+        lv_obj_set_size(mDrumRowRatchetBtn[i], 52, 34);
+        int r = mDrumRowRatchets[i];
+        if (r > 1) {
+            lv_obj_set_style_bg_color(mDrumRowRatchetBtn[i], trackColor, 0);
+        } else {
+            lv_obj_set_style_bg_color(mDrumRowRatchetBtn[i], lv_color_hex(0x2D2D2D), 0);
+        }
+        lv_obj_set_style_radius(mDrumRowRatchetBtn[i], 6, 0);
+        lv_obj_t* ratchLbl = lv_label_create(mDrumRowRatchetBtn[i]);
+        lv_label_set_text_fmt(ratchLbl, "%dx", r);
+        lv_obj_set_style_text_font(ratchLbl, &lv_font_montserrat_10, 0);
+        lv_obj_center(ratchLbl);
+        lv_obj_set_user_data(mDrumRowRatchetBtn[i], (void*)(intptr_t)i);
+        lv_obj_add_event_cb(mDrumRowRatchetBtn[i], drumRowRatchetBtnEventCb, LV_EVENT_CLICKED, this);
+    }
 
     rebuildPadGrid();
 }
@@ -2347,10 +2716,10 @@ void UIManager::rebuildPadGrid() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     int cols = 4;
     int rows = (mSettingsPadCount + cols - 1) / cols;
-    int padW = 180;
-    int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : (rows <= 4) ? 105 : 70;
+    int padH = (rows <= 1) ? 550 : (rows <= 2) ? 270 : (rows <= 3) ? 180 : (rows <= 4) ? 134 : 95;
+    int padW = padH; // Square pads!
     int gapX = 10;
-    int gapY = 8;
+    int gapY = 10;
 
     for (int i = 0; i < mSettingsPadCount; ++i) {
         int r = (mSettingsPadMode == 5) ? (i / cols) : (rows - 1 - (i / cols));
@@ -2594,24 +2963,24 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     // 2. CC Mapping Table (scrollable container)
     lv_obj_t* tableContainer = lv_obj_create(tab);
-    lv_obj_set_size(tableContainer, lv_pct(100), 465);
+    lv_obj_set_size(tableContainer, lv_pct(100), 610);
     lv_obj_set_style_bg_color(tableContainer, lv_color_hex(0x161616), 0);
     lv_obj_set_style_bg_opa(tableContainer, LV_OPA_80, 0);
     lv_obj_set_style_border_color(tableContainer, trackColor, 0);
     lv_obj_set_style_border_width(tableContainer, 1, 0);
     lv_obj_set_style_radius(tableContainer, 10, 0);
-    lv_obj_set_style_pad_all(tableContainer, 10, 0);
+    lv_obj_set_style_pad_all(tableContainer, 12, 0);
     lv_obj_set_layout(tableContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tableContainer, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(tableContainer, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_column(tableContainer, 12, 0);
-    lv_obj_set_style_pad_row(tableContainer, 6, 0);
+    lv_obj_set_style_pad_column(tableContainer, 16, 0);
+    lv_obj_set_style_pad_row(tableContainer, 8, 0);
 
     // Title label for mappings (Make it spans full width by setting width pct 100)
     lv_obj_t* mappingTitle = lv_label_create(tableContainer);
     lv_obj_set_width(mappingTitle, lv_pct(100));
     lv_label_set_text(mappingTitle, "CUSTOM HARDWARE MIDI CC ASSIGNMENTS");
-    lv_obj_set_style_text_font(mappingTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(mappingTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(mappingTitle, trackColor, 0);
 
     // Generate option list for 0-127
@@ -2630,7 +2999,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
     // Hardware CC mapping table list
     for (int k = 0; k < mSettingsKnobCount; ++k) {
         lv_obj_t* row = lv_obj_create(tableContainer);
-        lv_obj_set_size(row, 340, 40);
+        lv_obj_set_size(row, 490, 46);
         lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
@@ -2645,7 +3014,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
         // Dropdown to change CC number directly
         lv_obj_t* ccDd = lv_dropdown_create(row);
-        lv_obj_set_size(ccDd, 110, 32);
+        lv_obj_set_size(ccDd, 130, 36);
         lv_dropdown_set_options(ccDd, ccOptions.c_str());
         lv_dropdown_set_selected(ccDd, mSeqMidiKnobCC[mActiveTrack][k]);
         lv_obj_set_style_bg_color(ccDd, lv_color_hex(0x2A2A2A), 0);
@@ -2677,7 +3046,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     for (int f = 0; f < mSettingsSliderCount; ++f) {
         lv_obj_t* row = lv_obj_create(tableContainer);
-        lv_obj_set_size(row, 340, 40);
+        lv_obj_set_size(row, 490, 46);
         lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
@@ -2692,7 +3061,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
         // Dropdown to change CC number directly
         lv_obj_t* ccDd = lv_dropdown_create(row);
-        lv_obj_set_size(ccDd, 110, 32);
+        lv_obj_set_size(ccDd, 130, 36);
         lv_dropdown_set_options(ccDd, ccOptions.c_str());
         lv_dropdown_set_selected(ccDd, mSeqMidiFaderCC[mActiveTrack][f]);
         lv_obj_set_style_bg_color(ccDd, lv_color_hex(0x2A2A2A), 0);
@@ -2726,7 +3095,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
     lv_obj_t* transTitle = lv_label_create(tableContainer);
     lv_obj_set_width(transTitle, lv_pct(100));
     lv_label_set_text(transTitle, "SYSTEM & TRANSPORT CC ASSIGNMENTS");
-    lv_obj_set_style_text_font(transTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(transTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(transTitle, trackColor, 0);
     lv_obj_set_style_pad_top(transTitle, 15, 0);
 
@@ -2745,7 +3114,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
 
     for (size_t i = 0; i < transMap.size(); ++i) {
         lv_obj_t* row = lv_obj_create(tableContainer);
-        lv_obj_set_size(row, 340, 40);
+        lv_obj_set_size(row, 490, 46);
         lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
@@ -2759,7 +3128,7 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
         lv_obj_set_style_text_color(nameLbl, lv_color_hex(0xCCCCCC), 0);
 
         lv_obj_t* ccDd = lv_dropdown_create(row);
-        lv_obj_set_size(ccDd, 110, 32);
+        lv_obj_set_size(ccDd, 130, 36);
         lv_dropdown_set_options(ccDd, ccOptions.c_str());
         lv_dropdown_set_selected(ccDd, *(transMap[i].pCcVal));
         lv_obj_set_style_bg_color(ccDd, lv_color_hex(0x2A2A2A), 0);
@@ -2808,391 +3177,6 @@ void UIManager::populateSettingsKnobsFadersTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(wizardBtn, wizardClickCb, LV_EVENT_CLICKED, this);
 }
 
-void UIManager::populateSettingsSystemTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
-
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    auto applyCardStyle = [trackColor](lv_obj_t* card) {
-        lv_obj_set_size(card, 240, 460);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
-        lv_obj_set_style_border_color(card, trackColor, 0);
-        lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 12, 0);
-        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_row(card, 10, 0);
-    };
-
-    // --- Column 1: Audio Configuration ---
-    lv_obj_t* audioCard = lv_obj_create(tab);
-    applyCardStyle(audioCard);
-
-    lv_obj_t* audioTitle = lv_label_create(audioCard);
-    lv_label_set_text(audioTitle, "AUDIO DEVICE CONFIG");
-    lv_obj_set_style_text_font(audioTitle, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(audioTitle, trackColor, 0);
-
-    // Audio Output Mode selector
-    lv_obj_t* outputModeLbl = lv_label_create(audioCard);
-    lv_label_set_text(outputModeLbl, "Output Channel Mode:");
-    lv_obj_set_style_text_font(outputModeLbl, &lv_font_montserrat_10, 0);
-
-    lv_obj_t* outputModeDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(outputModeDd, 180, 36);
-    lv_dropdown_set_options(outputModeDd, "Stereo\nMono (L Only)\nPseudo-Stereo (Delay)\nPhase-Inverted");
-    lv_obj_set_style_bg_color(outputModeDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(outputModeDd, &lv_font_montserrat_12, 0);
-    lv_dropdown_set_selected(outputModeDd, mEngine.getAudioOutputMode());
-    
-    auto outModeCb = [](lv_event_t* e) {
-        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
-        int selected = lv_dropdown_get_selected(dd);
-        ui->mEngine.setAudioOutputMode(selected);
-        std::cout << "System: Audio Output Mode set to " << selected << std::endl;
-    };
-    lv_obj_add_event_cb(outputModeDd, outModeCb, LV_EVENT_VALUE_CHANGED, this);
-
-    // Audio Device Dropdown
-    lv_obj_t* deviceLbl = lv_label_create(audioCard);
-    lv_label_set_text(deviceLbl, "Active SDL Audio Device:");
-    lv_obj_set_style_text_font(deviceLbl, &lv_font_montserrat_10, 0);
-
-    std::string deviceOptions = "Default\n";
-    int numDevs = SDL_GetNumAudioDevices(0);
-    std::vector<std::string> devNames;
-    devNames.push_back("Default");
-    int activeIdx = 0;
-    
-    for (int i = 0; i < numDevs; ++i) {
-        const char* name = SDL_GetAudioDeviceName(i, 0);
-        if (name) {
-            deviceOptions += std::string(name) + "\n";
-            devNames.push_back(name);
-            if (gCurrentAudioDevice == name) {
-                activeIdx = devNames.size() - 1;
-            }
-        }
-    }
-    if (!deviceOptions.empty() && deviceOptions.back() == '\n') {
-        deviceOptions.pop_back();
-    }
-
-    lv_obj_t* deviceDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(deviceDd, 200, 36);
-    lv_dropdown_set_options(deviceDd, deviceOptions.c_str());
-    lv_obj_set_style_bg_color(deviceDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(deviceDd, &lv_font_montserrat_12, 0);
-    lv_dropdown_set_selected(deviceDd, activeIdx);
-
-    struct DeviceChangeData {
-        UIManager* ui;
-        std::vector<std::string> names;
-    };
-    DeviceChangeData* devData = new DeviceChangeData{this, devNames};
-
-    auto devCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
-        int selected = lv_dropdown_get_selected(dd);
-        if (selected >= 0 && selected < (int)d->names.size()) {
-            std::string selectedName = d->names[selected];
-            bool success = switchAudioDevice(selectedName);
-            if (success) {
-                d->ui->mSettingsAudioDevice = selectedName;
-                d->ui->saveSettings(d->ui->mSettingsFilePath);
-            }
-        }
-    };
-    lv_obj_add_event_cb(deviceDd, devCb, LV_EVENT_VALUE_CHANGED, devData);
-
-    auto devFreeCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        delete d;
-    };
-    lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
-
-    // 1. Mic Device Dropdown
-    lv_obj_t* micDeviceLbl = lv_label_create(audioCard);
-    lv_label_set_text(micDeviceLbl, "Active Mic Device:");
-    lv_obj_set_style_text_font(micDeviceLbl, &lv_font_montserrat_10, 0);
-
-    std::string micDeviceOptions = "Default\n";
-    int numInputDevs = SDL_GetNumAudioDevices(1);
-    std::vector<std::string> inputDevNames;
-    inputDevNames.push_back("Default");
-    int activeMicIdx = 0;
-    int activeLineInIdx = 0;
-    
-    for (int i = 0; i < numInputDevs; ++i) {
-        const char* name = SDL_GetAudioDeviceName(i, 1);
-        if (name) {
-            micDeviceOptions += std::string(name) + "\n";
-            inputDevNames.push_back(name);
-            if (mSettingsAudioMicDevice == name) {
-                activeMicIdx = inputDevNames.size() - 1;
-            }
-            if (mSettingsAudioLineInDevice == name) {
-                activeLineInIdx = inputDevNames.size() - 1;
-            }
-        }
-    }
-    if (!micDeviceOptions.empty() && micDeviceOptions.back() == '\n') {
-        micDeviceOptions.pop_back();
-    }
-
-    lv_obj_t* micDeviceDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(micDeviceDd, 200, 36);
-    lv_dropdown_set_options(micDeviceDd, micDeviceOptions.c_str());
-    lv_obj_set_style_bg_color(micDeviceDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(micDeviceDd, &lv_font_montserrat_12, 0);
-    lv_dropdown_set_selected(micDeviceDd, activeMicIdx);
-
-    DeviceChangeData* micDevData = new DeviceChangeData{this, inputDevNames};
-
-    auto micDevCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
-        int selected = lv_dropdown_get_selected(dd);
-        if (selected >= 0 && selected < (int)d->names.size()) {
-            std::string selectedName = d->names[selected];
-            d->ui->mSettingsAudioMicDevice = selectedName;
-            if (d->ui->mEngine.mRecordingSource.load() == 0) {
-                switchCaptureDevice(selectedName);
-            }
-            d->ui->saveSettings(d->ui->mSettingsFilePath);
-        }
-    };
-    lv_obj_add_event_cb(micDeviceDd, micDevCb, LV_EVENT_VALUE_CHANGED, micDevData);
-
-    auto micDevFreeCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        delete d;
-    };
-    lv_obj_add_event_cb(micDeviceDd, micDevFreeCb, LV_EVENT_DELETE, micDevData);
-
-    // 2. Line In Device Dropdown
-    lv_obj_t* lineInDeviceLbl = lv_label_create(audioCard);
-    lv_label_set_text(lineInDeviceLbl, "Active Line-In Device:");
-    lv_obj_set_style_text_font(lineInDeviceLbl, &lv_font_montserrat_10, 0);
-
-    lv_obj_t* lineInDeviceDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(lineInDeviceDd, 200, 36);
-    lv_dropdown_set_options(lineInDeviceDd, micDeviceOptions.c_str());
-    lv_obj_set_style_bg_color(lineInDeviceDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(lineInDeviceDd, &lv_font_montserrat_12, 0);
-    lv_dropdown_set_selected(lineInDeviceDd, activeLineInIdx);
-
-    DeviceChangeData* lineInDevData = new DeviceChangeData{this, inputDevNames};
-
-    auto lineInDevCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
-        int selected = lv_dropdown_get_selected(dd);
-        if (selected >= 0 && selected < (int)d->names.size()) {
-            std::string selectedName = d->names[selected];
-            d->ui->mSettingsAudioLineInDevice = selectedName;
-            if (d->ui->mEngine.mRecordingSource.load() == 1) {
-                switchCaptureDevice(selectedName);
-            }
-            d->ui->saveSettings(d->ui->mSettingsFilePath);
-        }
-    };
-    lv_obj_add_event_cb(lineInDeviceDd, lineInDevCb, LV_EVENT_VALUE_CHANGED, lineInDevData);
-
-    auto lineInDevFreeCb = [](lv_event_t* e) {
-        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
-        delete d;
-    };
-    lv_obj_add_event_cb(lineInDeviceDd, lineInDevFreeCb, LV_EVENT_DELETE, lineInDevData);
-
-    // Panic Button and Reset MIDI
-    lv_obj_t* actionLbl = lv_label_create(audioCard);
-    lv_label_set_text(actionLbl, "System Actions:");
-    lv_obj_set_style_text_font(actionLbl, &lv_font_montserrat_10, 0);
-
-    lv_obj_t* panicBtn = lv_button_create(audioCard);
-    lv_obj_set_size(panicBtn, 200, 36);
-    lv_obj_set_style_bg_color(panicBtn, lv_color_hex(0xE06C75), 0);
-    lv_obj_t* panicLbl = lv_label_create(panicBtn);
-    lv_label_set_text(panicLbl, "AUDIO PANIC (ALL NOTES OFF)");
-    lv_obj_set_style_text_font(panicLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(panicLbl);
-    lv_obj_add_event_cb(panicBtn, settingsPanicBtnEventCb, LV_EVENT_CLICKED, this);
-
-
-    // --- Column 2: System Performance & Updater ---
-    lv_obj_t* perfCard = lv_obj_create(tab);
-    applyCardStyle(perfCard);
-
-    lv_obj_t* perfTitle = lv_label_create(perfCard);
-    lv_label_set_text(perfTitle, "PERFORMANCE STATS");
-    lv_obj_set_style_text_font(perfTitle, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(perfTitle, trackColor, 0);
-
-    mCpuLoadLabelSystem = lv_label_create(perfCard);
-    lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
-    lv_obj_set_style_text_font(mCpuLoadLabelSystem, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(mCpuLoadLabelSystem, lv_color_hex(0xCCCCCC), 0);
-
-    lv_obj_t* sampleRateLbl = lv_label_create(perfCard);
-    lv_label_set_text_fmt(sampleRateLbl, "Sample Rate: %d Hz", (int)mEngine.getSampleRate());
-    lv_obj_set_style_text_font(sampleRateLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(sampleRateLbl, lv_color_hex(0xAAAAAA), 0);
-
-    lv_obj_t* bufferSizeLbl = lv_label_create(perfCard);
-    lv_label_set_text(bufferSizeLbl, "Buffer Size: 256 samples");
-    lv_obj_set_style_text_font(bufferSizeLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(bufferSizeLbl, lv_color_hex(0xAAAAAA), 0);
-
-    mIpAddressLbl = lv_label_create(perfCard);
-    std::string ip = getLocalIPAddress();
-    lv_label_set_text_fmt(mIpAddressLbl, "IP Address: %s", ip.c_str());
-    lv_obj_set_style_text_font(mIpAddressLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0); // Cool teal accent for visibility
-
-    lv_obj_t* versionLbl = lv_label_create(perfCard);
-    lv_label_set_text(versionLbl, "Version: v3.1.25");
-    lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
-
-    // Separator line
-    lv_obj_t* sepLine = lv_obj_create(perfCard);
-    lv_obj_set_size(sepLine, 210, 1);
-    lv_obj_set_style_bg_color(sepLine, lv_color_hex(0x333333), 0);
-    lv_obj_set_style_border_width(sepLine, 0, 0);
-
-    // System Updater Sub-section
-    lv_obj_t* updateTitle = lv_label_create(perfCard);
-    lv_label_set_text(updateTitle, "SYSTEM UPDATER");
-    lv_obj_set_style_text_font(updateTitle, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(updateTitle, trackColor, 0);
-
-    mSettingsUpdateStatus = lv_label_create(perfCard);
-    lv_label_set_text(mSettingsUpdateStatus, "Status: Idle");
-    lv_obj_set_style_text_font(mSettingsUpdateStatus, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mSettingsUpdateStatus, lv_color_hex(0xAAAAAA), 0);
-    lv_label_set_long_mode(mSettingsUpdateStatus, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(mSettingsUpdateStatus, 210);
-
-    lv_obj_t* updateBtn = lv_button_create(perfCard);
-    lv_obj_set_size(updateBtn, 180, 34);
-    lv_obj_set_style_bg_color(updateBtn, trackColor, 0);
-    lv_obj_t* updateBtnLbl = lv_label_create(updateBtn);
-    lv_label_set_text(updateBtnLbl, "CHECK & UPDATE");
-    lv_obj_set_style_text_font(updateBtnLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(updateBtnLbl);
-    lv_obj_add_event_cb(updateBtn, settingsUpdateBtnEventCb, LV_EVENT_CLICKED, this);
-
-    lv_obj_t* restartBtn = lv_button_create(perfCard);
-    lv_obj_set_size(restartBtn, 180, 34);
-    lv_obj_set_style_bg_color(restartBtn, lv_color_hex(0xE06C75), 0);
-    lv_obj_t* restartBtnLbl = lv_label_create(restartBtn);
-    lv_label_set_text(restartBtnLbl, "RESTART LOOM");
-    lv_obj_set_style_text_font(restartBtnLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(restartBtnLbl);
-    lv_obj_add_event_cb(restartBtn, settingsRestartBtnEventCb, LV_EVENT_CLICKED, this);
-
-    // Renew IP/Network Button
-    lv_obj_t* renewNetBtn = lv_button_create(perfCard);
-    lv_obj_set_size(renewNetBtn, 180, 36);
-    lv_obj_set_style_bg_color(renewNetBtn, lv_color_hex(0x28A745), 0);
-    lv_obj_t* renewNetLbl = lv_label_create(renewNetBtn);
-    lv_label_set_text(renewNetLbl, "RENEW IP ADDRESS");
-    lv_obj_set_style_text_font(renewNetLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(renewNetLbl);
-    
-    lv_obj_add_event_cb(renewNetBtn, [](lv_event_t* e) {
-        std::cout << "Settings: Triggering DHCP / network renew..." << std::endl;
-        int r = system("sudo dhcpcd -n wlan0 2>/dev/null || sudo dhcpcd -n eth0 2>/dev/null || "
-                       "sudo systemctl restart dhcpcd 2>/dev/null || "
-                       "sudo systemctl restart NetworkManager 2>/dev/null");
-        (void)r;
-    }, LV_EVENT_CLICKED, this);
-
-    // Exit to Console Button
-    lv_obj_t* exitConsoleBtn = lv_button_create(perfCard);
-    lv_obj_set_size(exitConsoleBtn, 180, 36);
-    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0xD32F2F), 0);
-    lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
-    lv_label_set_text(exitConsoleLbl, "EXIT TO CONSOLE");
-    lv_obj_set_style_text_font(exitConsoleLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(exitConsoleLbl);
-    
-    lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
-        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-        ui->openConsoleModal();
-    }, LV_EVENT_CLICKED, this);
-    
-    // Allow scrolling on perfCard in case of height overflow
-    lv_obj_add_flag(perfCard, LV_OBJ_FLAG_SCROLLABLE);
-
-
-    // --- Column 3: USB/MIDI Diagnostic Monitor ---
-    lv_obj_t* diagCard = lv_obj_create(tab);
-    applyCardStyle(diagCard);
-
-    lv_obj_t* diagTitle = lv_label_create(diagCard);
-    lv_label_set_text(diagTitle, "USB/MIDI DIAGNOSTICS");
-    lv_obj_set_style_text_font(diagTitle, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(diagTitle, trackColor, 0);
-
-    lv_obj_t* logContainer = lv_obj_create(diagCard);
-    lv_obj_set_flex_grow(logContainer, 1);
-    lv_obj_set_width(logContainer, lv_pct(100));
-    lv_obj_set_style_bg_opa(logContainer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(logContainer, 0, 0);
-    lv_obj_set_style_pad_all(logContainer, 0, 0);
-    lv_obj_set_flex_flow(logContainer, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(logContainer, LV_OBJ_FLAG_SCROLLABLE);
-
-    lv_obj_t* listTitle = lv_label_create(logContainer);
-    lv_label_set_text(listTitle, "Detected USB & MIDI:");
-    lv_obj_set_style_text_font(listTitle, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(listTitle, lv_color_hex(0x888888), 0);
-
-    mMidiDeviceListLabel = lv_label_create(logContainer);
-    lv_label_set_text(mMidiDeviceListLabel, "Scanning...");
-    lv_obj_set_style_text_font(mMidiDeviceListLabel, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mMidiDeviceListLabel, lv_color_hex(0xCCCCCC), 0);
-    lv_label_set_long_mode(mMidiDeviceListLabel, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(mMidiDeviceListLabel, 210);
-
-    lv_obj_t* monitorTitle = lv_label_create(logContainer);
-    lv_label_set_text(monitorTitle, "Real-time MIDI Log:");
-    lv_obj_set_style_text_font(monitorTitle, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(monitorTitle, lv_color_hex(0x888888), 0);
-
-    mMidiMonitorConsoleLabel = lv_label_create(logContainer);
-    lv_label_set_text(mMidiMonitorConsoleLabel, "(No MIDI events yet)");
-    lv_obj_set_style_text_font(mMidiMonitorConsoleLabel, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mMidiMonitorConsoleLabel, lv_color_hex(0x00FF88), 0); // Retro green console text
-    lv_label_set_long_mode(mMidiMonitorConsoleLabel, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(mMidiMonitorConsoleLabel, 210);
-
-    // Separator line
-    lv_obj_t* btSepLine = lv_obj_create(diagCard);
-    lv_obj_set_size(btSepLine, 210, 1);
-    lv_obj_set_style_bg_color(btSepLine, lv_color_hex(0x333333), 0);
-    lv_obj_set_style_border_width(btSepLine, 0, 0);
-
-    // Bluetooth button
-    lv_obj_t* btBtn = lv_button_create(diagCard);
-    lv_obj_set_size(btBtn, 200, 34);
-    lv_obj_set_style_bg_color(btBtn, trackColor, 0);
-    lv_obj_t* btBtnLbl = lv_label_create(btBtn);
-    lv_label_set_text(btBtnLbl, "PAIR BLUETOOTH");
-    lv_obj_set_style_text_font(btBtnLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(btBtnLbl);
-    lv_obj_add_event_cb(btBtn, settingsBtPairBtnEventCb, LV_EVENT_CLICKED, this);
-}
-
 void UIManager::populateSettingsUsbMidiTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
@@ -3221,7 +3205,7 @@ void UIManager::populateSettingsUsbMidiTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(scanBtn, [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         ui->mEngine.scanMidiDevices();
-        ui->mSettingsActiveTabIdx = 4;
+        ui->mSettingsActiveTabIdx = 3;
         ui->createCenterContentArea();
     }, LV_EVENT_CLICKED, this);
 
@@ -3555,6 +3539,50 @@ void UIManager::settingsPadCountDdEventCb(lv_event_t* e) {
     ui->rebuildPadGrid();
 }
 
+void UIManager::drumRowTrackDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    ui->mDrumRowTargetTrack = lv_dropdown_get_selected(dd);
+    // Update button colors for ratchet > 1
+    for (int i = 0; i < 8; ++i) {
+        if (ui->mDrumRowRatchetBtn[i]) {
+            if (ui->mDrumRowRatchets[i] > 1) {
+                lv_obj_set_style_bg_color(ui->mDrumRowRatchetBtn[i], ui->getTrackColor(ui->mDrumRowTargetTrack), 0);
+            }
+        }
+    }
+}
+
+void UIManager::drumRowNoteDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    int keyIdx = (int)(intptr_t)lv_obj_get_user_data(dd);
+    if (keyIdx >= 0 && keyIdx < 8) {
+        int sel = lv_dropdown_get_selected(dd);
+        ui->mDrumRowNotes[keyIdx] = 20 + sel;
+    }
+}
+
+void UIManager::drumRowRatchetBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int keyIdx = (int)(intptr_t)lv_obj_get_user_data(btn);
+    if (keyIdx >= 0 && keyIdx < 8) {
+        int r = ui->mDrumRowRatchets[keyIdx];
+        r = (r % 5) + 1; // 1 -> 2 -> 3 -> 4 -> 5 -> 1
+        ui->mDrumRowRatchets[keyIdx] = r;
+        lv_obj_t* lbl = lv_obj_get_child(btn, 0);
+        if (lbl) {
+            lv_label_set_text_fmt(lbl, "%dx", r);
+        }
+        if (r > 1) {
+            lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mDrumRowTargetTrack), 0);
+        } else {
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
+        }
+    }
+}
+
 void UIManager::settingsKnobCountDdEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
@@ -3723,7 +3751,7 @@ void UIManager::openSettingsFxSelectPopup(int padIdx) {
 
     // Create full-screen overlay
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
     lv_obj_set_style_border_width(overlay, 0, 0);
@@ -3861,7 +3889,7 @@ void UIManager::openScalePickerModal() {
 
     // Create full-screen overlay
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
     lv_obj_set_style_border_width(overlay, 0, 0);
@@ -4051,7 +4079,7 @@ void UIManager::settingsCreditsBtnEventCb(lv_event_t* e) {
 
     // Create full-screen overlay
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
     lv_obj_set_style_border_width(overlay, 0, 0);
@@ -4642,15 +4670,15 @@ void UIManager::update() {
         
         for (int c = 0; c < 16; ++c) {
             if (mArpColumns[c]) {
-                if (c == activeStep) {
-                    lv_obj_set_style_bg_color(mArpColumns[c], playheadColor, 0);
-                    lv_obj_set_style_bg_opa(mArpColumns[c], 38, 0); // ~15% opacity
-                    lv_obj_set_style_border_width(mArpColumns[c], 1, 0);
-                    lv_obj_set_style_border_color(mArpColumns[c], playheadColor, 0);
-                    lv_obj_set_style_border_opa(mArpColumns[c], LV_OPA_COVER, 0);
-                } else {
-                    lv_obj_set_style_bg_opa(mArpColumns[c], LV_OPA_TRANSP, 0);
-                    lv_obj_set_style_border_width(mArpColumns[c], 0, 0);
+                lv_obj_set_style_bg_opa(mArpColumns[c], LV_OPA_TRANSP, 0);
+                lv_obj_t* colNum = lv_obj_get_child(mArpColumns[c], 0);
+                if (colNum) {
+                    if (c == activeStep) {
+                        lv_obj_set_style_text_color(colNum, playheadColor, 0);
+                    } else {
+                        bool isBeatStart = (c == 0 || c == 4 || c == 8 || c == 12);
+                        lv_obj_set_style_text_color(colNum, isBeatStart ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x777777), 0);
+                    }
                 }
             }
         }
@@ -4742,7 +4770,7 @@ void UIManager::populateSeqScreen() {
     lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
     lv_tabview_set_tab_bar_size(tabview, 40);
     lv_obj_set_flex_grow(tabview, 1);
-    lv_obj_set_height(tabview, 600);
+    lv_obj_set_height(tabview, SCREEN_HEIGHT);
     lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
     lv_obj_set_style_border_width(tabview, 0, 0);
 
@@ -4894,25 +4922,86 @@ void UIManager::populateSeqScreen() {
     }
 
     // =========================================================================
-    // RIGHT SIDE PANEL: controls
+    // RIGHT SIDE PANEL: dynamic container (Track Params or Step Editor)
     // =========================================================================
     lv_obj_t* sidePanel = lv_obj_create(outerRow);
-    lv_obj_set_size(sidePanel, 215, 600);
+    lv_obj_set_size(sidePanel, 250, SCREEN_HEIGHT);
     lv_obj_set_style_bg_color(sidePanel, lv_color_hex(0x161616), 0);
     lv_obj_set_style_bg_opa(sidePanel, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(sidePanel, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_border_width(sidePanel, 1, 0);
-    lv_obj_set_style_pad_hor(sidePanel, 10, 0);
-    lv_obj_set_style_pad_ver(sidePanel, 8, 0);
+    lv_obj_set_style_pad_all(sidePanel, 0, 0);
     lv_obj_remove_flag(sidePanel, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(sidePanel, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(sidePanel, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(sidePanel, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(sidePanel, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Helper: build a small group container for label + control inside sidePanel
+    mSeqSidePanel = sidePanel;
+    rebuildSeqSidePanel();
+}
+
+void UIManager::closeSeqStepEditor() {
+    mEditingStepIdx = -1;
+    mStepModalActiveLocksList = nullptr;
+    mStepModalRatchetDd = nullptr;
+    mStepModalNoteSlider = nullptr;
+    mStepModalPunchSw = nullptr;
+    mStepModalProbSlider = nullptr;
+    mStepModalGateSlider = nullptr;
+    mStepModalSkipSw = nullptr;
+    mStepModalPLockDd = nullptr;
+    mStepModalPLockSlider = nullptr;
+    rebuildSeqSidePanel();
+    rebuildSeqGrid();
+}
+
+void UIManager::rebuildSeqSidePanel() {
+    if (!mSeqSidePanel) return;
+    lv_obj_clean(mSeqSidePanel);
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    // Create tabview inside mSeqSidePanel with tab bar at the bottom
+    mSeqSideTabview = lv_tabview_create(mSeqSidePanel);
+    lv_tabview_set_tab_bar_position(mSeqSideTabview, LV_DIR_BOTTOM);
+    lv_tabview_set_tab_bar_size(mSeqSideTabview, 42);
+    lv_obj_set_size(mSeqSideTabview, 250, SCREEN_HEIGHT);
+    lv_obj_set_style_bg_opa(mSeqSideTabview, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mSeqSideTabview, 0, 0);
+
+    lv_obj_t* sideTabBar = lv_tabview_get_tab_bar(mSeqSideTabview);
+    lv_obj_set_style_bg_color(sideTabBar, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(sideTabBar, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(sideTabBar, 1, LV_PART_MAIN);
+
+    mSeqTrackTab = lv_tabview_add_tab(mSeqSideTabview, "Sequence");
+    mSeqStepTab = lv_tabview_add_tab(mSeqSideTabview, "Step");
+
+    for (uint32_t i = 0; i < lv_obj_get_child_count(sideTabBar); i++) {
+        lv_obj_t* btn = lv_obj_get_child(sideTabBar, i);
+        lv_obj_set_style_text_font(btn, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(btn, lv_color_hex(0x888888), 0);
+        lv_obj_set_style_text_color(btn, trackColor, LV_STATE_CHECKED);
+    }
+
+    // Default to Step tab if mEditingStepIdx >= 0, otherwise Sequence tab
+    if (mEditingStepIdx >= 0) {
+        lv_tabview_set_active(mSeqSideTabview, 1, LV_ANIM_OFF);
+    } else {
+        lv_tabview_set_active(mSeqSideTabview, 0, LV_ANIM_OFF);
+    }
+
+    // -------------------------------------------------------------------------
+    // TAB 1: SEQUENCE / TRACK PARAMETERS
+    // -------------------------------------------------------------------------
+    lv_obj_set_style_pad_all(mSeqTrackTab, 4, 0);
+    lv_obj_set_layout(mSeqTrackTab, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mSeqTrackTab, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(mSeqTrackTab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(mSeqTrackTab, LV_OBJ_FLAG_SCROLLABLE);
+
     auto makeSideGroup = [&](lv_obj_t* parent, int h) -> lv_obj_t* {
         lv_obj_t* grp = lv_obj_create(parent);
-        lv_obj_set_size(grp, 193, h);
+        lv_obj_set_size(grp, 226, h);
         lv_obj_set_style_bg_opa(grp, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(grp, 0, 0);
         lv_obj_set_style_pad_all(grp, 0, 0);
@@ -4923,7 +5012,6 @@ void UIManager::populateSeqScreen() {
         return grp;
     };
 
-    // Helper: standard section label
     auto makeSideLabel = [&](lv_obj_t* parent, const char* text) -> lv_obj_t* {
         lv_obj_t* lbl = lv_label_create(parent);
         lv_label_set_text(lbl, text);
@@ -4932,13 +5020,13 @@ void UIManager::populateSeqScreen() {
         return lbl;
     };
 
-    // --- 1. 4×4 / 8×8 toggle & Play Order side-by-side ---
-    lv_obj_t* toggleGrp = makeSideGroup(sidePanel, 44);
+    // 1. 4×4 / 8×8 toggle & Play Order side-by-side
+    lv_obj_t* toggleGrp = makeSideGroup(mSeqTrackTab, 48);
     lv_obj_set_flex_flow(toggleGrp, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(toggleGrp, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* toggleBtn = lv_button_create(toggleGrp);
-    lv_obj_set_size(toggleBtn, 90, 38);
+    lv_obj_set_size(toggleBtn, 108, 42);
     lv_obj_add_flag(toggleBtn, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(toggleBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_bg_color(toggleBtn, trackColor, LV_STATE_CHECKED);
@@ -4951,12 +5039,12 @@ void UIManager::populateSeqScreen() {
 
     lv_obj_t* toggleLbl = lv_label_create(toggleBtn);
     lv_label_set_text(toggleLbl, is4x4 ? "8x8 View" : "4x4 View");
-    lv_obj_set_style_text_font(toggleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(toggleLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(toggleLbl);
     lv_obj_add_event_cb(toggleBtn, seqGridToggleBtnEventCb, LV_EVENT_VALUE_CHANGED, this);
 
     lv_obj_t* playOrderBtn = lv_button_create(toggleGrp);
-    lv_obj_set_size(playOrderBtn, 90, 38);
+    lv_obj_set_size(playOrderBtn, 108, 42);
     lv_obj_set_style_bg_color(playOrderBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_radius(playOrderBtn, 8, 0);
 
@@ -4972,27 +5060,26 @@ void UIManager::populateSeqScreen() {
         dirText = "P-P";
     }
     lv_label_set_text(playOrderLbl, dirText);
-    lv_obj_set_style_text_font(playOrderLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(playOrderLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(playOrderLbl);
     lv_obj_add_event_cb(playOrderBtn, seqPlayOrderBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // --- 2. Knob grid: Length, Humanize, Probability, Clock Div in a 2x2 layout ---
-    lv_obj_t* arcGrid = lv_obj_create(sidePanel);
-    lv_obj_set_size(arcGrid, 193, 158);
+    // 2. Knob grid: Length, Humanize, Probability, Clock Div in a 2x2 layout
+    lv_obj_t* arcGrid = lv_obj_create(mSeqTrackTab);
+    lv_obj_set_size(arcGrid, 226, 205);
     lv_obj_set_style_bg_opa(arcGrid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(arcGrid, 0, 0);
     lv_obj_set_style_pad_all(arcGrid, 0, 0);
     lv_obj_remove_flag(arcGrid, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(arcGrid, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(arcGrid, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(arcGrid, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_EVENLY);
-    lv_obj_set_style_pad_row(arcGrid, 6, 0);
-    lv_obj_set_style_pad_column(arcGrid, 4, 0);
+    lv_obj_set_flex_align(arcGrid, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_BETWEEN);
+    lv_obj_set_style_pad_row(arcGrid, 10, 0);
+    lv_obj_set_style_pad_column(arcGrid, 8, 0);
 
-    // Helper: make a single arc cell (arc on top, text label below)
     auto makeArcCell = [&](lv_obj_t* parent) -> lv_obj_t* {
         lv_obj_t* cell = lv_obj_create(parent);
-        lv_obj_set_size(cell, 88, 76);
+        lv_obj_set_size(cell, 106, 95);
         lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(cell, 0, 0);
         lv_obj_set_style_pad_all(cell, 0, 0);
@@ -5000,14 +5087,14 @@ void UIManager::populateSeqScreen() {
         lv_obj_set_layout(cell, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(cell, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(cell, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_row(cell, 3, 0);
+        lv_obj_set_style_pad_row(cell, 4, 0);
         return cell;
     };
 
     // Cell 1: Length
     lv_obj_t* lenCell = makeArcCell(arcGrid);
     lv_obj_t* lenArc = lv_arc_create(lenCell);
-    lv_obj_set_size(lenArc, 46, 46);
+    lv_obj_set_size(lenArc, 60, 60);
     lv_arc_set_range(lenArc, 1, 64);
     lv_arc_set_value(lenArc, mSeqTrackLength[mActiveTrack]);
     lv_obj_set_style_arc_color(lenArc, trackColor, LV_PART_INDICATOR);
@@ -5020,7 +5107,7 @@ void UIManager::populateSeqScreen() {
     // Cell 2: Humanize
     lv_obj_t* humCell = makeArcCell(arcGrid);
     lv_obj_t* humArc = lv_arc_create(humCell);
-    lv_obj_set_size(humArc, 46, 46);
+    lv_obj_set_size(humArc, 60, 60);
     lv_arc_set_range(humArc, 0, 100);
     lv_arc_set_value(humArc, mSeqTrackHumanize[mActiveTrack]);
     lv_obj_set_style_arc_color(humArc, trackColor, LV_PART_INDICATOR);
@@ -5036,7 +5123,7 @@ void UIManager::populateSeqScreen() {
     // Cell 3: Probability
     lv_obj_t* probCell = makeArcCell(arcGrid);
     lv_obj_t* probArc = lv_arc_create(probCell);
-    lv_obj_set_size(probArc, 46, 46);
+    lv_obj_set_size(probArc, 60, 60);
     lv_arc_set_range(probArc, 0, 100);
     lv_arc_set_value(probArc, mSeqTrackProbability[mActiveTrack]);
     lv_obj_set_style_arc_color(probArc, trackColor, LV_PART_INDICATOR);
@@ -5052,7 +5139,7 @@ void UIManager::populateSeqScreen() {
     // Cell 4: Clock Div
     lv_obj_t* clkCell = makeArcCell(arcGrid);
     lv_obj_t* clkArc = lv_arc_create(clkCell);
-    lv_obj_set_size(clkArc, 46, 46);
+    lv_obj_set_size(clkArc, 60, 60);
     lv_arc_set_range(clkArc, 0, 6);
     lv_arc_set_value(clkArc, mSeqTrackClockDivIndex[mActiveTrack]);
     lv_obj_set_style_arc_color(clkArc, trackColor, LV_PART_INDICATOR);
@@ -5065,12 +5152,11 @@ void UIManager::populateSeqScreen() {
     lv_obj_add_event_cb(clkArc, seqClockDivArcEventCb, LV_EVENT_VALUE_CHANGED, this);
     makeSideLabel(clkCell, "Clock Div");
 
-
-    // --- 5. Transpose row ---
-    lv_obj_t* transpGrp = makeSideGroup(sidePanel, 60);
+    // 3. Transpose row
+    lv_obj_t* transpGrp = makeSideGroup(mSeqTrackTab, 64);
     makeSideLabel(transpGrp, "Transpose");
     lv_obj_t* transpRow = lv_obj_create(transpGrp);
-    lv_obj_set_size(transpRow, 190, 34);
+    lv_obj_set_size(transpRow, 220, 40);
     lv_obj_set_style_bg_opa(transpRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(transpRow, 0, 0);
     lv_obj_set_style_pad_all(transpRow, 0, 0);
@@ -5079,12 +5165,12 @@ void UIManager::populateSeqScreen() {
     lv_obj_set_flex_align(transpRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* tDnBtn = lv_button_create(transpRow);
-    lv_obj_set_size(tDnBtn, 50, 30);
+    lv_obj_set_size(tDnBtn, 64, 38);
     lv_obj_set_style_radius(tDnBtn, 6, 0);
     lv_obj_set_style_bg_color(tDnBtn, lv_color_hex(0x333333), 0);
     lv_obj_t* tDnLbl = lv_label_create(tDnBtn); lv_label_set_text(tDnLbl, "-"); lv_obj_center(tDnLbl);
     lv_obj_add_event_cb(tDnBtn, seqTransposeBtnEventCb, LV_EVENT_CLICKED, this);
-    lv_obj_set_user_data(tDnBtn, (void*)(uintptr_t)0); // 0 = decrement
+    lv_obj_set_user_data(tDnBtn, (void*)(uintptr_t)0);
 
     mSeqTransposeLbl = lv_label_create(transpRow);
     char tBuf[8];
@@ -5094,18 +5180,18 @@ void UIManager::populateSeqScreen() {
     lv_obj_set_style_text_color(mSeqTransposeLbl, trackColor, 0);
 
     lv_obj_t* tUpBtn = lv_button_create(transpRow);
-    lv_obj_set_size(tUpBtn, 50, 30);
+    lv_obj_set_size(tUpBtn, 64, 38);
     lv_obj_set_style_radius(tUpBtn, 6, 0);
     lv_obj_set_style_bg_color(tUpBtn, lv_color_hex(0x333333), 0);
     lv_obj_t* tUpLbl = lv_label_create(tUpBtn); lv_label_set_text(tUpLbl, "+"); lv_obj_center(tUpLbl);
     lv_obj_add_event_cb(tUpBtn, seqTransposeBtnEventCb, LV_EVENT_CLICKED, this);
-    lv_obj_set_user_data(tUpBtn, (void*)(uintptr_t)1); // 1 = increment
+    lv_obj_set_user_data(tUpBtn, (void*)(uintptr_t)1);
 
-    // --- 6. Octave row ---
-    lv_obj_t* octGrp = makeSideGroup(sidePanel, 60);
+    // 4. Octave row
+    lv_obj_t* octGrp = makeSideGroup(mSeqTrackTab, 64);
     makeSideLabel(octGrp, "Octave");
     lv_obj_t* octRow = lv_obj_create(octGrp);
-    lv_obj_set_size(octRow, 190, 34);
+    lv_obj_set_size(octRow, 220, 40);
     lv_obj_set_style_bg_opa(octRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(octRow, 0, 0);
     lv_obj_set_style_pad_all(octRow, 0, 0);
@@ -5114,7 +5200,7 @@ void UIManager::populateSeqScreen() {
     lv_obj_set_flex_align(octRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* oDnBtn = lv_button_create(octRow);
-    lv_obj_set_size(oDnBtn, 50, 30);
+    lv_obj_set_size(oDnBtn, 64, 38);
     lv_obj_set_style_radius(oDnBtn, 6, 0);
     lv_obj_set_style_bg_color(oDnBtn, lv_color_hex(0x333333), 0);
     lv_obj_t* oDnLbl2 = lv_label_create(oDnBtn); lv_label_set_text(oDnLbl2, "-"); lv_obj_center(oDnLbl2);
@@ -5129,20 +5215,20 @@ void UIManager::populateSeqScreen() {
     lv_obj_set_style_text_color(mSeqOctaveLbl, trackColor, 0);
 
     lv_obj_t* oUpBtn = lv_button_create(octRow);
-    lv_obj_set_size(oUpBtn, 50, 30);
+    lv_obj_set_size(oUpBtn, 64, 38);
     lv_obj_set_style_radius(oUpBtn, 6, 0);
     lv_obj_set_style_bg_color(oUpBtn, lv_color_hex(0x333333), 0);
     lv_obj_t* oUpLbl2 = lv_label_create(oUpBtn); lv_label_set_text(oUpLbl2, "+"); lv_obj_center(oUpLbl2);
     lv_obj_add_event_cb(oUpBtn, seqOctaveBtnEventCb, LV_EVENT_CLICKED, this);
     lv_obj_set_user_data(oUpBtn, (void*)(uintptr_t)1);
 
-    // --- 7. Copy / Paste / Clear buttons ---
-    lv_obj_t* cpGrp = makeSideGroup(sidePanel, 38);
+    // 5. Copy / Paste / Clear buttons
+    lv_obj_t* cpGrp = makeSideGroup(mSeqTrackTab, 48);
     lv_obj_set_flex_flow(cpGrp, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(cpGrp, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(cpGrp, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* copyBtn = lv_button_create(cpGrp);
-    lv_obj_set_size(copyBtn, 56, 30);
+    lv_obj_set_size(copyBtn, 68, 38);
     lv_obj_set_style_bg_color(copyBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(copyBtn, trackColor, 0);
     lv_obj_set_style_border_width(copyBtn, 1, 0);
@@ -5152,7 +5238,7 @@ void UIManager::populateSeqScreen() {
     lv_obj_add_event_cb(copyBtn, seqCopyBtnEventCb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* pasteBtn = lv_button_create(cpGrp);
-    lv_obj_set_size(pasteBtn, 56, 30);
+    lv_obj_set_size(pasteBtn, 68, 38);
     lv_obj_set_style_bg_color(pasteBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(pasteBtn, trackColor, 0);
     lv_obj_set_style_border_width(pasteBtn, 1, 0);
@@ -5162,7 +5248,7 @@ void UIManager::populateSeqScreen() {
     lv_obj_add_event_cb(pasteBtn, seqPasteBtnEventCb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* clearBtn = lv_button_create(cpGrp);
-    lv_obj_set_size(clearBtn, 56, 30);
+    lv_obj_set_size(clearBtn, 68, 38);
     lv_obj_set_style_bg_color(clearBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(clearBtn, trackColor, 0);
     lv_obj_set_style_border_width(clearBtn, 1, 0);
@@ -5171,13 +5257,13 @@ void UIManager::populateSeqScreen() {
     lv_obj_set_style_text_font(clearLbl, &lv_font_montserrat_12, 0); lv_obj_center(clearLbl);
     lv_obj_add_event_cb(clearBtn, seqClearBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // --- 8. Save / Load buttons ---
-    lv_obj_t* slGrp = makeSideGroup(sidePanel, 38);
+    // 6. Save / Load buttons
+    lv_obj_t* slGrp = makeSideGroup(mSeqTrackTab, 48);
     lv_obj_set_flex_flow(slGrp, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(slGrp, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(slGrp, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* saveBtn = lv_button_create(slGrp);
-    lv_obj_set_size(saveBtn, 84, 30);
+    lv_obj_set_size(saveBtn, 108, 38);
     lv_obj_set_style_bg_color(saveBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(saveBtn, trackColor, 0);
     lv_obj_set_style_border_width(saveBtn, 1, 0);
@@ -5187,7 +5273,7 @@ void UIManager::populateSeqScreen() {
     lv_obj_add_event_cb(saveBtn, seqSaveBtnEventCb, LV_EVENT_CLICKED, this);
 
     lv_obj_t* loadBtn = lv_button_create(slGrp);
-    lv_obj_set_size(loadBtn, 84, 30);
+    lv_obj_set_size(loadBtn, 108, 38);
     lv_obj_set_style_bg_color(loadBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(loadBtn, trackColor, 0);
     lv_obj_set_style_border_width(loadBtn, 1, 0);
@@ -5195,6 +5281,313 @@ void UIManager::populateSeqScreen() {
     lv_obj_t* loadLbl = lv_label_create(loadBtn); lv_label_set_text(loadLbl, "Load");
     lv_obj_set_style_text_font(loadLbl, &lv_font_montserrat_12, 0); lv_obj_center(loadLbl);
     lv_obj_add_event_cb(loadBtn, seqLoadBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // -------------------------------------------------------------------------
+    // TAB 2: STEP PARAMETERS & P-LOCKS EDITOR
+    // -------------------------------------------------------------------------
+    lv_obj_set_style_pad_all(mSeqStepTab, 4, 0);
+    lv_obj_set_layout(mSeqStepTab, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mSeqStepTab, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(mSeqStepTab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(mSeqStepTab, 10, 0);
+    lv_obj_add_flag(mSeqStepTab, LV_OBJ_FLAG_SCROLLABLE);
+
+    int activeStep = mEditingStepIdx >= 0 ? mEditingStepIdx : 0;
+
+    // Header: Step title
+    lv_obj_t* headerRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(headerRow, 226, 38);
+    lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(headerRow, 0, 0);
+    lv_obj_set_style_pad_all(headerRow, 0, 0);
+    lv_obj_set_layout(headerRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(headerRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(headerRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* titleLbl = lv_label_create(headerRow);
+    lv_label_set_text_fmt(titleLbl, "STEP %d OPTIONS", activeStep + 1);
+    lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(titleLbl, trackColor, 0);
+
+    lv_obj_t* doneBtn = lv_button_create(headerRow);
+    lv_obj_set_size(doneBtn, 70, 32);
+    lv_obj_set_style_bg_color(doneBtn, trackColor, 0);
+    lv_obj_set_style_radius(doneBtn, 6, 0);
+    lv_obj_t* doneLbl = lv_label_create(doneBtn);
+    lv_label_set_text(doneLbl, "CLOSE");
+    lv_obj_set_style_text_font(doneLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(doneLbl);
+    auto doneCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->closeSeqStepEditor();
+    };
+    lv_obj_add_event_cb(doneBtn, doneCb, LV_EVENT_CLICKED, this);
+
+    // Fetch step data
+    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
+    std::vector<Step> currentSteps;
+    if (isDrum) {
+        currentSteps = mEngine.getDrumSequencerSteps(mActiveTrack, mActiveDrumIdx);
+    } else {
+        currentSteps = mEngine.getSequencerSteps(mActiveTrack);
+    }
+
+    Step stepObj;
+    if (activeStep < (int)currentSteps.size()) {
+        stepObj = currentSteps[activeStep];
+    } else {
+        stepObj.active = mSeqTrackSteps[mActiveTrack][activeStep];
+    }
+
+    // 1. Ratchet
+    lv_obj_t* ratchetRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(ratchetRow, 226, 36);
+    lv_obj_set_style_bg_opa(ratchetRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(ratchetRow, 0, 0);
+    lv_obj_set_style_pad_all(ratchetRow, 0, 0);
+    lv_obj_set_layout(ratchetRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(ratchetRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(ratchetRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* ratchetLbl = lv_label_create(ratchetRow);
+    lv_label_set_text(ratchetLbl, "Ratchet:");
+    lv_obj_set_style_text_font(ratchetLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(ratchetLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalRatchetDd = lv_dropdown_create(ratchetRow);
+    lv_obj_set_size(mStepModalRatchetDd, 110, 32);
+    lv_dropdown_set_options(mStepModalRatchetDd, "1x\n2x\n3x\n4x\n8x");
+    int ratchetSel = 0;
+    if (stepObj.ratchet == 2) ratchetSel = 1;
+    else if (stepObj.ratchet == 3) ratchetSel = 2;
+    else if (stepObj.ratchet == 4) ratchetSel = 3;
+    else if (stepObj.ratchet == 8) ratchetSel = 4;
+    lv_dropdown_set_selected(mStepModalRatchetDd, ratchetSel);
+    lv_obj_set_style_text_font(mStepModalRatchetDd, &lv_font_montserrat_12, 0);
+    lv_obj_add_event_cb(mStepModalRatchetDd, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalRatchetDd, (void*)(uintptr_t)10);
+
+    // 2. Note Slider
+    auto getNoteName = [](int n) -> std::string {
+        static const char* noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+        int octave = (n / 12) - 1;
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%s%d (%d)", noteNames[n % 12], octave, n);
+        return std::string(buf);
+    };
+
+    int currentNoteVal = isDrum ? (60 + mActiveDrumIdx) : 60;
+    if (!stepObj.notes.empty()) {
+        currentNoteVal = stepObj.notes[0].note;
+    }
+
+    lv_obj_t* noteRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(noteRow, 226, 52);
+    lv_obj_set_style_bg_opa(noteRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(noteRow, 0, 0);
+    lv_obj_set_style_pad_all(noteRow, 0, 0);
+    lv_obj_set_layout(noteRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(noteRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(noteRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(noteRow, 6, 0);
+
+    lv_obj_t* noteLbl = lv_label_create(noteRow);
+    lv_label_set_text_fmt(noteLbl, "Note: %s", getNoteName(currentNoteVal).c_str());
+    lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalNoteSlider = lv_slider_create(noteRow);
+    lv_obj_set_size(mStepModalNoteSlider, 226, 16);
+    lv_slider_set_range(mStepModalNoteSlider, 24, 108);
+    lv_slider_set_value(mStepModalNoteSlider, currentNoteVal, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mStepModalNoteSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mStepModalNoteSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mStepModalNoteSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalNoteSlider, (void*)(uintptr_t)11);
+
+    // 3. Punch & Skip Switches side-by-side
+    lv_obj_t* swRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(swRow, 226, 36);
+    lv_obj_set_style_bg_opa(swRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(swRow, 0, 0);
+    lv_obj_set_style_pad_all(swRow, 0, 0);
+    lv_obj_set_layout(swRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(swRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(swRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* punchLbl = lv_label_create(swRow);
+    lv_label_set_text(punchLbl, "Punch:");
+    lv_obj_set_style_text_font(punchLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(punchLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalPunchSw = lv_switch_create(swRow);
+    lv_obj_set_size(mStepModalPunchSw, 42, 24);
+    if (stepObj.punch) lv_obj_add_state(mStepModalPunchSw, LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(mStepModalPunchSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_add_event_cb(mStepModalPunchSw, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalPunchSw, (void*)(uintptr_t)12);
+
+    lv_obj_t* skipLbl = lv_label_create(swRow);
+    lv_label_set_text(skipLbl, "Skip:");
+    lv_obj_set_style_text_font(skipLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(skipLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalSkipSw = lv_switch_create(swRow);
+    lv_obj_set_size(mStepModalSkipSw, 42, 24);
+    if (stepObj.isSkipped) lv_obj_add_state(mStepModalSkipSw, LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(mStepModalSkipSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_add_event_cb(mStepModalSkipSw, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalSkipSw, (void*)(uintptr_t)15);
+
+    // 4. Probability Slider
+    lv_obj_t* probRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(probRow, 226, 52);
+    lv_obj_set_style_bg_opa(probRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(probRow, 0, 0);
+    lv_obj_set_style_pad_all(probRow, 0, 0);
+    lv_obj_set_layout(probRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(probRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(probRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(probRow, 6, 0);
+
+    lv_obj_t* probLbl = lv_label_create(probRow);
+    int probVal = (int)(stepObj.probability * 100.0f);
+    lv_label_set_text_fmt(probLbl, "Probability: %d%%", probVal);
+    lv_obj_set_style_text_font(probLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(probLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalProbSlider = lv_slider_create(probRow);
+    lv_obj_set_size(mStepModalProbSlider, 226, 16);
+    lv_slider_set_range(mStepModalProbSlider, 0, 100);
+    lv_slider_set_value(mStepModalProbSlider, probVal, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mStepModalProbSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mStepModalProbSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mStepModalProbSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalProbSlider, (void*)(uintptr_t)13);
+
+    // 5. Gate Slider
+    lv_obj_t* gateRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(gateRow, 226, 52);
+    lv_obj_set_style_bg_opa(gateRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(gateRow, 0, 0);
+    lv_obj_set_style_pad_all(gateRow, 0, 0);
+    lv_obj_set_layout(gateRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(gateRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(gateRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(gateRow, 6, 0);
+
+    lv_obj_t* gateLbl = lv_label_create(gateRow);
+    int gateVal = (int)(stepObj.gate * 100.0f);
+    lv_label_set_text_fmt(gateLbl, "Gate Length: %d%%", gateVal);
+    lv_obj_set_style_text_font(gateLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(gateLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalGateSlider = lv_slider_create(gateRow);
+    lv_obj_set_size(mStepModalGateSlider, 226, 16);
+    lv_slider_set_range(mStepModalGateSlider, 0, 100);
+    lv_slider_set_value(mStepModalGateSlider, gateVal, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mStepModalGateSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mStepModalGateSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mStepModalGateSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalGateSlider, (void*)(uintptr_t)14);
+
+    // 6. Parameter Lock Section
+    lv_obj_t* pLockHeader = lv_label_create(mSeqStepTab);
+    lv_label_set_text(pLockHeader, "PARAMETER LOCKS");
+    lv_obj_set_style_text_font(pLockHeader, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(pLockHeader, trackColor, 0);
+    lv_obj_set_style_margin_top(pLockHeader, 8, 0);
+
+    auto params = getTrackParamOptions(mActiveTrack);
+    std::string paramOptionsStr = "";
+    for (size_t i = 0; i < params.size(); ++i) {
+        paramOptionsStr += params[i].second;
+        if (i < params.size() - 1) paramOptionsStr += "\n";
+    }
+
+    mStepModalPLockDd = lv_dropdown_create(mSeqStepTab);
+    lv_obj_set_size(mStepModalPLockDd, 226, 34);
+    lv_dropdown_set_options(mStepModalPLockDd, paramOptionsStr.c_str());
+    lv_obj_set_style_text_font(mStepModalPLockDd, &lv_font_montserrat_12, 0);
+
+    // Lock Value Slider
+    lv_obj_t* pLockValRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(pLockValRow, 226, 50);
+    lv_obj_set_style_bg_opa(pLockValRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(pLockValRow, 0, 0);
+    lv_obj_set_style_pad_all(pLockValRow, 0, 0);
+    lv_obj_set_layout(pLockValRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(pLockValRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(pLockValRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(pLockValRow, 4, 0);
+
+    lv_obj_t* pLockValLbl = lv_label_create(pLockValRow);
+    lv_label_set_text(pLockValLbl, "Lock Value: 50%");
+    lv_obj_set_style_text_font(pLockValLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(pLockValLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mStepModalPLockSlider = lv_slider_create(pLockValRow);
+    lv_obj_set_size(mStepModalPLockSlider, 226, 16);
+    lv_slider_set_range(mStepModalPLockSlider, 0, 100);
+    lv_slider_set_value(mStepModalPLockSlider, 50, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mStepModalPLockSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mStepModalPLockSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mStepModalPLockSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_set_user_data(mStepModalPLockSlider, (void*)(uintptr_t)20);
+
+    // Buttons: Add Lock & Clear All
+    lv_obj_t* pLockBtnRow = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(pLockBtnRow, 226, 36);
+    lv_obj_set_style_bg_opa(pLockBtnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(pLockBtnRow, 0, 0);
+    lv_obj_set_style_pad_all(pLockBtnRow, 0, 0);
+    lv_obj_set_layout(pLockBtnRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(pLockBtnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(pLockBtnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* addLockBtn = lv_button_create(pLockBtnRow);
+    lv_obj_set_size(addLockBtn, 108, 34);
+    lv_obj_set_style_bg_color(addLockBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_color(addLockBtn, trackColor, 0);
+    lv_obj_set_style_border_width(addLockBtn, 1, 0);
+    lv_obj_set_style_radius(addLockBtn, 6, 0);
+    lv_obj_t* addLockLbl = lv_label_create(addLockBtn);
+    lv_label_set_text(addLockLbl, "Add Lock");
+    lv_obj_set_style_text_font(addLockLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(addLockLbl);
+    lv_obj_add_event_cb(addLockBtn, stepModalAddLockEventCb, LV_EVENT_CLICKED, this);
+
+    lv_obj_t* clearLocksBtn = lv_button_create(pLockBtnRow);
+    lv_obj_set_size(clearLocksBtn, 108, 34);
+    lv_obj_set_style_bg_color(clearLocksBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_color(clearLocksBtn, lv_color_hex(0xCC3333), 0);
+    lv_obj_set_style_border_width(clearLocksBtn, 1, 0);
+    lv_obj_set_style_radius(clearLocksBtn, 6, 0);
+    lv_obj_t* clearLocksLbl = lv_label_create(clearLocksBtn);
+    lv_label_set_text(clearLocksLbl, "Clear All");
+    lv_obj_set_style_text_font(clearLocksLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(clearLocksLbl);
+    lv_obj_add_event_cb(clearLocksBtn, stepModalClearLocksEventCb, LV_EVENT_CLICKED, this);
+
+    // Scrollable locks list view
+    mStepModalActiveLocksList = lv_obj_create(mSeqStepTab);
+    lv_obj_set_size(mStepModalActiveLocksList, 226, 160);
+    lv_obj_set_style_bg_color(mStepModalActiveLocksList, lv_color_hex(0x111111), 0);
+    lv_obj_set_style_bg_opa(mStepModalActiveLocksList, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(mStepModalActiveLocksList, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(mStepModalActiveLocksList, 1, 0);
+    lv_obj_set_style_radius(mStepModalActiveLocksList, 8, 0);
+    lv_obj_set_style_pad_all(mStepModalActiveLocksList, 6, 0);
+    lv_obj_set_layout(mStepModalActiveLocksList, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mStepModalActiveLocksList, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(mStepModalActiveLocksList, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(mStepModalActiveLocksList, 4, 0);
+    lv_obj_add_flag(mStepModalActiveLocksList, LV_OBJ_FLAG_SCROLLABLE);
+
+    refreshStepModalLocksList();
 }
 
 // ---- rebuildSeqGrid: renders 8×8 or 4×4 step grid ----
@@ -5205,9 +5598,9 @@ void UIManager::rebuildSeqGrid() {
     bool is4x4 = mSeqTrackIs4x4[mActiveTrack];
     int cols = is4x4 ? 4 : 8;
     int rows = is4x4 ? 4 : 8;
-    int btnW = is4x4 ? 128 : 62;
-    int btnH = is4x4 ? 108 : 62;
-    int gap  = is4x4 ? 6   : 4;
+    int btnW = is4x4 ? 160 : 82;
+    int btnH = is4x4 ? 130 : 72;
+    int gap  = is4x4 ? 8   : 5;
 
     int gridW = cols * btnW + (cols - 1) * gap;
     int gridH = rows * btnH + (rows - 1) * gap;
@@ -5320,7 +5713,7 @@ void UIManager::openFileBrowser(bool isSave) {
 
     // Full-screen dimmed overlay
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(overlay, 0, 0);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
@@ -5847,379 +6240,14 @@ void UIManager::seqStepReleaseEventCb(lv_event_t* e) {
 }
 
 void UIManager::openSeqStepModal(int stepIdx) {
-    if (mStepModal) {
-        lv_obj_delete(mStepModal);
-        mStepModal = nullptr;
-    }
     mEditingStepIdx = stepIdx;
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    rebuildSeqSidePanel();
+    rebuildSeqGrid();
+}
 
-    // Full-screen dimmed overlay
-    lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
-    lv_obj_set_pos(overlay, 0, 0);
-    lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
-    lv_obj_set_style_border_width(overlay, 0, 0);
-    lv_obj_add_flag(overlay, LV_OBJ_FLAG_FLOATING);
-    mStepModal = overlay;
-
-    // Modal card
-    lv_obj_t* card = lv_obj_create(overlay);
-    lv_obj_set_size(card, 540, 540);
-    lv_obj_center(card);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(card, trackColor, 0);
-    lv_obj_set_style_border_width(card, 2, 0);
-    lv_obj_set_style_radius(card, 16, 0);
-    lv_obj_set_style_pad_all(card, 16, 0);
-    lv_obj_set_layout(card, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(card, 12, 0);
-
-    // Header Row
-    lv_obj_t* headerRow = lv_obj_create(card);
-    lv_obj_set_size(headerRow, lv_pct(100), 40);
-    lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(headerRow, 0, 0);
-    lv_obj_set_style_pad_all(headerRow, 0, 0);
-    lv_obj_set_layout(headerRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(headerRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(headerRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* titleLbl = lv_label_create(headerRow);
-    lv_label_set_text_fmt(titleLbl, "Track %d - Step %d Settings", mActiveTrack + 1, stepIdx + 1);
-    lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(titleLbl, lv_color_hex(0xEEEEEE), 0);
-
-    lv_obj_t* closeBtn = lv_button_create(headerRow);
-    lv_obj_set_size(closeBtn, 36, 36);
-    lv_obj_set_style_bg_color(closeBtn, lv_color_hex(0x333333), 0);
-    lv_obj_set_style_radius(closeBtn, 18, 0);
-    lv_obj_t* closeLbl = lv_label_create(closeBtn);
-    lv_label_set_text(closeLbl, "X");
-    lv_obj_set_style_text_font(closeLbl, &lv_font_montserrat_12, 0);
-    lv_obj_center(closeLbl);
-    lv_obj_add_event_cb(closeBtn, stepModalCloseEventCb, LV_EVENT_CLICKED, this);
-
-    // Body Columns Container
-    lv_obj_t* bodyContainer = lv_obj_create(card);
-    lv_obj_set_size(bodyContainer, lv_pct(100), 450);
-    lv_obj_set_style_bg_opa(bodyContainer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(bodyContainer, 0, 0);
-    lv_obj_set_style_pad_all(bodyContainer, 0, 0);
-    lv_obj_set_layout(bodyContainer, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(bodyContainer, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(bodyContainer, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_column(bodyContainer, 16, 0);
-
-    // Fetch existing step details
-    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
-    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
-
-    std::vector<Step> currentSteps;
-    if (isDrum) {
-        currentSteps = mEngine.getDrumSequencerSteps(mActiveTrack, mActiveDrumIdx);
-    } else {
-        currentSteps = mEngine.getSequencerSteps(mActiveTrack);
-    }
-
-    Step stepObj;
-    if (stepIdx < (int)currentSteps.size()) {
-        stepObj = currentSteps[stepIdx];
-    } else {
-        stepObj.active = mSeqTrackSteps[mActiveTrack][stepIdx];
-    }
-
-    // Left Column
-    lv_obj_t* leftCol = lv_obj_create(bodyContainer);
-    lv_obj_set_size(leftCol, 240, 440);
-    lv_obj_set_style_bg_color(leftCol, lv_color_hex(0x222222), 0);
-    lv_obj_set_style_bg_opa(leftCol, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(leftCol, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(leftCol, 1, 0);
-    lv_obj_set_style_radius(leftCol, 12, 0);
-    lv_obj_set_style_pad_all(leftCol, 10, 0);
-    lv_obj_set_layout(leftCol, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(leftCol, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(leftCol, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(leftCol, 8, 0);
-    lv_obj_remove_flag(leftCol, LV_OBJ_FLAG_SCROLLABLE);
-
-    // 1. Ratchet Dropdown
-    lv_obj_t* ratchetRow = lv_obj_create(leftCol);
-    lv_obj_set_size(ratchetRow, lv_pct(100), 32);
-    lv_obj_set_style_bg_opa(ratchetRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(ratchetRow, 0, 0);
-    lv_obj_set_style_pad_all(ratchetRow, 0, 0);
-    lv_obj_set_layout(ratchetRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(ratchetRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(ratchetRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* ratchetLbl = lv_label_create(ratchetRow);
-    lv_label_set_text(ratchetLbl, "Ratchet:");
-    lv_obj_set_style_text_font(ratchetLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(ratchetLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalRatchetDd = lv_dropdown_create(ratchetRow);
-    lv_obj_set_size(mStepModalRatchetDd, 100, 32);
-    lv_dropdown_set_options(mStepModalRatchetDd, "1x\n2x\n3x\n4x\n8x");
-    int ratchetSel = 0;
-    if (stepObj.ratchet == 2) ratchetSel = 1;
-    else if (stepObj.ratchet == 3) ratchetSel = 2;
-    else if (stepObj.ratchet == 4) ratchetSel = 3;
-    else if (stepObj.ratchet == 8) ratchetSel = 4;
-    lv_dropdown_set_selected(mStepModalRatchetDd, ratchetSel);
-    lv_obj_set_style_text_font(mStepModalRatchetDd, &lv_font_montserrat_12, 0);
-    lv_obj_add_event_cb(mStepModalRatchetDd, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalRatchetDd, (void*)(uintptr_t)10);
-
-    // 2. Note Slider with notation helper
-    auto getNoteName = [](int n) -> std::string {
-        static const char* noteNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-        int octave = (n / 12) - 1;
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%s%d (%d)", noteNames[n % 12], octave, n);
-        return std::string(buf);
-    };
-
-    int currentNoteVal = isDrum ? (60 + mActiveDrumIdx) : 60;
-    if (!stepObj.notes.empty()) {
-        currentNoteVal = stepObj.notes[0].note;
-    }
-
-    lv_obj_t* noteRow = lv_obj_create(leftCol);
-    lv_obj_set_size(noteRow, lv_pct(100), 50);
-    lv_obj_set_style_bg_opa(noteRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(noteRow, 0, 0);
-    lv_obj_set_style_pad_all(noteRow, 0, 0);
-    lv_obj_set_layout(noteRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(noteRow, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(noteRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(noteRow, 4, 0);
-
-    lv_obj_t* noteLbl = lv_label_create(noteRow);
-    lv_label_set_text_fmt(noteLbl, "Note: %s", getNoteName(currentNoteVal).c_str());
-    lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalNoteSlider = lv_slider_create(noteRow);
-    lv_obj_set_size(mStepModalNoteSlider, lv_pct(100), 12);
-    lv_slider_set_range(mStepModalNoteSlider, 24, 108);
-    lv_slider_set_value(mStepModalNoteSlider, currentNoteVal, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mStepModalNoteSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mStepModalNoteSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mStepModalNoteSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalNoteSlider, (void*)(uintptr_t)11);
-
-    // 3. Punch Toggle Switch
-    lv_obj_t* punchRow = lv_obj_create(leftCol);
-    lv_obj_set_size(punchRow, lv_pct(100), 32);
-    lv_obj_set_style_bg_opa(punchRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(punchRow, 0, 0);
-    lv_obj_set_style_pad_all(punchRow, 0, 0);
-    lv_obj_set_layout(punchRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(punchRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(punchRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* punchLbl = lv_label_create(punchRow);
-    lv_label_set_text(punchLbl, "Punch (1.1x / OD):");
-    lv_obj_set_style_text_font(punchLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(punchLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalPunchSw = lv_switch_create(punchRow);
-    lv_obj_set_size(mStepModalPunchSw, 46, 24);
-    if (stepObj.punch) {
-        lv_obj_add_state(mStepModalPunchSw, LV_STATE_CHECKED);
-    }
-    lv_obj_set_style_bg_color(mStepModalPunchSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
-    lv_obj_add_event_cb(mStepModalPunchSw, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalPunchSw, (void*)(uintptr_t)12);
-
-    // 4. Probability Slider
-    lv_obj_t* probRow = lv_obj_create(leftCol);
-    lv_obj_set_size(probRow, lv_pct(100), 50);
-    lv_obj_set_style_bg_opa(probRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(probRow, 0, 0);
-    lv_obj_set_style_pad_all(probRow, 0, 0);
-    lv_obj_set_layout(probRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(probRow, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(probRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(probRow, 4, 0);
-
-    lv_obj_t* probLbl = lv_label_create(probRow);
-    int probVal = (int)(stepObj.probability * 100.0f);
-    lv_label_set_text_fmt(probLbl, "Probability: %d%%", probVal);
-    lv_obj_set_style_text_font(probLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(probLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalProbSlider = lv_slider_create(probRow);
-    lv_obj_set_size(mStepModalProbSlider, lv_pct(100), 12);
-    lv_slider_set_range(mStepModalProbSlider, 0, 100);
-    lv_slider_set_value(mStepModalProbSlider, probVal, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mStepModalProbSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mStepModalProbSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mStepModalProbSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalProbSlider, (void*)(uintptr_t)13);
-
-    // 5. Gate Slider
-    lv_obj_t* gateRow = lv_obj_create(leftCol);
-    lv_obj_set_size(gateRow, lv_pct(100), 50);
-    lv_obj_set_style_bg_opa(gateRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(gateRow, 0, 0);
-    lv_obj_set_style_pad_all(gateRow, 0, 0);
-    lv_obj_set_layout(gateRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(gateRow, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(gateRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(gateRow, 4, 0);
-
-    lv_obj_t* gateLbl = lv_label_create(gateRow);
-    int gateVal = (int)(stepObj.gate * 100.0f);
-    lv_label_set_text_fmt(gateLbl, "Gate Length: %d%%", gateVal);
-    lv_obj_set_style_text_font(gateLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(gateLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalGateSlider = lv_slider_create(gateRow);
-    lv_obj_set_size(mStepModalGateSlider, lv_pct(100), 12);
-    lv_slider_set_range(mStepModalGateSlider, 0, 100);
-    lv_slider_set_value(mStepModalGateSlider, gateVal, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mStepModalGateSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mStepModalGateSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mStepModalGateSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalGateSlider, (void*)(uintptr_t)14);
-
-    // 6. Skip Step Switch
-    lv_obj_t* skipRow = lv_obj_create(leftCol);
-    lv_obj_set_size(skipRow, lv_pct(100), 32);
-    lv_obj_set_style_bg_opa(skipRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(skipRow, 0, 0);
-    lv_obj_set_style_pad_all(skipRow, 0, 0);
-    lv_obj_set_layout(skipRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(skipRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(skipRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* skipLbl = lv_label_create(skipRow);
-    lv_label_set_text(skipLbl, "Skip Step:");
-    lv_obj_set_style_text_font(skipLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(skipLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalSkipSw = lv_switch_create(skipRow);
-    lv_obj_set_size(mStepModalSkipSw, 46, 24);
-    if (stepObj.isSkipped) {
-        lv_obj_add_state(mStepModalSkipSw, LV_STATE_CHECKED);
-    }
-    lv_obj_set_style_bg_color(mStepModalSkipSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
-    lv_obj_add_event_cb(mStepModalSkipSw, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalSkipSw, (void*)(uintptr_t)15);
-
-    // Right Column (Parameter Locking Dashboard)
-    lv_obj_t* rightCol = lv_obj_create(bodyContainer);
-    lv_obj_set_size(rightCol, 240, 440);
-    lv_obj_set_style_bg_color(rightCol, lv_color_hex(0x222222), 0);
-    lv_obj_set_style_bg_opa(rightCol, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(rightCol, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(rightCol, 1, 0);
-    lv_obj_set_style_radius(rightCol, 12, 0);
-    lv_obj_set_style_pad_all(rightCol, 10, 0);
-    lv_obj_set_layout(rightCol, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(rightCol, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(rightCol, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(rightCol, 8, 0);
-    lv_obj_remove_flag(rightCol, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Parameter Dropdown Options
-    auto params = getTrackParamOptions(mActiveTrack);
-    std::string paramOptionsStr = "";
-    for (size_t i = 0; i < params.size(); ++i) {
-        paramOptionsStr += params[i].second;
-        if (i < params.size() - 1) {
-            paramOptionsStr += "\n";
-        }
-    }
-
-    mStepModalPLockDd = lv_dropdown_create(rightCol);
-    lv_obj_set_size(mStepModalPLockDd, lv_pct(100), 32);
-    lv_dropdown_set_options(mStepModalPLockDd, paramOptionsStr.c_str());
-    lv_obj_set_style_text_font(mStepModalPLockDd, &lv_font_montserrat_12, 0);
-
-    // Lock Value slider
-    lv_obj_t* pLockValRow = lv_obj_create(rightCol);
-    lv_obj_set_size(pLockValRow, lv_pct(100), 50);
-    lv_obj_set_style_bg_opa(pLockValRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(pLockValRow, 0, 0);
-    lv_obj_set_style_pad_all(pLockValRow, 0, 0);
-    lv_obj_set_layout(pLockValRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(pLockValRow, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(pLockValRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(pLockValRow, 4, 0);
-
-    lv_obj_t* pLockValLbl = lv_label_create(pLockValRow);
-    lv_label_set_text(pLockValLbl, "Lock Value: 50%");
-    lv_obj_set_style_text_font(pLockValLbl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(pLockValLbl, lv_color_hex(0xCCCCCC), 0);
-
-    mStepModalPLockSlider = lv_slider_create(pLockValRow);
-    lv_obj_set_size(mStepModalPLockSlider, lv_pct(100), 12);
-    lv_slider_set_range(mStepModalPLockSlider, 0, 100);
-    lv_slider_set_value(mStepModalPLockSlider, 50, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mStepModalPLockSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mStepModalPLockSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mStepModalPLockSlider, stepModalControlEventCb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_set_user_data(mStepModalPLockSlider, (void*)(uintptr_t)20);
-
-    // Buttons Row
-    lv_obj_t* pLockBtnRow = lv_obj_create(rightCol);
-    lv_obj_set_size(pLockBtnRow, lv_pct(100), 36);
-    lv_obj_set_style_bg_opa(pLockBtnRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(pLockBtnRow, 0, 0);
-    lv_obj_set_style_pad_all(pLockBtnRow, 0, 0);
-    lv_obj_set_layout(pLockBtnRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(pLockBtnRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(pLockBtnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    lv_obj_t* addLockBtn = lv_button_create(pLockBtnRow);
-    lv_obj_set_size(addLockBtn, 105, 34);
-    lv_obj_set_style_bg_color(addLockBtn, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_color(addLockBtn, trackColor, 0);
-    lv_obj_set_style_border_width(addLockBtn, 1, 0);
-    lv_obj_set_style_radius(addLockBtn, 6, 0);
-    lv_obj_t* addLockLbl = lv_label_create(addLockBtn);
-    lv_label_set_text(addLockLbl, "Add Lock");
-    lv_obj_set_style_text_font(addLockLbl, &lv_font_montserrat_12, 0);
-    lv_obj_center(addLockLbl);
-    lv_obj_add_event_cb(addLockBtn, stepModalAddLockEventCb, LV_EVENT_CLICKED, this);
-
-    lv_obj_t* clearLocksBtn = lv_button_create(pLockBtnRow);
-    lv_obj_set_size(clearLocksBtn, 105, 34);
-    lv_obj_set_style_bg_color(clearLocksBtn, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_color(clearLocksBtn, lv_color_hex(0xCC3333), 0);
-    lv_obj_set_style_border_width(clearLocksBtn, 1, 0);
-    lv_obj_set_style_radius(clearLocksBtn, 6, 0);
-    lv_obj_t* clearLocksLbl = lv_label_create(clearLocksBtn);
-    lv_label_set_text(clearLocksLbl, "Clear All");
-    lv_obj_set_style_text_font(clearLocksLbl, &lv_font_montserrat_12, 0);
-    lv_obj_center(clearLocksLbl);
-    lv_obj_add_event_cb(clearLocksBtn, stepModalClearLocksEventCb, LV_EVENT_CLICKED, this);
-
-    // Scrollable locks list view
-    mStepModalActiveLocksList = lv_obj_create(rightCol);
-    lv_obj_set_size(mStepModalActiveLocksList, lv_pct(100), 160);
-    lv_obj_set_style_bg_color(mStepModalActiveLocksList, lv_color_hex(0x161616), 0);
-    lv_obj_set_style_bg_opa(mStepModalActiveLocksList, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(mStepModalActiveLocksList, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(mStepModalActiveLocksList, 1, 0);
-    lv_obj_set_style_radius(mStepModalActiveLocksList, 8, 0);
-    lv_obj_set_style_pad_all(mStepModalActiveLocksList, 6, 0);
-    lv_obj_set_layout(mStepModalActiveLocksList, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(mStepModalActiveLocksList, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(mStepModalActiveLocksList, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_row(mStepModalActiveLocksList, 4, 0);
-    lv_obj_add_flag(mStepModalActiveLocksList, LV_OBJ_FLAG_SCROLLABLE);
-
-    refreshStepModalLocksList();
+void UIManager::stepModalCloseEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->closeSeqStepEditor();
 }
 
 void UIManager::refreshStepModalLocksList() {
@@ -6284,7 +6312,6 @@ void UIManager::refreshStepModalLocksList() {
             lv_obj_t* b = (lv_obj_t*)lv_event_get_target(ev);
             int pidToDelete = (int)(uintptr_t)lv_obj_get_user_data(b);
 
-            // Fetch and reconstruct locks list safely to clear a single lock
             std::vector<Step> currentSteps = ui->mEngine.getSequencerSteps(ui->mActiveTrack);
             if (ui->mEditingStepIdx >= 0 && ui->mEditingStepIdx < (int)currentSteps.size()) {
                 const Step& s = currentSteps[ui->mEditingStepIdx];
@@ -6295,10 +6322,8 @@ void UIManager::refreshStepModalLocksList() {
                     }
                 }
                 
-                // Clear all locks first
                 ui->mEngine.clearParameterLocks(ui->mActiveTrack, ui->mEditingStepIdx);
                 
-                // Re-add remaining locks
                 for (const auto& lp : remainingLocks) {
                     ui->mEngine.setParameterLock(ui->mActiveTrack, ui->mEditingStepIdx, lp.first, lp.second);
                 }
@@ -6343,17 +6368,19 @@ void UIManager::stepModalControlEventCb(lv_event_t* e) {
 
     // Read all values and update AudioEngine step config in real-time
     int ratchetVal = 1;
-    int selectedRatchetIdx = lv_dropdown_get_selected(ui->mStepModalRatchetDd);
-    if (selectedRatchetIdx == 1) ratchetVal = 2;
-    else if (selectedRatchetIdx == 2) ratchetVal = 3;
-    else if (selectedRatchetIdx == 3) ratchetVal = 4;
-    else if (selectedRatchetIdx == 4) ratchetVal = 8;
+    if (ui->mStepModalRatchetDd) {
+        int selectedRatchetIdx = lv_dropdown_get_selected(ui->mStepModalRatchetDd);
+        if (selectedRatchetIdx == 1) ratchetVal = 2;
+        else if (selectedRatchetIdx == 2) ratchetVal = 3;
+        else if (selectedRatchetIdx == 3) ratchetVal = 4;
+        else if (selectedRatchetIdx == 4) ratchetVal = 8;
+    }
 
-    int noteVal = lv_slider_get_value(ui->mStepModalNoteSlider);
-    bool punchVal = lv_obj_has_state(ui->mStepModalPunchSw, LV_STATE_CHECKED);
-    float probVal = lv_slider_get_value(ui->mStepModalProbSlider) / 100.0f;
-    float gateVal = lv_slider_get_value(ui->mStepModalGateSlider) / 100.0f;
-    bool skipVal = lv_obj_has_state(ui->mStepModalSkipSw, LV_STATE_CHECKED);
+    int noteVal = ui->mStepModalNoteSlider ? lv_slider_get_value(ui->mStepModalNoteSlider) : 60;
+    bool punchVal = ui->mStepModalPunchSw ? lv_obj_has_state(ui->mStepModalPunchSw, LV_STATE_CHECKED) : false;
+    float probVal = ui->mStepModalProbSlider ? (lv_slider_get_value(ui->mStepModalProbSlider) / 100.0f) : 1.0f;
+    float gateVal = ui->mStepModalGateSlider ? (lv_slider_get_value(ui->mStepModalGateSlider) / 100.0f) : 0.8f;
+    bool skipVal = ui->mStepModalSkipSw ? lv_obj_has_state(ui->mStepModalSkipSw, LV_STATE_CHECKED) : false;
 
     ui->mSeqTrackSteps[ui->mActiveTrack][ui->mEditingStepIdx] = !skipVal;
 
@@ -6366,11 +6393,12 @@ void UIManager::stepModalAddLockEventCb(lv_event_t* e) {
     if (ui->mEditingStepIdx < 0) return;
 
     auto params = ui->getTrackParamOptions(ui->mActiveTrack);
+    if (!ui->mStepModalPLockDd) return;
     int selectedParamIdx = lv_dropdown_get_selected(ui->mStepModalPLockDd);
     if (selectedParamIdx < 0 || selectedParamIdx >= (int)params.size()) return;
 
     int paramId = params[selectedParamIdx].first;
-    float lockVal = lv_slider_get_value(ui->mStepModalPLockSlider) / 100.0f;
+    float lockVal = ui->mStepModalPLockSlider ? (lv_slider_get_value(ui->mStepModalPLockSlider) / 100.0f) : 0.5f;
 
     ui->mEngine.setParameterLock(ui->mActiveTrack, ui->mEditingStepIdx, paramId, lockVal);
     ui->refreshStepModalLocksList();
@@ -6382,26 +6410,6 @@ void UIManager::stepModalClearLocksEventCb(lv_event_t* e) {
 
     ui->mEngine.clearParameterLocks(ui->mActiveTrack, ui->mEditingStepIdx);
     ui->refreshStepModalLocksList();
-}
-
-void UIManager::stepModalCloseEventCb(lv_event_t* e) {
-    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    if (ui->mStepModal) {
-        lv_obj_delete(ui->mStepModal);
-        ui->mStepModal = nullptr;
-    }
-    ui->mStepModalActiveLocksList = nullptr;
-    ui->mStepModalRatchetDd = nullptr;
-    ui->mStepModalNoteSlider = nullptr;
-    ui->mStepModalPunchSw = nullptr;
-    ui->mStepModalProbSlider = nullptr;
-    ui->mStepModalGateSlider = nullptr;
-    ui->mStepModalSkipSw = nullptr;
-    ui->mStepModalPLockDd = nullptr;
-    ui->mStepModalPLockSlider = nullptr;
-    ui->mEditingStepIdx = -1;
-
-    ui->rebuildSeqGrid();
 }
 
 void UIManager::seqGridToggleBtnEventCb(lv_event_t* e) {
@@ -6505,18 +6513,42 @@ void UIManager::seqOctaveBtnEventCb(lv_event_t* e) {
 
 void UIManager::seqCopyBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    int total = ui->mSeqTrackIs4x4[ui->mActiveTrack] ? 16 : 64;
-    ui->mSeqClipboard.resize(total);
-    for (int i = 0; i < total; ++i) {
-        ui->mSeqClipboard[i] = ui->mSeqTrackSteps[ui->mActiveTrack][i];
+    int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
+    if (isDrum) {
+        ui->mSeqClipboard = ui->mEngine.getDrumSequencerSteps(ui->mActiveTrack, ui->mActiveDrumIdx);
+    } else {
+        ui->mSeqClipboard = ui->mEngine.getSequencerSteps(ui->mActiveTrack);
     }
 }
 
 void UIManager::seqPasteBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (ui->mSeqClipboard.empty()) return;
+
+    int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
     int total = ui->mSeqTrackIs4x4[ui->mActiveTrack] ? 16 : 64;
     for (int i = 0; i < (int)ui->mSeqClipboard.size() && i < total; ++i) {
-        ui->mSeqTrackSteps[ui->mActiveTrack][i] = ui->mSeqClipboard[i];
+        const Step& s = ui->mSeqClipboard[i];
+        ui->mSeqTrackSteps[ui->mActiveTrack][i] = s.active;
+
+        std::vector<int> rawNotes;
+        if (s.notes.empty()) {
+            rawNotes = {isDrum ? (60 + ui->mActiveDrumIdx) : 60};
+        } else {
+            for (const auto& n : s.notes) {
+                rawNotes.push_back(n.note);
+            }
+        }
+        float velocity = s.notes.empty() ? 0.8f : s.notes[0].velocity;
+
+        ui->mEngine.setStep(ui->mActiveTrack, i, s.active, rawNotes, velocity,
+                            s.ratchet, s.punch, s.probability, s.gate, s.isSkipped);
     }
     ui->rebuildSeqGrid();
 }
@@ -6944,6 +6976,20 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 2212) return "Filter 3 Mode";
         return "Global Filter " + std::to_string(paramId);
     }
+    if (paramId >= 2300 && paramId <= 2309) {
+        std::string prefix = "Track " + std::to_string(trackIdx + 1) + " Arp ";
+        if (paramId == 2300) return prefix + "Mode";
+        if (paramId == 2301) return prefix + "Rate";
+        if (paramId == 2302) return prefix + "Octaves";
+        if (paramId == 2303) return prefix + "Latch";
+        if (paramId == 2304) return prefix + "Strum";
+        if (paramId == 2305) return prefix + "Probability";
+        if (paramId == 2306) return prefix + "Chord Gen";
+        if (paramId == 2307) return prefix + "Chord Mood";
+        if (paramId == 2308) return prefix + "Chord Complexity";
+        if (paramId == 2309) return prefix + "Inversions";
+        return prefix + std::to_string(paramId);
+    }
     std::string prefix = "Track " + std::to_string(trackIdx + 1) + " ";
     if (paramId == 0) return prefix + "Volume";
     if (paramId == 9) return prefix + "Pan";
@@ -7196,7 +7242,7 @@ void UIManager::populateAssignScreen() {
     lv_obj_set_style_text_color(knobsHeader, trackColor, 0);
 
     lv_obj_t* knobsRow = lv_obj_create(tab1);
-    lv_obj_set_size(knobsRow, 814, LV_SIZE_CONTENT);
+    lv_obj_set_size(knobsRow, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(knobsRow, lv_color_hex(0x151515), 0);
     lv_obj_set_style_border_color(knobsRow, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_border_width(knobsRow, 1, 0);
@@ -7212,16 +7258,16 @@ void UIManager::populateAssignScreen() {
         int paramId = mSeqMidiKnobParam[mActiveTrack][k];
 
         lv_obj_t* kCard = lv_obj_create(knobsRow);
-        lv_obj_set_size(kCard, 95, 175);
+        lv_obj_set_size(kCard, 118, 195);
         applyCardStyle(kCard);
-        lv_obj_set_style_pad_all(kCard, 5, 0);
+        lv_obj_set_style_pad_all(kCard, 6, 0);
         lv_obj_set_layout(kCard, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(kCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(kCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         lv_obj_t* identLbl = lv_label_create(kCard);
         lv_label_set_text_fmt(identLbl, "K%d", k + 1);
-        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(identLbl, lv_color_hex(0xFFB300), 0);
 
         lv_obj_t* paramLbl = lv_label_create(kCard);
@@ -7240,7 +7286,7 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* arc = lv_arc_create(kCard);
         mAssignKnobArcs[k] = arc;
-        lv_obj_set_size(arc, 60, 60);
+        lv_obj_set_size(arc, 74, 74);
         lv_arc_set_range(arc, 0, 100);
         lv_arc_set_value(arc, (int)(mSeqMidiKnobValue[mActiveTrack][k] * 100));
         lv_obj_set_style_arc_color(arc, trackColor, LV_PART_INDICATOR);
@@ -7298,7 +7344,7 @@ void UIManager::populateAssignScreen() {
     lv_obj_set_style_text_color(fadersHeader, trackColor, 0);
 
     lv_obj_t* fadersRow = lv_obj_create(tab1);
-    lv_obj_set_size(fadersRow, 814, LV_SIZE_CONTENT);
+    lv_obj_set_size(fadersRow, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(fadersRow, lv_color_hex(0x151515), 0);
     lv_obj_set_style_border_color(fadersRow, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_border_width(fadersRow, 1, 0);
@@ -7314,16 +7360,16 @@ void UIManager::populateAssignScreen() {
         int paramId = mSeqMidiFaderParam[mActiveTrack][f];
 
         lv_obj_t* fCard = lv_obj_create(fadersRow);
-        lv_obj_set_size(fCard, 95, 175);
+        lv_obj_set_size(fCard, 118, 250);
         applyCardStyle(fCard);
-        lv_obj_set_style_pad_all(fCard, 5, 0);
+        lv_obj_set_style_pad_all(fCard, 6, 0);
         lv_obj_set_layout(fCard, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(fCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(fCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         lv_obj_t* identLbl = lv_label_create(fCard);
         lv_label_set_text_fmt(identLbl, "F%d", f + 1);
-        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(identLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(identLbl, lv_color_hex(0xFFB300), 0);
 
         lv_obj_t* paramLbl = lv_label_create(fCard);
@@ -7343,7 +7389,7 @@ void UIManager::populateAssignScreen() {
         // Vertical slider (fader)
         lv_obj_t* fader = lv_slider_create(fCard);
         mAssignFaderSliders[f] = fader;
-        lv_obj_set_size(fader, 14, 88);
+        lv_obj_set_size(fader, 16, 160);
         lv_slider_set_range(fader, 0, 100);
         lv_slider_set_value(fader, (int)(mSeqMidiFaderValue[mActiveTrack][f] * 100), LV_ANIM_OFF);
         lv_obj_set_style_bg_color(fader, trackColor, LV_PART_INDICATOR);
@@ -7397,7 +7443,7 @@ void UIManager::populateAssignScreen() {
     // --- Tab 2: Macros & Patch Bay ---
     // =========================================================================
     lv_obj_t* tab2Container = lv_obj_create(tab2);
-    lv_obj_set_size(tab2Container, 814, 500);
+    lv_obj_set_size(tab2Container, lv_pct(100), 680);
     lv_obj_set_style_bg_opa(tab2Container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(tab2Container, 0, 0);
     lv_obj_set_style_pad_all(tab2Container, 0, 0);
@@ -7408,20 +7454,20 @@ void UIManager::populateAssignScreen() {
 
     // Left side: Macros Grid (2 rows of 4 Macros)
     lv_obj_t* macrosGrid = lv_obj_create(tab2Container);
-    lv_obj_set_size(macrosGrid, 534, 500);
+    lv_obj_set_size(macrosGrid, 760, 680);
     lv_obj_set_style_bg_opa(macrosGrid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(macrosGrid, 0, 0);
     lv_obj_set_style_pad_all(macrosGrid, 0, 0);
     lv_obj_set_layout(macrosGrid, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(macrosGrid, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(macrosGrid, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_SPACE_BETWEEN);
-    lv_obj_set_style_pad_row(macrosGrid, 10, 0);
+    lv_obj_set_style_pad_row(macrosGrid, 12, 0);
     lv_obj_set_style_pad_column(macrosGrid, 10, 0);
     lv_obj_remove_flag(macrosGrid, LV_OBJ_FLAG_SCROLLABLE);
 
     // Right side: Active Connections List
     lv_obj_t* listCard = lv_obj_create(tab2Container);
-    lv_obj_set_size(listCard, 270, 500);
+    lv_obj_set_size(listCard, 280, 680);
     applyCardStyle(listCard);
     lv_obj_set_layout(listCard, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(listCard, LV_FLEX_FLOW_COLUMN);
@@ -7434,7 +7480,7 @@ void UIManager::populateAssignScreen() {
 
     // Aftertouch Destination Selection Card
     lv_obj_t* atCard = lv_obj_create(listCard);
-    lv_obj_set_size(atCard, 246, 65);
+    lv_obj_set_size(atCard, 256, 75);
     lv_obj_set_style_bg_color(atCard, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(atCard, lv_color_hex(0x3D3D3D), 0);
     lv_obj_set_style_border_width(atCard, 1, 0);
@@ -7451,7 +7497,7 @@ void UIManager::populateAssignScreen() {
     lv_obj_set_style_text_color(atTitle, trackColor, 0);
 
     lv_obj_t* atDestBtn = lv_button_create(atCard);
-    lv_obj_set_size(atDestBtn, 230, 24);
+    lv_obj_set_size(atDestBtn, 240, 28);
     lv_obj_set_style_bg_color(atDestBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_radius(atDestBtn, 4, 0);
 
@@ -7477,7 +7523,7 @@ void UIManager::populateAssignScreen() {
     lv_obj_add_event_cb(atDestBtn, atClickDataFreeCb, LV_EVENT_DELETE, atClickData);
 
     mActiveRoutingsContainer = lv_obj_create(listCard);
-    lv_obj_set_size(mActiveRoutingsContainer, 246, 370);
+    lv_obj_set_size(mActiveRoutingsContainer, 256, 530);
     lv_obj_set_style_bg_opa(mActiveRoutingsContainer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(mActiveRoutingsContainer, 0, 0);
     lv_obj_set_style_pad_all(mActiveRoutingsContainer, 0, 0);
@@ -7492,16 +7538,16 @@ void UIManager::populateAssignScreen() {
         AudioEngine::MacroModule& macro = mEngine.mMacros[m];
 
         lv_obj_t* macroCard = lv_obj_create(macrosGrid);
-        lv_obj_set_size(macroCard, 126, 240);
+        lv_obj_set_size(macroCard, 175, 325);
         applyCardStyle(macroCard);
-        lv_obj_set_style_pad_all(macroCard, 5, 0);
+        lv_obj_set_style_pad_all(macroCard, 8, 0);
         lv_obj_set_layout(macroCard, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(macroCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(macroCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         // Header: Macro Name & Learn Button Row
         lv_obj_t* headerRow = lv_obj_create(macroCard);
-        lv_obj_set_size(headerRow, 116, 22);
+        lv_obj_set_size(headerRow, 158, 26);
         lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(headerRow, 0, 0);
         lv_obj_set_style_pad_all(headerRow, 0, 0);
@@ -7511,13 +7557,13 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* mLbl = lv_label_create(headerRow);
         lv_label_set_text_fmt(mLbl, "MACRO %d", m + 1);
-        lv_obj_set_style_text_font(mLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(mLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(mLbl, trackColor, 0);
 
         lv_obj_t* learnBtn = lv_button_create(headerRow);
-        lv_obj_set_size(learnBtn, 46, 18);
+        lv_obj_set_size(learnBtn, 56, 22);
         lv_obj_set_style_bg_color(learnBtn, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_radius(learnBtn, 3, 0);
+        lv_obj_set_style_radius(learnBtn, 4, 0);
         lv_obj_t* learnLbl = lv_label_create(learnBtn);
         lv_label_set_text(learnLbl, "Learn");
         lv_obj_set_style_text_font(learnLbl, &lv_font_montserrat_10, 0);
@@ -7553,7 +7599,7 @@ void UIManager::populateAssignScreen() {
 
         // Source Dropdown (placed above controls for optimal spacing)
         lv_obj_t* srcDd = lv_dropdown_create(macroCard);
-        lv_obj_set_size(srcDd, 116, 26);
+        lv_obj_set_size(srcDd, 158, 32);
         lv_dropdown_set_options(srcDd, "Source\nTrack Out\nLFO 1\nLFO 2\nLFO 3\nLFO 4\nLFO 5\nLFO 6\nEnvelope\nSidechain\nMacro 1\nMacro 2\nMacro 3\nMacro 4\nMacro 5\nMacro 6\nMacro 7\nMacro 8");
         lv_obj_set_style_text_font(srcDd, &lv_font_montserrat_10, 0);
 
@@ -7572,7 +7618,7 @@ void UIManager::populateAssignScreen() {
 
         // Row of 2 columns, grouping each Arc with its Destination button
         lv_obj_t* controlsRow = lv_obj_create(macroCard);
-        lv_obj_set_size(controlsRow, 116, 115);
+        lv_obj_set_size(controlsRow, 158, 180);
         lv_obj_set_style_bg_opa(controlsRow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(controlsRow, 0, 0);
         lv_obj_set_style_pad_all(controlsRow, 0, 0);
@@ -7583,7 +7629,7 @@ void UIManager::populateAssignScreen() {
         for (int d = 0; d < 2; ++d) {
             // Column for Arc + Dest Button (more compact, fits card perfectly)
             lv_obj_t* col = lv_obj_create(controlsRow);
-            lv_obj_set_size(col, 55, 105);
+            lv_obj_set_size(col, 74, 170);
             lv_obj_set_style_bg_opa(col, LV_OPA_TRANSP, 0);
             lv_obj_set_style_border_width(col, 0, 0);
             lv_obj_set_style_pad_all(col, 0, 0);
@@ -7594,47 +7640,45 @@ void UIManager::populateAssignScreen() {
             // Bipolar Arc
             int arcVal = (int)((d == 0 ? amt1 : amt2) * 100.0f);
             lv_obj_t* mArc = lv_arc_create(col);
-            lv_obj_set_size(mArc, 48, 48);
+            lv_obj_set_size(mArc, 66, 66);
             lv_arc_set_range(mArc, -100, 100);
             lv_arc_set_value(mArc, arcVal);
             lv_obj_set_style_arc_color(mArc, trackColor, LV_PART_INDICATOR);
             lv_obj_set_style_bg_color(mArc, trackColor, LV_PART_KNOB);
             
             // Thin arc styling & small handle scaling to prevent text/label clipping
-            lv_obj_set_style_arc_width(mArc, 3, LV_PART_MAIN);
-            lv_obj_set_style_arc_width(mArc, 3, LV_PART_INDICATOR);
-            lv_obj_set_style_width(mArc, 6, LV_PART_KNOB);
-            lv_obj_set_style_height(mArc, 6, LV_PART_KNOB);
+            lv_obj_set_style_arc_width(mArc, 4, LV_PART_MAIN);
+            lv_obj_set_style_arc_width(mArc, 4, LV_PART_INDICATOR);
+            lv_obj_set_style_width(mArc, 8, LV_PART_KNOB);
+            lv_obj_set_style_height(mArc, 8, LV_PART_KNOB);
             lv_obj_set_style_pad_all(mArc, 0, LV_PART_KNOB);
 
             mMacroArc[m][d] = mArc;
 
-            lv_obj_t* mValLbl = lv_label_create(mArc);
-            lv_label_set_text_fmt(mValLbl, "%s%d%%", arcVal > 0 ? "+" : "", arcVal);
-            lv_obj_set_style_text_font(mValLbl, &lv_font_montserrat_10, 0);
-            lv_obj_center(mValLbl);
+            lv_obj_t* mVal = lv_label_create(mArc);
+            lv_label_set_text_fmt(mVal, "%s%d%%", arcVal > 0 ? "+" : "", arcVal);
+            lv_obj_set_style_text_font(mVal, &lv_font_montserrat_10, 0);
+            lv_obj_center(mVal);
 
-            MacroArcCallbackData* arcData = new MacroArcCallbackData{this, m, d, mValLbl};
+            MacroArcCallbackData* arcData = new MacroArcCallbackData{this, m, d, mVal};
             lv_obj_add_event_cb(mArc, macroValueArcEventCb, LV_EVENT_VALUE_CHANGED, arcData);
-            auto arcDataFreeCb = [](lv_event_t* e) { delete (MacroArcCallbackData*)lv_event_get_user_data(e); };
-            lv_obj_add_event_cb(mArc, arcDataFreeCb, LV_EVENT_DELETE, arcData);
+            auto aDataFreeCb = [](lv_event_t* e) { delete (MacroArcCallbackData*)lv_event_get_user_data(e); };
+            lv_obj_add_event_cb(mArc, aDataFreeCb, LV_EVENT_DELETE, arcData);
 
-            // Destination Button directly underneath
+            // Destination Button
             lv_obj_t* destBtn = lv_button_create(col);
-            lv_obj_set_size(destBtn, 55, 34); // Sized taller to support wrapped labels
+            lv_obj_set_size(destBtn, 74, 34);
             lv_obj_set_style_bg_color(destBtn, lv_color_hex(0x2D2D2D), 0);
-            lv_obj_set_style_radius(destBtn, 4, 0);
-            lv_obj_set_style_pad_all(destBtn, 2, 0); // Minimize internal padding to maximize text space
+            lv_obj_set_style_radius(destBtn, 6, 0);
+            lv_obj_set_style_pad_all(destBtn, 2, 0);
 
             lv_obj_t* destLbl = lv_label_create(destBtn);
             mMacroDestBtnLabel[m][d] = destLbl;
-            lv_obj_set_width(destLbl, 51); // Give it a fixed width for wrapping
-            lv_label_set_long_mode(destLbl, LV_LABEL_LONG_WRAP);
-            lv_obj_set_style_text_align(destLbl, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_style_text_color(destLbl, lv_color_hex(0xFFFFFF), 0); // Explicit high-contrast white text
 
-            if (mMacroDestParamId[m][d] != -1) {
-                std::string destName = getCompactDestName(mMacroDestTrack[m][d], mMacroDestParamId[m][d], &mEngine);
+            int targetPid = mMacroDestParamId[m][d];
+            int targetTrk = mMacroDestTrack[m][d];
+            if (targetPid != -1) {
+                std::string destName = getParameterNameString(targetTrk, targetPid, &mEngine);
                 lv_label_set_text(destLbl, destName.c_str());
             } else {
                 lv_label_set_text(destLbl, "Dest");
@@ -7653,21 +7697,24 @@ void UIManager::populateAssignScreen() {
     // --- Tab 3: Bank of LFOs ---
     // =========================================================================
     lv_obj_set_flex_flow(tab3, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(tab3, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_EVENLY);
+    lv_obj_set_flex_align(tab3, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_BETWEEN);
+    lv_obj_set_style_pad_row(tab3, 10, 0);
+    lv_obj_set_style_pad_column(tab3, 10, 0);
 
     for (int l = 0; l < 6; ++l) {
         LfoEngine& lfo = mEngine.mLfos[l];
 
         lv_obj_t* lfoCard = lv_obj_create(tab3);
-        lv_obj_set_size(lfoCard, 240, 235); // Sized to fit 3 columns and 2 rows perfectly!
+        lv_obj_set_size(lfoCard, 510, 215); // Wide and compact 2-column layout (2 cols x 3 rows)!
         applyCardStyle(lfoCard);
+        lv_obj_set_style_pad_all(lfoCard, 8, 0);
         lv_obj_set_layout(lfoCard, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(lfoCard, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(lfoCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         // Header with active track colored label
         lv_obj_t* lfoHeader = lv_obj_create(lfoCard);
-        lv_obj_set_size(lfoHeader, 216, 30);
+        lv_obj_set_size(lfoHeader, 486, 30);
         lv_obj_set_style_bg_opa(lfoHeader, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(lfoHeader, 0, 0);
         lv_obj_set_style_pad_all(lfoHeader, 0, 0);
@@ -7682,7 +7729,7 @@ void UIManager::populateAssignScreen() {
 
         // Sync Switch
         lv_obj_t* syncBtn = lv_button_create(lfoHeader);
-        lv_obj_set_size(syncBtn, 65, 26);
+        lv_obj_set_size(syncBtn, 75, 26);
         lv_obj_add_flag(syncBtn, LV_OBJ_FLAG_CHECKABLE);
         lv_obj_set_style_radius(syncBtn, 6, 0);
         lv_obj_t* syncLbl = lv_label_create(syncBtn);
@@ -7696,16 +7743,53 @@ void UIManager::populateAssignScreen() {
             lv_obj_set_style_bg_color(syncBtn, lv_color_hex(0x444444), 0);
         }
 
+        // Middle Row: Shape Dropdown on left (230px), Destination Button on right (230px)
+        lv_obj_t* midRow = lv_obj_create(lfoCard);
+        lv_obj_set_size(midRow, 486, 36);
+        lv_obj_set_style_bg_opa(midRow, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(midRow, 0, 0);
+        lv_obj_set_style_pad_all(midRow, 0, 0);
+        lv_obj_set_layout(midRow, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(midRow, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(midRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
         // Shape selector dropdown
-        lv_obj_t* shapeDd = lv_dropdown_create(lfoCard);
-        lv_obj_set_size(shapeDd, 216, 32);
+        lv_obj_t* shapeDd = lv_dropdown_create(midRow);
+        lv_obj_set_size(shapeDd, 235, 34);
         lv_dropdown_set_options(shapeDd, "Sine Wave\nTriangle\nSquare\nSawtooth\nRandom / S&H");
         lv_dropdown_set_selected(shapeDd, lfo.getShape());
-        lv_obj_set_style_text_font(shapeDd, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(shapeDd, &lv_font_montserrat_12, 0);
 
-        // Arcs row
+        // Destination Button
+        lv_obj_t* destBtn = lv_button_create(midRow);
+        lv_obj_set_size(destBtn, 235, 34);
+        lv_obj_set_style_bg_color(destBtn, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_radius(destBtn, 6, 0);
+
+        lv_obj_t* destLbl = lv_label_create(destBtn);
+        mLfoDestBtnLabel[l] = destLbl;
+
+        if (mLfoDestParamId[l] != -1) {
+            std::string destName = getParameterNameString(mLfoDestTrack[l], mLfoDestParamId[l], &mEngine);
+            lv_label_set_text(destLbl, destName.c_str());
+        } else {
+            lv_label_set_text(destLbl, "Select Destination");
+        }
+        lv_obj_set_style_text_font(destLbl, &lv_font_montserrat_12, 0);
+        lv_obj_center(destLbl);
+
+        ModDestModalData* clickData = new ModDestModalData{this, 2, l};
+        lv_obj_add_event_cb(destBtn, openModDestModalEventCb, LV_EVENT_CLICKED, clickData);
+
+        auto clickDataFreeCb = [](lv_event_t* e) {
+            ModDestModalData* data = (ModDestModalData*)lv_event_get_user_data(e);
+            delete data;
+        };
+        lv_obj_add_event_cb(destBtn, clickDataFreeCb, LV_EVENT_DELETE, clickData);
+
+        // Arcs row (Depth and Rate)
         lv_obj_t* lfoControlsRow = lv_obj_create(lfoCard);
-        lv_obj_set_size(lfoControlsRow, 216, 95);
+        lv_obj_set_size(lfoControlsRow, 486, 115);
         lv_obj_set_style_bg_opa(lfoControlsRow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(lfoControlsRow, 0, 0);
         lv_obj_set_style_pad_all(lfoControlsRow, 0, 0);
@@ -7715,7 +7799,7 @@ void UIManager::populateAssignScreen() {
 
         // 1. Depth Arc
         lv_obj_t* depthGrp = lv_obj_create(lfoControlsRow);
-        lv_obj_set_size(depthGrp, 103, 95);
+        lv_obj_set_size(depthGrp, 200, 110);
         lv_obj_set_style_bg_opa(depthGrp, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(depthGrp, 0, 0);
         lv_obj_set_style_pad_all(depthGrp, 0, 0);
@@ -7725,11 +7809,11 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* dLbl = lv_label_create(depthGrp);
         lv_label_set_text(dLbl, "Depth");
-        lv_obj_set_style_text_font(dLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(dLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(dLbl, lv_color_hex(0x888888), 0);
 
         lv_obj_t* dArc = lv_arc_create(depthGrp);
-        lv_obj_set_size(dArc, 62, 62);
+        lv_obj_set_size(dArc, 72, 72);
         lv_arc_set_range(dArc, 0, 100);
         lv_arc_set_value(dArc, (int)(lfo.getDepth() * 100));
         lv_obj_set_style_arc_color(dArc, trackColor, LV_PART_INDICATOR);
@@ -7742,7 +7826,7 @@ void UIManager::populateAssignScreen() {
 
         // 2. Rate Arc
         lv_obj_t* rateGrp = lv_obj_create(lfoControlsRow);
-        lv_obj_set_size(rateGrp, 103, 95);
+        lv_obj_set_size(rateGrp, 200, 110);
         lv_obj_set_style_bg_opa(rateGrp, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(rateGrp, 0, 0);
         lv_obj_set_style_pad_all(rateGrp, 0, 0);
@@ -7752,11 +7836,11 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* rLbl = lv_label_create(rateGrp);
         lv_label_set_text(rLbl, "Rate");
-        lv_obj_set_style_text_font(rLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(rLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(rLbl, lv_color_hex(0x888888), 0);
 
         lv_obj_t* rArc = lv_arc_create(rateGrp);
-        lv_obj_set_size(rArc, 62, 62);
+        lv_obj_set_size(rArc, 72, 72);
         lv_arc_set_range(rArc, 0, 100);
         lv_arc_set_value(rArc, (int)(lfo.getUiRate() * 100));
         lv_obj_set_style_arc_color(rArc, trackColor, LV_PART_INDICATOR);
@@ -7827,40 +7911,13 @@ void UIManager::populateAssignScreen() {
         lv_obj_add_event_cb(rArc, lfoDataFreeCb, LV_EVENT_DELETE, lRateData);
         lv_obj_add_event_cb(syncBtn, lfoSyncDataFreeCb, LV_EVENT_DELETE, sData);
         lv_obj_add_event_cb(shapeDd, lfoShapeDataFreeCb, LV_EVENT_DELETE, shData);
-
-        // Destination Button
-        lv_obj_t* destBtn = lv_button_create(lfoCard);
-        lv_obj_set_size(destBtn, 216, 26);
-        lv_obj_set_style_bg_color(destBtn, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_radius(destBtn, 4, 0);
-
-        lv_obj_t* destLbl = lv_label_create(destBtn);
-        mLfoDestBtnLabel[l] = destLbl;
-
-        if (mLfoDestParamId[l] != -1) {
-            std::string destName = getParameterNameString(mLfoDestTrack[l], mLfoDestParamId[l], &mEngine);
-            lv_label_set_text(destLbl, destName.c_str());
-        } else {
-            lv_label_set_text(destLbl, "Destination");
-        }
-        lv_obj_set_style_text_font(destLbl, &lv_font_montserrat_10, 0);
-        lv_obj_center(destLbl);
-
-        ModDestModalData* clickData = new ModDestModalData{this, 2, l};
-        lv_obj_add_event_cb(destBtn, openModDestModalEventCb, LV_EVENT_CLICKED, clickData);
-
-        auto clickDataFreeCb = [](lv_event_t* e) {
-            ModDestModalData* data = (ModDestModalData*)lv_event_get_user_data(e);
-            delete data;
-        };
-        lv_obj_add_event_cb(destBtn, clickDataFreeCb, LV_EVENT_DELETE, clickData);
     }
 
     // =========================================================================
     // --- Tab 4: FX Pedal Serial Chaining ---
     // =========================================================================
     lv_obj_set_flex_flow(tab4, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(tab4, 15, 0);
+    lv_obj_set_style_pad_row(tab4, 20, 0);
 
     const char* FX_NAMES[17] = {
         "Overdrive", "Bitcrusher", "Chorus", "Phaser", "Tape Wobble",
@@ -7871,7 +7928,7 @@ void UIManager::populateAssignScreen() {
 
     for (int chainIdx = 0; chainIdx < 2; ++chainIdx) {
         lv_obj_t* chainCard = lv_obj_create(tab4);
-        lv_obj_set_size(chainCard, 790, 185);
+        lv_obj_set_size(chainCard, lv_pct(100), 280);
         applyCardStyle(chainCard);
         lv_obj_set_layout(chainCard, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(chainCard, LV_FLEX_FLOW_COLUMN);
@@ -7879,11 +7936,11 @@ void UIManager::populateAssignScreen() {
 
         lv_obj_t* chainTitle = lv_label_create(chainCard);
         lv_label_set_text_fmt(chainTitle, "SERIAL FX CHAIN %d", chainIdx + 1);
-        lv_obj_set_style_text_font(chainTitle, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(chainTitle, &lv_font_montserrat_14, 0);
         lv_obj_set_style_text_color(chainTitle, trackColor, 0);
 
         lv_obj_t* slotsRow = lv_obj_create(chainCard);
-        lv_obj_set_size(slotsRow, 766, 120);
+        lv_obj_set_size(slotsRow, lv_pct(100), 200);
         lv_obj_set_style_bg_opa(slotsRow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(slotsRow, 0, 0);
         lv_obj_set_style_pad_all(slotsRow, 0, 0);
@@ -7895,13 +7952,13 @@ void UIManager::populateAssignScreen() {
             int pedalId = mFxChainPedals[chainIdx][slotIdx];
 
             lv_obj_t* slotBtn = lv_button_create(slotsRow);
-            lv_obj_set_size(slotBtn, 128, 100);
-            lv_obj_set_style_radius(slotBtn, 10, 0);
+            lv_obj_set_size(slotBtn, 180, 160);
+            lv_obj_set_style_radius(slotBtn, 12, 0);
 
             if (pedalId >= 0 && pedalId < 17) {
                 lv_obj_set_style_bg_color(slotBtn, lv_color_hex(0x222222), 0);
                 lv_obj_set_style_border_color(slotBtn, trackColor, 0);
-                lv_obj_set_style_border_width(slotBtn, 1, 0);
+                lv_obj_set_style_border_width(slotBtn, 2, 0);
             } else {
                 lv_obj_set_style_bg_color(slotBtn, lv_color_hex(0x151515), 0);
                 lv_obj_set_style_border_color(slotBtn, lv_color_hex(0x444444), 0);
@@ -7910,7 +7967,7 @@ void UIManager::populateAssignScreen() {
 
             lv_obj_t* slotLbl = lv_label_create(slotBtn);
             lv_label_set_text_fmt(slotLbl, "SLOT %d", slotIdx + 1);
-            lv_obj_set_style_text_font(slotLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(slotLbl, &lv_font_montserrat_12, 0);
             lv_obj_set_style_text_color(slotLbl, lv_color_hex(0x888888), 0);
             lv_obj_set_align(slotLbl, LV_ALIGN_TOP_MID);
 
@@ -7922,7 +7979,7 @@ void UIManager::populateAssignScreen() {
                 lv_label_set_text(nameLbl, "---");
                 lv_obj_set_style_text_color(nameLbl, lv_color_hex(0x555555), 0);
             }
-            lv_obj_set_style_text_font(nameLbl, &lv_font_montserrat_12, 0);
+            lv_obj_set_style_text_font(nameLbl, &lv_font_montserrat_14, 0);
             lv_obj_center(nameLbl);
 
             struct PedalSlotClickData {
@@ -7943,8 +8000,8 @@ void UIManager::populateAssignScreen() {
             if (slotIdx < 4) {
                 lv_obj_t* arrow = lv_label_create(slotsRow);
                 lv_label_set_text(arrow, "\xe2\x86\x92"); // right arrow
-                lv_obj_set_style_text_font(arrow, &lv_font_montserrat_12, 0);
-                lv_obj_set_style_text_color(arrow, lv_color_hex(0x444444), 0);
+                lv_obj_set_style_text_font(arrow, &lv_font_montserrat_16, 0);
+                lv_obj_set_style_text_color(arrow, lv_color_hex(0x666666), 0);
             }
         }
     }
@@ -9035,7 +9092,7 @@ void UIManager::populateModDestCategories(UIManager* ui, bool isFxMode, lv_obj_t
 
     for (int c = startCat; c <= endCat; ++c) {
         lv_obj_t* catBtn = lv_button_create(leftCol);
-        lv_obj_set_size(catBtn, 140, 32);
+        lv_obj_set_size(catBtn, 195, 38);
         lv_obj_set_style_radius(catBtn, 6, 0);
 
         // Highlight active category
@@ -9082,7 +9139,7 @@ void UIManager::populateModDestCategories(UIManager* ui, bool isFxMode, lv_obj_t
                 default: lv_label_set_text(catLbl, "FX"); break;
             }
         }
-        lv_obj_set_style_text_font(catLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(catLbl, &lv_font_montserrat_12, 0);
         if (isAtDisabledTrack) {
             lv_obj_set_style_text_color(catLbl, lv_color_hex(0x555555), 0);
         }
@@ -9157,7 +9214,7 @@ void UIManager::populateModDestParams(UIManager* ui, int categoryIdx, lv_obj_t* 
 
         for (const auto& p : params) {
             lv_obj_t* pBtn = lv_button_create(rightCol);
-            lv_obj_set_size(pBtn, 110, 36);
+            lv_obj_set_size(pBtn, 132, 44);
             lv_obj_set_style_radius(pBtn, 6, 0);
 
             bool isSelected = (ui->mModDestType == 5 && ui->mModDestTrack == categoryIdx && ui->mModDestParamId == p.first);
@@ -9171,7 +9228,7 @@ void UIManager::populateModDestParams(UIManager* ui, int categoryIdx, lv_obj_t* 
 
             lv_obj_t* pLbl = lv_label_create(pBtn);
             lv_label_set_text(pLbl, p.second.c_str());
-            lv_obj_set_style_text_font(pLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(pLbl, &lv_font_montserrat_12, 0);
             lv_obj_center(pLbl);
 
             ParamClickData* pData = new ParamClickData{ui, categoryIdx, p.first};
@@ -9235,7 +9292,7 @@ void UIManager::populateModDestParams(UIManager* ui, int categoryIdx, lv_obj_t* 
 
         for (const auto& p : globalParams) {
             lv_obj_t* pBtn = lv_button_create(rightCol);
-            lv_obj_set_size(pBtn, 110, 36);
+            lv_obj_set_size(pBtn, 132, 44);
             lv_obj_set_style_radius(pBtn, 6, 0);
 
             bool isSelected = (ui->mModDestParamId == p.first);
@@ -9249,7 +9306,7 @@ void UIManager::populateModDestParams(UIManager* ui, int categoryIdx, lv_obj_t* 
 
             lv_obj_t* pLbl = lv_label_create(pBtn);
             lv_label_set_text(pLbl, p.second.c_str());
-            lv_obj_set_style_text_font(pLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(pLbl, &lv_font_montserrat_12, 0);
             lv_obj_center(pLbl);
 
             ParamClickData* pData = new ParamClickData{ui, 0, p.first};
@@ -9284,18 +9341,26 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
         ui->mModDestBtnLabel = ui->mAftertouchDestBtnLabel[ui->mActiveTrack];
         ui->mModDestTrack = ui->mActiveTrack;
         ui->mModDestParamId = ui->mAftertouchDestParamId[ui->mActiveTrack];
+    } else if (data->callerType == 4) { // Play Mod X
+        ui->mModDestBtnLabel = ui->mPlayModXDestLbl;
+        ui->mModDestTrack = ui->mPlayModXTrack;
+        ui->mModDestParamId = ui->mPlayModXDest;
+    } else if (data->callerType == 5) { // Play Mod Y
+        ui->mModDestBtnLabel = ui->mPlayModYDestLbl;
+        ui->mModDestTrack = ui->mPlayModYTrack;
+        ui->mModDestParamId = ui->mPlayModYDest;
     } else {
         ui->mModDestBtnLabel = nullptr;
     }
 
     ui->mModDestModal = lv_obj_create(ui->mMainScreen);
-    lv_obj_set_size(ui->mModDestModal, 600, 440);
+    lv_obj_set_size(ui->mModDestModal, 860, 620);
     lv_obj_center(ui->mModDestModal);
     lv_obj_set_style_bg_color(ui->mModDestModal, lv_color_hex(0x1F1F1F), 0);
     lv_obj_set_style_border_color(ui->mModDestModal, lv_color_hex(0x3D3D3D), 0);
     lv_obj_set_style_border_width(ui->mModDestModal, 2, 0);
     lv_obj_set_style_radius(ui->mModDestModal, 16, 0);
-    lv_obj_set_style_pad_all(ui->mModDestModal, 15, 0);
+    lv_obj_set_style_pad_all(ui->mModDestModal, 18, 0);
     lv_obj_set_layout(ui->mModDestModal, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(ui->mModDestModal, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(ui->mModDestModal, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -9310,7 +9375,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Split Row
     lv_obj_t* splitRow = lv_obj_create(ui->mModDestModal);
-    lv_obj_set_size(splitRow, 560, 310);
+    lv_obj_set_size(splitRow, 820, 480);
     lv_obj_set_style_bg_opa(splitRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(splitRow, 0, 0);
     lv_obj_set_style_pad_all(splitRow, 0, 0);
@@ -9320,7 +9385,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Left Container (Holds Toggle Row + Left Col Category List)
     lv_obj_t* leftContainer = lv_obj_create(splitRow);
-    lv_obj_set_size(leftContainer, 170, 300);
+    lv_obj_set_size(leftContainer, 220, 475);
     lv_obj_set_style_bg_opa(leftContainer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(leftContainer, 0, 0);
     lv_obj_set_style_pad_all(leftContainer, 0, 0);
@@ -9330,7 +9395,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Toggle Row (Tracks / FX)
     lv_obj_t* toggleRow = lv_obj_create(leftContainer);
-    lv_obj_set_size(toggleRow, 170, 30);
+    lv_obj_set_size(toggleRow, 220, 36);
     lv_obj_set_style_bg_opa(toggleRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(toggleRow, 0, 0);
     lv_obj_set_style_pad_all(toggleRow, 0, 0);
@@ -9339,48 +9404,48 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
     lv_obj_set_flex_align(toggleRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* tracksToggleBtn = lv_button_create(toggleRow);
-    lv_obj_set_size(tracksToggleBtn, 82, 26);
+    lv_obj_set_size(tracksToggleBtn, 106, 32);
     lv_obj_set_style_radius(tracksToggleBtn, 6, 0);
     lv_obj_t* tracksToggleLbl = lv_label_create(tracksToggleBtn);
     lv_label_set_text(tracksToggleLbl, "TRACKS");
-    lv_obj_set_style_text_font(tracksToggleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(tracksToggleLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(tracksToggleLbl);
 
     lv_obj_t* fxToggleBtn = lv_button_create(toggleRow);
-    lv_obj_set_size(fxToggleBtn, 82, 26);
+    lv_obj_set_size(fxToggleBtn, 106, 32);
     lv_obj_set_style_radius(fxToggleBtn, 6, 0);
     lv_obj_t* fxToggleLbl = lv_label_create(fxToggleBtn);
     lv_label_set_text(fxToggleLbl, "FX");
-    lv_obj_set_style_text_font(fxToggleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(fxToggleLbl, &lv_font_montserrat_12, 0);
     lv_obj_center(fxToggleLbl);
 
     // Left Column: Category List (scrolling vertical column)
     lv_obj_t* leftCol = lv_obj_create(leftContainer);
-    lv_obj_set_size(leftCol, 170, 265);
+    lv_obj_set_size(leftCol, 220, 430);
     lv_obj_set_style_bg_color(leftCol, lv_color_hex(0x151515), 0);
     lv_obj_set_style_border_color(leftCol, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(leftCol, 1, 0);
     lv_obj_set_style_radius(leftCol, 8, 0);
-    lv_obj_set_style_pad_all(leftCol, 5, 0);
+    lv_obj_set_style_pad_all(leftCol, 6, 0);
     lv_obj_set_layout(leftCol, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(leftCol, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(leftCol, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(leftCol, 5, 0);
+    lv_obj_set_style_pad_row(leftCol, 6, 0);
     lv_obj_add_flag(leftCol, LV_OBJ_FLAG_SCROLLABLE);
 
     // Right Column: Parameters scrolling grid
     lv_obj_t* rightCol = lv_obj_create(splitRow);
-    lv_obj_set_size(rightCol, 370, 300);
+    lv_obj_set_size(rightCol, 590, 475);
     lv_obj_set_style_bg_color(rightCol, lv_color_hex(0x151515), 0);
     lv_obj_set_style_border_color(rightCol, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(rightCol, 1, 0);
     lv_obj_set_style_radius(rightCol, 8, 0);
-    lv_obj_set_style_pad_all(rightCol, 8, 0);
+    lv_obj_set_style_pad_all(rightCol, 10, 0);
     lv_obj_set_layout(rightCol, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(rightCol, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(rightCol, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_pad_column(rightCol, 8, 0);
-    lv_obj_set_style_pad_row(rightCol, 8, 0);
+    lv_obj_set_style_pad_column(rightCol, 10, 0);
+    lv_obj_set_style_pad_row(rightCol, 10, 0);
     lv_obj_add_flag(rightCol, LV_OBJ_FLAG_SCROLLABLE);
 
     // Determine initial view mode based on current selection
@@ -9447,7 +9512,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Button Row (Cancel + Clear)
     lv_obj_t* btnRow = lv_obj_create(ui->mModDestModal);
-    lv_obj_set_size(btnRow, 560, 46);
+    lv_obj_set_size(btnRow, 820, 48);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
     lv_obj_set_style_pad_all(btnRow, 0, 0);
@@ -9458,7 +9523,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Cancel Button
     lv_obj_t* cancelBtn = lv_button_create(btnRow);
-    lv_obj_set_size(cancelBtn, 140, 36);
+    lv_obj_set_size(cancelBtn, 180, 40);
     lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_radius(cancelBtn, 8, 0);
     lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
@@ -9469,7 +9534,7 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
 
     // Clear Button
     lv_obj_t* clearBtn = lv_button_create(btnRow);
-    lv_obj_set_size(clearBtn, 140, 36);
+    lv_obj_set_size(clearBtn, 180, 40);
     lv_obj_set_style_bg_color(clearBtn, lv_color_hex(0xD9534F), 0); // Red
     lv_obj_set_style_radius(clearBtn, 8, 0);
     lv_obj_t* clearLbl = lv_label_create(clearBtn);
@@ -9532,6 +9597,12 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
         } else if (ui->mModDestModalCallerType == 1) {
             std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
             lv_label_set_text(ui->mModDestBtnLabel, compactName.c_str());
+        } else if (ui->mModDestModalCallerType == 4) {
+            std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
+            lv_label_set_text_fmt(ui->mModDestBtnLabel, "X: %s", compactName.c_str());
+        } else if (ui->mModDestModalCallerType == 5) {
+            std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
+            lv_label_set_text_fmt(ui->mModDestBtnLabel, "Y: %s", compactName.c_str());
         } else {
             lv_label_set_text(ui->mModDestBtnLabel, currentDestName.c_str());
         }
@@ -9556,6 +9627,12 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
     } else if (ui->mModDestModalCallerType == 3) {
         ui->mAftertouchDestParamId[ui->mActiveTrack] = data->paramId;
         ui->mEngine.setRouting(data->trackIdx, ui->mActiveTrack, 27, 5, 1.0f, data->paramId);
+    } else if (ui->mModDestModalCallerType == 4) {
+        ui->mPlayModXTrack = data->trackIdx;
+        ui->mPlayModXDest = data->paramId;
+    } else if (ui->mModDestModalCallerType == 5) {
+        ui->mPlayModYTrack = data->trackIdx;
+        ui->mPlayModYDest = data->paramId;
     }
 
     ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
@@ -9614,6 +9691,16 @@ void UIManager::clearModDestModalEventCb(lv_event_t* e) {
         ui->mAftertouchDestParamId[ui->mActiveTrack] = -1;
         if (ui->mModDestBtnLabel) {
             lv_label_set_text(ui->mModDestBtnLabel, "AFTERTOUCH DEST: NONE (TAP TO ASSIGN)");
+        }
+    } else if (ui->mModDestModalCallerType == 4) { // Play Mod X
+        ui->mPlayModXDest = -1;
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "X: None");
+        }
+    } else if (ui->mModDestModalCallerType == 5) { // Play Mod Y
+        ui->mPlayModYDest = -1;
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "Y: None");
         }
     }
 
@@ -10238,7 +10325,7 @@ void UIManager::populateFxScreen() {
 
         // Inner Sliders Container
         lv_obj_t* slidersCont = lv_obj_create(eq);
-        lv_obj_set_size(slidersCont, 245, 180);
+        lv_obj_set_size(slidersCont, 305, 240);
         lv_obj_set_style_bg_opa(slidersCont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(slidersCont, 0, 0);
         lv_obj_set_style_pad_all(slidersCont, 0, 0);
@@ -10256,15 +10343,15 @@ void UIManager::populateFxScreen() {
 
         // Separator line
         lv_obj_t* eqLine = lv_obj_create(eq);
-        lv_obj_set_size(eqLine, 245, 2);
+        lv_obj_set_size(eqLine, 305, 2);
         lv_obj_set_style_bg_color(eqLine, lv_color_hex(0xF59E0B), 0);
         lv_obj_set_style_bg_opa(eqLine, LV_OPA_20, 0);
         lv_obj_set_style_border_width(eqLine, 0, 0);
-        lv_obj_align(eqLine, LV_ALIGN_TOP_MID, 0, 200);
+        lv_obj_align(eqLine, LV_ALIGN_TOP_MID, 0, 270);
 
         // Bottom knobs container: Mix & Send Knobs side-by-side
         lv_obj_t* mixCont = lv_obj_create(eq);
-        lv_obj_set_size(mixCont, 245, 180);
+        lv_obj_set_size(mixCont, 305, 220);
         lv_obj_set_style_bg_opa(mixCont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(mixCont, 0, 0);
         lv_obj_set_style_pad_all(mixCont, 0, 0);
@@ -10272,7 +10359,7 @@ void UIManager::populateFxScreen() {
         lv_obj_set_flex_flow(mixCont, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(mixCont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_remove_flag(mixCont, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_align(mixCont, LV_ALIGN_TOP_MID, 0, 210);
+        lv_obj_align(mixCont, LV_ALIGN_TOP_MID, 0, 290);
 
         addPedalKnob(mixCont, "Mix", 1539, 0.0f, 1.0f);
         addPedalKnob(mixCont, "Send", 2170, 0.0f, 1.0f);
@@ -10337,7 +10424,7 @@ void UIManager::populateFxScreen() {
 
 lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_color_t accentColor) {
     lv_obj_t* card = lv_obj_create(parent);
-    lv_obj_set_size(card, 265, 490);
+    lv_obj_set_size(card, 335, 700);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(card, accentColor, 0);
@@ -10387,27 +10474,27 @@ lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_colo
     // Title label
     lv_obj_t* title = lv_label_create(card);
     lv_label_set_text(title, name);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(title, accentColor, 0);
     
     // Separator line
     lv_obj_t* line = lv_obj_create(card);
-    lv_obj_set_size(line, 245, 2);
+    lv_obj_set_size(line, 305, 2);
     lv_obj_set_style_bg_color(line, accentColor, 0);
     lv_obj_set_style_bg_opa(line, LV_OPA_30, 0);
     lv_obj_set_style_border_width(line, 0, 0);
 
     // Controls Body container
     lv_obj_t* body = lv_obj_create(card);
-    lv_obj_set_size(body, 245, 420);
+    lv_obj_set_size(body, 305, 610);
     lv_obj_set_style_bg_opa(body, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(body, 0, 0);
     lv_obj_set_style_pad_all(body, 0, 0);
     lv_obj_set_layout(body, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(body, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(body, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(body, 8, 0);
-    lv_obj_set_style_pad_row(body, 8, 0);
+    lv_obj_set_style_pad_column(body, 10, 0);
+    lv_obj_set_style_pad_row(body, 22, 0);
     lv_obj_remove_flag(body, LV_OBJ_FLAG_SCROLLABLE);
 
     return body;
@@ -10415,7 +10502,7 @@ lv_obj_t* UIManager::createPedalCard(lv_obj_t* parent, const char* name, lv_colo
 
 void UIManager::addPedalKnob(lv_obj_t* pedal, const char* labelText, int paramId, float minVal, float maxVal, int decimals) {
     lv_obj_t* container = lv_obj_create(pedal);
-    lv_obj_set_size(container, 64, 95);
+    lv_obj_set_size(container, 82, 115);
     lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(container, 0, 0);
     lv_obj_set_style_pad_all(container, 0, 0);
@@ -10427,14 +10514,14 @@ void UIManager::addPedalKnob(lv_obj_t* pedal, const char* labelText, int paramId
 
     // Mini Arc
     lv_obj_t* arc = lv_arc_create(container);
-    lv_obj_set_size(arc, 56, 56);
+    lv_obj_set_size(arc, 68, 68);
     lv_arc_set_rotation(arc, 135);
     lv_arc_set_bg_angles(arc, 0, 270);
     lv_obj_set_style_bg_opa(arc, LV_OPA_TRANSP, LV_PART_KNOB);
     lv_obj_set_style_border_width(arc, 0, LV_PART_KNOB);
     lv_obj_set_style_pad_all(arc, 0, LV_PART_KNOB);
-    lv_obj_set_style_arc_width(arc, 4, LV_PART_MAIN);
-    lv_obj_set_style_arc_width(arc, 5, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(arc, 5, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(arc, 6, LV_PART_INDICATOR);
     lv_obj_set_style_arc_color(arc, lv_color_hex(0x2D2D2D), LV_PART_MAIN);
     
     // Get accent color of the selected track
@@ -10688,7 +10775,7 @@ void UIManager::addPedalDropdown(lv_obj_t* pedal, const char* labelText, int par
 
 void UIManager::addPedalSpacer(lv_obj_t* pedal, int height) {
     lv_obj_t* spacer = lv_obj_create(pedal);
-    lv_obj_set_size(spacer, 240, height);
+    lv_obj_set_size(spacer, 350, height);
     lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(spacer, 0, 0);
     lv_obj_set_style_pad_all(spacer, 0, 0);
@@ -11153,6 +11240,7 @@ void UIManager::mixerEngineDdEventCb(lv_event_t* e) {
     d->ui->mEngine.setEngineType(d->trackIdx, engineType);
     d->ui->applyDefaultMidiMappings(d->trackIdx, engineType);
     d->ui->updateHighlighting();
+    d->ui->createCenterContentArea();
 }
 
 void UIManager::mixerMuteBtnEventCb(lv_event_t* e) {
@@ -11204,35 +11292,27 @@ void UIManager::mixerActiveBtnEventCb(lv_event_t* e) {
 void UIManager::populateMixRecScreen() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
-    lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-    lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-    lv_tabview_set_tab_bar_size(tabview, 40);
+    // Single unified container (replacing tabview)
+    lv_obj_t* container = lv_obj_create(mCenterArea);
+    lv_obj_set_size(container, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_color(container, lv_color_hex(0x121212), 0);
+    lv_obj_set_style_border_width(container, 0, 0);
+    lv_obj_set_style_pad_all(container, 10, 0);
+    lv_obj_remove_flag(container, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Modern dark styling for tabview
-    lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-    lv_obj_set_style_border_width(tabview, 0, 0);
+    // Register delete callback to safely nullify widget pointers
+    lv_obj_add_event_cb(container, mixRecScreenDeleteEventCb, LV_EVENT_DELETE, this);
 
-    lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-    lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(tab_bar, 1, LV_PART_MAIN);
-
-    // Style the individual tab buttons in the tab bar
-    for(uint32_t i = 0; i < lv_obj_get_child_count(tab_bar); i++) {
-        lv_obj_t* btn = lv_obj_get_child(tab_bar, i);
-        lv_obj_set_style_text_font(btn, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(btn, lv_color_hex(0x888888), 0);
-        lv_obj_set_style_text_color(btn, trackColor, LV_STATE_CHECKED);
-    }
-
-    lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "Transport & Rec");
-    lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "Mixer");
-
-    lv_obj_set_style_pad_all(tab1, 10, 0);
-    lv_obj_set_style_pad_all(tab2, 10, 0);
-
-    // Register a delete event callback on the tabview container to safely clean up references
-    lv_obj_add_event_cb(tabview, mixRecScreenDeleteEventCb, LV_EVENT_DELETE, this);
+    // Outer vertical flex: Top Card (Tempo & Master Transport) + Bottom Card (8-Track Mixer)
+    lv_obj_t* outerCol = lv_obj_create(container);
+    lv_obj_set_size(outerCol, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_opa(outerCol, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(outerCol, 0, 0);
+    lv_obj_set_style_pad_all(outerCol, 0, 0);
+    lv_obj_set_layout(outerCol, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(outerCol, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(outerCol, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(outerCol, LV_OBJ_FLAG_SCROLLABLE);
 
     // Glassmorphic Card Styling helper
     auto applyCardStyle = [](lv_obj_t* card) {
@@ -11241,48 +11321,50 @@ void UIManager::populateMixRecScreen() {
         lv_obj_set_style_border_color(card, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_width(card, 1, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 20, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     };
 
-    // --- TAB 1: TRANSPORT & REC ---
-    lv_obj_t* outerRow = lv_obj_create(tab1);
-    lv_obj_set_size(outerRow, lv_pct(100), lv_pct(100));
-    lv_obj_set_style_bg_opa(outerRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(outerRow, 0, 0);
-    lv_obj_set_style_pad_all(outerRow, 5, 0);
-    lv_obj_set_layout(outerRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(outerRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(outerRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(outerRow, LV_OBJ_FLAG_SCROLLABLE);
+    // =========================================================================
+    // TOP CARD: TEMPO, MASTER VOLUME & TRANSPORT (Width: 1050px, Height: 260px)
+    // =========================================================================
+    lv_obj_t* topCard = lv_obj_create(outerCol);
+    lv_obj_set_size(topCard, 1050, 260);
+    applyCardStyle(topCard);
+    lv_obj_set_style_pad_all(topCard, 10, 0);
+    lv_obj_set_layout(topCard, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(topCard, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(topCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // --- LEFT COLUMN: Tempo & Swing ---
-    lv_obj_t* col1 = lv_obj_create(outerRow);
-    lv_obj_set_size(col1, 380, 480);
-    applyCardStyle(col1);
+    // Section 1 (Left of Top Card): Tempo & Swing Section (Width: 500px)
+    lv_obj_t* tempoSection = lv_obj_create(topCard);
+    lv_obj_set_size(tempoSection, 500, 238);
+    lv_obj_set_style_bg_opa(tempoSection, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(tempoSection, 0, 0);
+    lv_obj_set_style_pad_all(tempoSection, 0, 0);
+    lv_obj_set_layout(tempoSection, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(tempoSection, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(tempoSection, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_remove_flag(tempoSection, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t* title1 = lv_label_create(col1);
-    lv_label_set_text(title1, "TEMPO & TIMING");
+    lv_obj_t* title1 = lv_label_create(tempoSection);
+    lv_label_set_text(title1, "TEMPO & SWING");
     lv_obj_set_style_text_font(title1, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(title1, lv_color_hex(0x888888), 0);
 
-    // Flex row inside left column to house the BPM & Swing knobs side-by-side
-    lv_obj_t* knobRow = lv_obj_create(col1);
-    lv_obj_set_size(knobRow, 350, 190);
-    lv_obj_set_style_bg_opa(knobRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(knobRow, 0, 0);
-    lv_obj_set_style_pad_all(knobRow, 0, 0);
-    lv_obj_set_layout(knobRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(knobRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(knobRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(knobRow, LV_OBJ_FLAG_SCROLLABLE);
+    // Row containing Knobs on left, Tap Tempo button on right
+    lv_obj_t* tempoKnobsRow = lv_obj_create(tempoSection);
+    lv_obj_set_size(tempoKnobsRow, 500, 200);
+    lv_obj_set_style_bg_opa(tempoKnobsRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(tempoKnobsRow, 0, 0);
+    lv_obj_set_style_pad_all(tempoKnobsRow, 0, 0);
+    lv_obj_set_layout(tempoKnobsRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(tempoKnobsRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(tempoKnobsRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(tempoKnobsRow, LV_OBJ_FLAG_SCROLLABLE);
 
     // 1. BPM Arc/Knob
-    lv_obj_t* bpmCont = lv_obj_create(knobRow);
-    lv_obj_set_size(bpmCont, 150, 180);
+    lv_obj_t* bpmCont = lv_obj_create(tempoKnobsRow);
+    lv_obj_set_size(bpmCont, 150, 190);
     lv_obj_set_style_bg_opa(bpmCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bpmCont, 0, 0);
     lv_obj_set_style_pad_all(bpmCont, 0, 0);
@@ -11292,7 +11374,7 @@ void UIManager::populateMixRecScreen() {
     lv_obj_remove_flag(bpmCont, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* bpmArc = lv_arc_create(bpmCont);
-    lv_obj_set_size(bpmArc, 125, 125);
+    lv_obj_set_size(bpmArc, 130, 130);
     lv_arc_set_rotation(bpmArc, 135);
     lv_arc_set_bg_angles(bpmArc, 0, 270);
     lv_arc_set_range(bpmArc, 12, 300);
@@ -11325,8 +11407,8 @@ void UIManager::populateMixRecScreen() {
     lv_obj_set_style_text_color(bpmSubTitle, lv_color_hex(0x888888), 0);
 
     // 2. Swing Arc/Knob
-    lv_obj_t* swingCont = lv_obj_create(knobRow);
-    lv_obj_set_size(swingCont, 150, 180);
+    lv_obj_t* swingCont = lv_obj_create(tempoKnobsRow);
+    lv_obj_set_size(swingCont, 150, 190);
     lv_obj_set_style_bg_opa(swingCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(swingCont, 0, 0);
     lv_obj_set_style_pad_all(swingCont, 0, 0);
@@ -11336,7 +11418,7 @@ void UIManager::populateMixRecScreen() {
     lv_obj_remove_flag(swingCont, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* swingArc = lv_arc_create(swingCont);
-    lv_obj_set_size(swingArc, 125, 125);
+    lv_obj_set_size(swingArc, 130, 130);
     lv_arc_set_rotation(swingArc, 135);
     lv_arc_set_bg_angles(swingArc, 0, 270);
     lv_arc_set_range(swingArc, 0, 100);
@@ -11368,44 +11450,60 @@ void UIManager::populateMixRecScreen() {
     lv_obj_set_style_text_font(swingSubTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(swingSubTitle, lv_color_hex(0x888888), 0);
 
-    // Subtle horizontal divider line
-    lv_obj_t* spacer = lv_obj_create(col1);
-    lv_obj_set_size(spacer, 300, 2);
-    lv_obj_set_style_bg_color(spacer, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_bg_opa(spacer, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(spacer, 0, 0);
-    lv_obj_set_style_pad_all(spacer, 0, 0);
-
-    // TAP TEMPO Button
-    lv_obj_t* tapBtn = lv_button_create(col1);
-    lv_obj_set_size(tapBtn, 300, 50);
+    // TAP TEMPO Button placed to the right of the knobs
+    lv_obj_t* tapBtn = lv_button_create(tempoKnobsRow);
+    lv_obj_set_size(tapBtn, 150, 68);
     lv_obj_set_style_bg_color(tapBtn, lv_color_hex(0x2A2A2A), 0);
     lv_obj_set_style_bg_opa(tapBtn, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(tapBtn, lv_color_hex(0x444444), 0);
     lv_obj_set_style_border_width(tapBtn, 1, 0);
-    lv_obj_set_style_radius(tapBtn, 8, 0);
+    lv_obj_set_style_radius(tapBtn, 10, 0);
 
     lv_obj_t* tapBtnLbl = lv_label_create(tapBtn);
     lv_label_set_text(tapBtnLbl, "TAP TEMPO");
     lv_obj_set_style_text_font(tapBtnLbl, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(tapBtnLbl, trackColor, 0);
     lv_obj_center(tapBtnLbl);
-
     lv_obj_add_event_cb(tapBtn, mixRecBpmTapEventCb, LV_EVENT_CLICKED, this);
 
-    // --- RIGHT COLUMN: Master Volume & Transport ---
-    lv_obj_t* col2 = lv_obj_create(outerRow);
-    lv_obj_set_size(col2, 380, 480);
-    applyCardStyle(col2);
+    // Vertical divider between sections
+    lv_obj_t* vDivider = lv_obj_create(topCard);
+    lv_obj_set_size(vDivider, 1, 230);
+    lv_obj_set_style_bg_color(vDivider, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_bg_opa(vDivider, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(vDivider, 0, 0);
+    lv_obj_set_style_pad_all(vDivider, 0, 0);
 
-    lv_obj_t* title2 = lv_label_create(col2);
-    lv_label_set_text(title2, "MASTER & TRANSPORT");
+    // Section 2 (Right of Top Card): Master Volume & Transport Buttons (Width: 500px)
+    lv_obj_t* masterSection = lv_obj_create(topCard);
+    lv_obj_set_size(masterSection, 500, 238);
+    lv_obj_set_style_bg_opa(masterSection, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(masterSection, 0, 0);
+    lv_obj_set_style_pad_all(masterSection, 0, 0);
+    lv_obj_set_layout(masterSection, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(masterSection, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(masterSection, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_remove_flag(masterSection, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* title2 = lv_label_create(masterSection);
+    lv_label_set_text(title2, "MASTER VOLUME & TRANSPORT");
     lv_obj_set_style_text_font(title2, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(title2, lv_color_hex(0x888888), 0);
 
+    // Row containing Master Volume Knob on left, Transport Buttons on right
+    lv_obj_t* masterRow = lv_obj_create(masterSection);
+    lv_obj_set_size(masterRow, 500, 200);
+    lv_obj_set_style_bg_opa(masterRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(masterRow, 0, 0);
+    lv_obj_set_style_pad_all(masterRow, 0, 0);
+    lv_obj_set_layout(masterRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(masterRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(masterRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(masterRow, LV_OBJ_FLAG_SCROLLABLE);
+
     // Master Volume Arc Container
-    lv_obj_t* volCont = lv_obj_create(col2);
-    lv_obj_set_size(volCont, 180, 190);
+    lv_obj_t* volCont = lv_obj_create(masterRow);
+    lv_obj_set_size(volCont, 170, 190);
     lv_obj_set_style_bg_opa(volCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(volCont, 0, 0);
     lv_obj_set_style_pad_all(volCont, 0, 0);
@@ -11415,7 +11513,7 @@ void UIManager::populateMixRecScreen() {
     lv_obj_remove_flag(volCont, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* volArc = lv_arc_create(volCont);
-    lv_obj_set_size(volArc, 140, 140);
+    lv_obj_set_size(volArc, 130, 130);
     lv_arc_set_rotation(volArc, 135);
     lv_arc_set_bg_angles(volArc, 0, 270);
     lv_arc_set_range(volArc, 0, 100);
@@ -11447,17 +11545,9 @@ void UIManager::populateMixRecScreen() {
     lv_obj_set_style_text_font(volSubTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(volSubTitle, lv_color_hex(0x888888), 0);
 
-    // Subtle divider
-    lv_obj_t* spacer2 = lv_obj_create(col2);
-    lv_obj_set_size(spacer2, 300, 2);
-    lv_obj_set_style_bg_color(spacer2, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_bg_opa(spacer2, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(spacer2, 0, 0);
-    lv_obj_set_style_pad_all(spacer2, 0, 0);
-
-    // Transport buttons flex row
-    lv_obj_t* transRow = lv_obj_create(col2);
-    lv_obj_set_size(transRow, 300, 65);
+    // Transport buttons row placed to the right of Master Volume knob
+    lv_obj_t* transRow = lv_obj_create(masterRow);
+    lv_obj_set_size(transRow, 290, 68);
     lv_obj_set_style_bg_opa(transRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(transRow, 0, 0);
     lv_obj_set_style_pad_all(transRow, 0, 0);
@@ -11467,7 +11557,7 @@ void UIManager::populateMixRecScreen() {
     lv_obj_remove_flag(transRow, LV_OBJ_FLAG_SCROLLABLE);
 
     auto applyTransBtnStyle = [](lv_obj_t* btn) {
-        lv_obj_set_size(btn, 85, 50);
+        lv_obj_set_size(btn, 88, 56);
         lv_obj_set_style_radius(btn, 8, 0);
         lv_obj_set_style_border_color(btn, lv_color_hex(0x444444), 0);
         lv_obj_set_style_border_width(btn, 1, 0);
@@ -11498,44 +11588,59 @@ void UIManager::populateMixRecScreen() {
     // Record Button
     lv_obj_t* recBtn = lv_button_create(transRow);
     applyTransBtnStyle(recBtn);
-    
-    // Perfectly round centered red circle indicator
     lv_obj_t* recCircle = lv_obj_create(recBtn);
-    lv_obj_set_size(recCircle, 14, 14);
+    lv_obj_set_size(recCircle, 18, 18);
     lv_obj_set_style_bg_color(recCircle, lv_color_hex(0xFF3333), 0);
     lv_obj_set_style_bg_opa(recCircle, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(recCircle, 0, 0);
     lv_obj_set_style_radius(recCircle, LV_RADIUS_CIRCLE, 0);
     lv_obj_center(recCircle);
     lv_obj_remove_flag(recCircle, LV_OBJ_FLAG_CLICKABLE);
-    
     lv_obj_add_event_cb(recBtn, mixRecRecordBtnEventCb, LV_EVENT_CLICKED, this);
     mMixRecRecordBtn = recBtn;
 
-    // --- TAB 2: MIXER ---
-    lv_obj_t* mixerContainer = lv_obj_create(tab2);
-    lv_obj_set_size(mixerContainer, lv_pct(100), lv_pct(100));
-    lv_obj_set_style_bg_opa(mixerContainer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(mixerContainer, 0, 0);
-    lv_obj_set_style_pad_all(mixerContainer, 5, 0);
-    lv_obj_set_layout(mixerContainer, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(mixerContainer, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(mixerContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(mixerContainer, LV_OBJ_FLAG_SCROLLABLE);
+    // =========================================================================
+    // BOTTOM CARD: 8-TRACK MIXER FADERS (Width: 1050px, Height: 505px)
+    // =========================================================================
+    lv_obj_t* mixerCard = lv_obj_create(outerCol);
+    lv_obj_set_size(mixerCard, 1050, 505);
+    applyCardStyle(mixerCard);
+    lv_obj_set_style_pad_all(mixerCard, 10, 0);
+    lv_obj_set_layout(mixerCard, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mixerCard, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(mixerCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* mixerTitle = lv_label_create(mixerCard);
+    lv_label_set_text(mixerTitle, "8-TRACK MIXER CONSOLE");
+    lv_obj_set_style_text_font(mixerTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mixerTitle, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* mixerRow = lv_obj_create(mixerCard);
+    lv_obj_set_size(mixerRow, 1030, 455);
+    lv_obj_set_style_bg_opa(mixerRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mixerRow, 0, 0);
+    lv_obj_set_style_pad_all(mixerRow, 0, 0);
+    lv_obj_set_layout(mixerRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mixerRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(mixerRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(mixerRow, LV_OBJ_FLAG_SCROLLABLE);
 
     for (int i = 0; i < 8; ++i) {
         lv_color_t tColor = getTrackColor(i);
 
-        lv_obj_t* sliderCard = lv_obj_create(mixerContainer);
+        lv_obj_t* sliderCard = lv_obj_create(mixerRow);
         mMixerCards[i] = sliderCard;
-        lv_obj_set_size(sliderCard, 90, 480);
+        lv_obj_set_size(sliderCard, 122, 450);
         applyCardStyle(sliderCard);
-        lv_obj_set_style_pad_all(sliderCard, 5, 0);
+        lv_obj_set_style_pad_all(sliderCard, 6, 0);
+        lv_obj_set_layout(sliderCard, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(sliderCard, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(sliderCard, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         // Track title
         lv_obj_t* trackTitle = lv_label_create(sliderCard);
         lv_label_set_text_fmt(trackTitle, "Track %d", i + 1);
-        lv_obj_set_style_text_font(trackTitle, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(trackTitle, &lv_font_montserrat_14, 0);
         lv_obj_set_style_text_color(trackTitle, tColor, 0);
 
         // Parameter Value Label (0% to 150%)
@@ -11544,13 +11649,13 @@ void UIManager::populateMixRecScreen() {
         float currentVol = mEngine.getTracks()[i].volume;
         int pctVal = (int)(currentVol * 100.0f);
         lv_label_set_text_fmt(valLbl, "%d%%", pctVal);
-        lv_obj_set_style_text_font(valLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(valLbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(valLbl, lv_color_hex(0xFFFFFF), 0);
 
-        // Vertical Slider (fader)
+        // Vertical Slider (fader) - 340px tall fader!
         lv_obj_t* slider = lv_slider_create(sliderCard);
         mMixerVolSliders[i] = slider;
-        lv_obj_set_size(slider, 16, 320); // Nice tall vertical slider!
+        lv_obj_set_size(slider, 22, 340);
         lv_slider_set_range(slider, 0, 150);
         lv_slider_set_value(slider, pctVal, LV_ANIM_OFF);
         
@@ -11817,7 +11922,7 @@ void UIManager::populateParamScreen() {
         mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 480);
+        lv_obj_set_size(tabview, lv_pct(100), 730);
         lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
         lv_obj_set_style_border_width(tabview, 0, 0);
@@ -11829,27 +11934,23 @@ void UIManager::populateParamScreen() {
         lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
 
         lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "OSCILLATORS");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "FILTER & LFO");
-        lv_obj_t* tab3 = lv_tabview_add_tab(tabview, "ENVELOPES");
+        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "FILTER, LFO & ENVELOPES");
 
         lv_obj_set_style_pad_all(tab1, 10, 0);
         lv_obj_set_style_pad_all(tab2, 10, 0);
-        lv_obj_set_style_pad_all(tab3, 10, 0);
         
         lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab3, LV_OBJ_FLAG_SCROLLABLE);
 
         populateParamSubtractiveOscTab(tab1);
         populateParamSubtractiveFilterTab(tab2);
-        populateParamSubtractiveEnvTab(tab3);
     } else if (engineType == 1) {
         // FM Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
         mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 480);
+        lv_obj_set_size(tabview, lv_pct(100), 730);
         lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
         lv_obj_set_style_border_width(tabview, 0, 0);
@@ -11860,26 +11961,23 @@ void UIManager::populateParamScreen() {
         lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "OPERATORS");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "ROUTING");
-        lv_obj_t* tab3 = lv_tabview_add_tab(tabview, "FILTER & ENVELOPES");
+        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "OPERATORS & ROUTING");
+        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "FILTER & ENVELOPES");
 
         lv_obj_set_style_pad_all(tab1, 10, 0);
         lv_obj_set_style_pad_all(tab2, 10, 0);
-        lv_obj_set_style_pad_all(tab3, 10, 0);
         
         lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab3, LV_OBJ_FLAG_SCROLLABLE);
 
-        populateParamFmTab(tab1, tab2, tab3);
+        populateParamFmTab(tab1, tab2);
     } else if (engineType == 2) {
         // Sampler Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
         mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 480);
+        lv_obj_set_size(tabview, lv_pct(100), 730);
         lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
         lv_obj_set_style_border_width(tabview, 0, 0);
@@ -11890,24 +11988,20 @@ void UIManager::populateParamScreen() {
         lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "SAMPLING");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "SYNTHESIS & ENVELOPES");
+        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "SAMPLER & SYNTHESIS");
 
         lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
         
         lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
 
         populateParamSamplerTab(tab1);
-        populateParamSamplerSynthesisTab(tab2);
     } else if (engineType == 3) {
         // Granular Active: Create tab view dashboard
         lv_obj_t* tabview = lv_tabview_create(mCenterArea);
         mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 550);
+        lv_obj_set_size(tabview, lv_pct(100), 730);
         lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
         lv_obj_set_style_border_width(tabview, 0, 0);
@@ -11935,7 +12029,7 @@ void UIManager::populateParamScreen() {
         mParamTabview = tabview;
         lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
         lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 480);
+        lv_obj_set_size(tabview, lv_pct(100), 730);
         lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
         lv_obj_set_style_border_width(tabview, 0, 0);
@@ -11946,148 +12040,73 @@ void UIManager::populateParamScreen() {
         lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "WAVETABLES");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "FILTER & ENVELOPES");
+        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "WAVETABLE SYNTHESIS");
 
         lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
         
         lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
 
         populateParamWavetableTab(tab1);
-        populateParamWavetableFilterTab(tab2);
     } else if (engineType == 9) {
-        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-        mParamTabview = tabview;
-        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-        lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 550);
-        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-        lv_obj_set_style_border_width(tabview, 0, 0);
-        
-        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+        // SoundFont Active: Single-page dashboard
+        mParamTabview = nullptr;
+        lv_obj_t* page = lv_obj_create(mCenterArea);
+        lv_obj_set_size(page, lv_pct(100), 730);
+        lv_obj_align(page, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(page, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(page, 0, 0);
+        lv_obj_set_style_pad_all(page, 10, 0);
+        lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "LIBRARY");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "SYNTHESIS");
-
-        lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
-        
-        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-
-        populateParamSoundFontLibraryTab(tab1);
-        populateParamSoundFontSynthTab(tab2);
+        populateParamSoundFontLibraryTab(page);
     } else if (engineType == 8) {
-        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-        mParamTabview = tabview;
-        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-        lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 550);
-        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-        lv_obj_set_style_border_width(tabview, 0, 0);
-        
-        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+        // Audio In Active: Single-page dashboard
+        mParamTabview = nullptr;
+        lv_obj_t* page = lv_obj_create(mCenterArea);
+        lv_obj_set_size(page, lv_pct(100), 730);
+        lv_obj_align(page, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(page, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(page, 0, 0);
+        lv_obj_set_style_pad_all(page, 10, 0);
+        lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "AUDIO INPUT");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "FILTER & ENVELOPE");
-
-        lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
-        
-        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-
-        populateParamAudioInTab(tab1);
-        populateParamAudioInFilterEnvTab(tab2);
+        populateParamAudioInTab(page);
     } else if (engineType == 5) {
-        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-        mParamTabview = tabview;
-        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-        lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 550);
-        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-        lv_obj_set_style_border_width(tabview, 0, 0);
-        
-        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+        // FM Drum Active: Single-page dashboard (all 8 voices side-by-side)
+        mParamTabview = nullptr;
+        lv_obj_t* page = lv_obj_create(mCenterArea);
+        lv_obj_set_size(page, lv_pct(100), 730);
+        lv_obj_align(page, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(page, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(page, 0, 0);
+        lv_obj_set_style_pad_all(page, 6, 0);
+        lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "MAIN DRUMS");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "CYMBALS & PERC");
-
-        lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
-        
-        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-
-        populateParamFmDrumTab1(tab1);
-        populateParamFmDrumTab2(tab2);
+        populateParamFmDrumTab1(page);
     } else if (engineType == 6) {
-        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-        mParamTabview = tabview;
-        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-        lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 550);
-        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-        lv_obj_set_style_border_width(tabview, 0, 0);
-        
-        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+        // Analogue Drum Active: Single-page dashboard (all 8 voices side-by-side)
+        mParamTabview = nullptr;
+        lv_obj_t* page = lv_obj_create(mCenterArea);
+        lv_obj_set_size(page, lv_pct(100), 730);
+        lv_obj_align(page, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(page, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(page, 0, 0);
+        lv_obj_set_style_pad_all(page, 6, 0);
+        lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "MAIN DRUMS");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "CYMBALS & HATS");
-
-        lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
-        
-        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-
-        populateParamAnalogDrumTab1(tab1);
-        populateParamAnalogDrumTab2(tab2);
+        populateParamAnalogDrumTab1(page);
     } else if (engineType == 10) {
-        // MIDI Engine Active: Create tab view dashboard
-        lv_obj_t* tabview = lv_tabview_create(mCenterArea);
-        mParamTabview = tabview;
-        lv_tabview_set_tab_bar_position(tabview, LV_DIR_TOP);
-        lv_tabview_set_tab_bar_size(tabview, 40);
-        lv_obj_set_size(tabview, 790, 480);
-        lv_obj_align(tabview, LV_ALIGN_TOP_MID, 0, 0);
-        lv_obj_set_style_bg_color(tabview, lv_color_hex(0x121212), 0);
-        lv_obj_set_style_border_width(tabview, 0, 0);
-        
-        lv_obj_t* tab_bar = lv_tabview_get_tab_bar(tabview);
-        lv_obj_set_style_bg_color(tab_bar, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_border_color(tab_bar, lv_color_hex(0x2D2D2D), 0);
-        lv_obj_set_style_border_width(tab_bar, 1, LV_BORDER_SIDE_BOTTOM);
+        // MIDI Engine Active: Single-page dashboard (Routing on top, Controller Mapping list below)
+        mParamTabview = nullptr;
+        lv_obj_t* page = lv_obj_create(mCenterArea);
+        lv_obj_set_size(page, lv_pct(100), 730);
+        lv_obj_align(page, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(page, lv_color_hex(0x121212), 0);
+        lv_obj_set_style_border_width(page, 0, 0);
+        lv_obj_set_style_pad_all(page, 8, 0);
+        lv_obj_remove_flag(page, LV_OBJ_FLAG_SCROLLABLE);
 
-        lv_obj_t* tab1 = lv_tabview_add_tab(tabview, "MIDI ROUTING");
-        lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "CONTROLLER MAPPING");
-
-        lv_obj_set_style_pad_all(tab1, 10, 0);
-        lv_obj_set_style_pad_all(tab2, 10, 0);
-        
-        lv_obj_remove_flag(tab1, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(tab2, LV_OBJ_FLAG_SCROLLABLE);
-
-        populateParamMidiRoutingTab(tab1);
-        populateParamMidiMappingTab(tab2);
+        populateParamMidiRoutingTab(page);
     }
 
     if (mParamTabview) {
@@ -12186,7 +12205,9 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(tab, 8, 0);
+    lv_obj_set_style_pad_column(tab, 8, 0);
 
     auto createSynthCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
         lv_obj_t* card = lv_obj_create(parent);
@@ -12196,7 +12217,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 10, 0);
+        lv_obj_set_style_pad_all(card, 8, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         
         lv_obj_set_layout(card, LV_LAYOUT_FLEX);
@@ -12213,7 +12234,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
 
     auto createKnobGrid = [](lv_obj_t* parent) -> lv_obj_t* {
         lv_obj_t* grid = lv_obj_create(parent);
-        lv_obj_set_size(grid, 160, 240);
+        lv_obj_set_size(grid, 156, 240);
         lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(grid, 0, 0);
         lv_obj_set_style_pad_all(grid, 0, 0);
@@ -12222,20 +12243,20 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
         lv_obj_set_layout(grid, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
         lv_obj_set_flex_align(grid, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_SPACE_EVENLY);
-        lv_obj_set_style_pad_row(grid, 12, 0);
+        lv_obj_set_style_pad_row(grid, 10, 0);
         lv_obj_set_style_pad_column(grid, 4, 0);
         return grid;
     };
 
     // --- MACROS ---
-    lv_obj_t* macroCard = createSynthCard(tab, "MACROS", 90);
+    lv_obj_t* macroCard = createSynthCard(tab, "MACROS", 95);
     lv_obj_set_style_pad_all(macroCard, 4, 0);
     addSynthKnob(macroCard, "MORPHX3", 290, 0.0f, 1.0f, 2, true);
     addSynthKnob(macroCard, "FOLDX3", 291, 0.0f, 1.0f, 2, true);
     addSynthKnob(macroCard, "DRIVEX3", 292, 0.0f, 1.0f, 2, true);
 
     // --- OSC 1 ---
-    lv_obj_t* card1 = createSynthCard(tab, "OSCILLATOR 1", 182);
+    lv_obj_t* card1 = createSynthCard(tab, "OSCILLATOR 1", 175);
     lv_obj_t* grid1 = createKnobGrid(card1);
     addSynthKnob(grid1, "PITCH", 160, 0.0f, 1.0f, 2, false);
     addSynthKnob(grid1, "MORPH", 104, 0.0f, 1.0f, 2, true);
@@ -12244,7 +12265,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
     addSynthKnob(card1, "VOLUME", 107, 0.0f, 1.0f, 2, true);
 
     // --- OSC 2 ---
-    lv_obj_t* card2 = createSynthCard(tab, "OSCILLATOR 2", 182);
+    lv_obj_t* card2 = createSynthCard(tab, "OSCILLATOR 2", 175);
     lv_obj_t* grid2 = createKnobGrid(card2);
     addSynthKnob(grid2, "PITCH", 161, 0.0f, 1.0f, 2, false);
     addSynthKnob(grid2, "MORPH", 105, 0.0f, 1.0f, 2, true);
@@ -12253,7 +12274,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
     addSynthKnob(card2, "VOLUME", 108, 0.0f, 1.0f, 2, true);
 
     // --- SUB OSC ---
-    lv_obj_t* card3 = createSynthCard(tab, "SUB OSCILLATOR", 182);
+    lv_obj_t* card3 = createSynthCard(tab, "SUB OSCILLATOR", 175);
     lv_obj_t* grid3 = createKnobGrid(card3);
     addSynthKnob(grid3, "PITCH", 162, 0.0f, 1.0f, 2, false);
     addSynthKnob(grid3, "MORPH", 155, 0.0f, 1.0f, 2, true);
@@ -12262,7 +12283,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
     addSynthKnob(card3, "VOLUME", 109, 0.0f, 1.0f, 2, true);
 
     // --- TUNE & UTILITIES ---
-    lv_obj_t* card4 = createSynthCard(tab, "TUNE & UTILITIES", 182);
+    lv_obj_t* card4 = createSynthCard(tab, "TUNE & UTILITIES", 175);
     lv_obj_t* grid4 = createKnobGrid(card4);
     addSynthKnob(grid4, "DETUNE", 106, 0.0f, 1.0f, 2, true);
     addSynthKnob(grid4, "NOISE VOL", 110, 0.0f, 1.0f, 2, true);
@@ -12270,7 +12291,7 @@ void UIManager::populateParamSubtractiveOscTab(lv_obj_t* tab) {
 
     // Flex switches row inside card 4
     lv_obj_t* swRow = lv_obj_create(card4);
-    lv_obj_set_size(swRow, 160, 60);
+    lv_obj_set_size(swRow, 156, 60);
     lv_obj_set_style_bg_opa(swRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(swRow, 0, 0);
     lv_obj_set_style_pad_all(swRow, 0, 0);
@@ -12323,41 +12344,54 @@ void UIManager::populateParamSubtractiveFilterTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW_WRAP);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_SPACE_BETWEEN);
+    lv_obj_set_style_pad_all(tab, 8, 0);
+    lv_obj_set_style_pad_row(tab, 8, 0);
+    lv_obj_set_style_pad_column(tab, 8, 0);
 
-    auto createFilterCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
+    auto createFilterCard = [trackColor](lv_obj_t* parent, const char* name, int width, int height) -> lv_obj_t* {
         lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 410);
+        lv_obj_set_size(card, width, height);
         lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 15, 0);
+        lv_obj_set_style_pad_all(card, 8, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         
         lv_obj_set_layout(card, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         
-        lv_obj_t* title = lv_label_create(card);
-        lv_label_set_text(title, name);
-        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(title, trackColor, 0);
-        
         return card;
     };
 
-    // --- STATE VARIABLE FILTER CARD ---
-    lv_obj_t* filterCard = createFilterCard(tab, "STATE VARIABLE FILTER", 365);
+    // --- 1. FILTER CARD (Top-Left: 490px x 300px) ---
+    lv_obj_t* filterCard = createFilterCard(tab, "FILTER", 490, 300);
     
-    // Add dropdown at top
-    addSynthDropdown(filterCard, "FILTER MODE", 157, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, true);
+    // Header label
+    lv_obj_t* filterTitle = lv_label_create(filterCard);
+    lv_label_set_text(filterTitle, "FILTER");
+    lv_obj_set_style_text_font(filterTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(filterTitle, trackColor, 0);
 
-    // Row for the 3 knobs below
+    // Dropdown row at top
+    lv_obj_t* fDdCont = lv_obj_create(filterCard);
+    lv_obj_set_size(fDdCont, 470, 52);
+    lv_obj_set_style_bg_opa(fDdCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(fDdCont, 0, 0);
+    lv_obj_set_style_pad_all(fDdCont, 0, 0);
+    lv_obj_remove_flag(fDdCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(fDdCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(fDdCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(fDdCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    addSynthDropdown(fDdCont, "FILTER MODE", 157, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, true, 260);
+
+    // Row for the 3 filter knobs below
     lv_obj_t* knobRow1 = lv_obj_create(filterCard);
-    lv_obj_set_size(knobRow1, 335, 120);
+    lv_obj_set_size(knobRow1, 470, 140);
     lv_obj_set_style_bg_opa(knobRow1, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(knobRow1, 0, 0);
     lv_obj_set_style_pad_all(knobRow1, 0, 0);
@@ -12368,47 +12402,45 @@ void UIManager::populateParamSubtractiveFilterTab(lv_obj_t* tab) {
 
     addSynthKnob(knobRow1, "CUTOFF", 1, 0.0f, 1.0f, 2, true);
     addSynthKnob(knobRow1, "RESONANCE", 2, 0.0f, 1.0f, 2, true);
-    addSynthKnob(knobRow1, "ENV AMOUNT", 118, 0.0f, 1.0f, 2, true);
+    addSynthKnob(knobRow1, "ENV AMT", 118, 0.0f, 1.0f, 2, true);
 
-    // Spacer or filler to balance vertical layouts
-    lv_obj_t* spacer = lv_obj_create(filterCard);
-    lv_obj_set_size(spacer, 10, 40);
-    lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(spacer, 0, 0);
+    // --- 2. LFO CARD (Top-Right: 490px x 300px) ---
+    lv_obj_t* lfoCard = createFilterCard(tab, "LFO", 490, 300);
 
-    // --- SYNTH LFO CARD ---
-    lv_obj_t* lfoCard = createFilterCard(tab, "SYNTH LFO", 365);
+    // Header label
+    lv_obj_t* lfoTitle = lv_label_create(lfoCard);
+    lv_label_set_text(lfoTitle, "LFO");
+    lv_obj_set_style_text_font(lfoTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(lfoTitle, trackColor, 0);
 
-    // Flex row for shape and destination dropdowns side-by-side
+    // Shape and destination dropdowns row
     lv_obj_t* ddRow = lv_obj_create(lfoCard);
-    lv_obj_set_size(ddRow, 335, 60);
+    lv_obj_set_size(ddRow, 470, 52);
     lv_obj_set_style_bg_opa(ddRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(ddRow, 0, 0);
     lv_obj_set_style_pad_all(ddRow, 0, 0);
     lv_obj_remove_flag(ddRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(ddRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(ddRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(ddRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(ddRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Add Shape dropdown
     lv_obj_t* shapeCont = lv_obj_create(ddRow);
-    lv_obj_set_size(shapeCont, 160, 52);
+    lv_obj_set_size(shapeCont, 210, 50);
     lv_obj_set_style_bg_opa(shapeCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(shapeCont, 0, 0);
     lv_obj_set_style_pad_all(shapeCont, 0, 0);
-    addSynthDropdown(shapeCont, "LFO SHAPE", 154, "Sine\nTriangle\nSaw\nSquare\nRandom", 0, false);
+    addSynthDropdown(shapeCont, "SHAPE", 154, "Sine\nTriangle\nSaw\nSquare\nRandom", 0, false, 190);
 
-    // Add Destination dropdown
     lv_obj_t* destCont = lv_obj_create(ddRow);
-    lv_obj_set_size(destCont, 160, 52);
+    lv_obj_set_size(destCont, 210, 50);
     lv_obj_set_style_bg_opa(destCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(destCont, 0, 0);
     lv_obj_set_style_pad_all(destCont, 0, 0);
-    addSynthDropdown(destCont, "LFO DESTINATION", 153, "Cutoff\nPitch\nMorph 1\nMorph 2\nFold 1\nFold 2\nVol 1\nVol 2", 0, false);
+    addSynthDropdown(destCont, "DEST", 153, "Cutoff\nPitch\nMorph 1\nMorph 2\nFold 1\nFold 2\nVol 1\nVol 2", 0, false, 190);
 
     // Row for the 2 LFO knobs below
     lv_obj_t* knobRow2 = lv_obj_create(lfoCard);
-    lv_obj_set_size(knobRow2, 335, 120);
+    lv_obj_set_size(knobRow2, 470, 140);
     lv_obj_set_style_bg_opa(knobRow2, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(knobRow2, 0, 0);
     lv_obj_set_style_pad_all(knobRow2, 0, 0);
@@ -12417,70 +12449,47 @@ void UIManager::populateParamSubtractiveFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(knobRow2, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(knobRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthKnob(knobRow2, "LFO RATE", 7, 0.0f, 1.0f, 2, true);
-    addSynthKnob(knobRow2, "LFO DEPTH", 8, 0.0f, 1.0f, 2, true);
+    addSynthKnob(knobRow2, "RATE", 7, 0.0f, 1.0f, 2, true);
+    addSynthKnob(knobRow2, "DEPTH", 8, 0.0f, 1.0f, 2, true);
 
-    // Spacer or filler to balance vertical layouts
-    lv_obj_t* spacer2 = lv_obj_create(lfoCard);
-    lv_obj_set_size(spacer2, 10, 40);
-    lv_obj_set_style_bg_opa(spacer2, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(spacer2, 0, 0);
-}
+    // --- 3. AMPLITUDE ENVELOPE CARD (Bottom-Left: 490px x 300px) ---
+    lv_obj_t* ampCard = createFilterCard(tab, "AMP ENVELOPE", 490, 300);
 
-void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
-
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    auto createEnvCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
-        lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 418);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
-        lv_obj_set_style_border_color(card, trackColor, 0);
-        lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 6, 0);
-        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        
-        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        
-        lv_obj_t* title = lv_label_create(card);
-        lv_label_set_text(title, name);
-        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(title, trackColor, 0);
-        
-        return card;
-    };
-
-    // --- AMPLITUDE ENVELOPE CARD ---
-    lv_obj_t* ampCard = createEnvCard(tab, "AMPLITUDE ENVELOPE", 365);
-
-    // Bypass Env row at the top
+    // Bypass Env row at the top with Title
     lv_obj_t* bypassRow = lv_obj_create(ampCard);
-    lv_obj_set_size(bypassRow, 330, 30);
+    lv_obj_set_size(bypassRow, 470, 30);
     lv_obj_set_style_bg_opa(bypassRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bypassRow, 0, 0);
     lv_obj_set_style_pad_all(bypassRow, 0, 0);
     lv_obj_remove_flag(bypassRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(bypassRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(bypassRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(bypassRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(bypassRow, 8, 0);
+    lv_obj_set_flex_align(bypassRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_t* bpLabel = lv_label_create(bypassRow);
-    lv_label_set_text(bpLabel, "USE AMP ENVELOPE");
+    lv_obj_t* ampTitle = lv_label_create(bypassRow);
+    lv_label_set_text(ampTitle, "AMP ENVELOPE");
+    lv_obj_set_style_text_font(ampTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(ampTitle, trackColor, 0);
+
+    lv_obj_t* swWrap = lv_obj_create(bypassRow);
+    lv_obj_set_size(swWrap, 160, 28);
+    lv_obj_set_style_bg_opa(swWrap, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(swWrap, 0, 0);
+    lv_obj_set_style_pad_all(swWrap, 0, 0);
+    lv_obj_remove_flag(swWrap, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(swWrap, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(swWrap, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(swWrap, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(swWrap, 8, 0);
+
+    lv_obj_t* bpLabel = lv_label_create(swWrap);
+    lv_label_set_text(bpLabel, "USE AMP ENV");
     lv_obj_set_style_text_font(bpLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(bpLabel, lv_color_hex(0x888888), 0);
 
-    lv_obj_t* bpSw = lv_switch_create(bypassRow);
+    lv_obj_t* bpSw = lv_switch_create(swWrap);
     lv_obj_set_size(bpSw, 40, 20);
     
-    // Grab value from parameters ID 350
     float useEnvVal = mEngine.getTracks()[mActiveTrack].parameters[350];
     if (useEnvVal > 0.5f) {
         lv_obj_add_state(bpSw, LV_STATE_CHECKED);
@@ -12496,7 +12505,7 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
 
     // Row for the 4 ADSR sliders
     lv_obj_t* faderRow1 = lv_obj_create(ampCard);
-    lv_obj_set_size(faderRow1, 335, 330);
+    lv_obj_set_size(faderRow1, 470, 220);
     lv_obj_set_style_bg_opa(faderRow1, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(faderRow1, 0, 0);
     lv_obj_set_style_pad_all(faderRow1, 0, 0);
@@ -12505,17 +12514,23 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow1, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow1, "A", 100, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "D", 101, 0.0f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "S", 102, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow1, "R", 103, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow1, "A", 100, 0.001f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow1, "D", 101, 0.0f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow1, "S", 102, 0.0f, 1.0f, 2, true, 220);
+    addSynthSlider(faderRow1, "R", 103, 0.001f, 4.0f, 2, false, 220);
 
-    // --- FILTER ENVELOPE CARD ---
-    lv_obj_t* filterCard = createEnvCard(tab, "FILTER ENVELOPE", 365);
+    // --- 4. FILTER ENVELOPE CARD (Bottom-Right: 490px x 300px) ---
+    lv_obj_t* filterEnvCard = createFilterCard(tab, "FILTER ENVELOPE", 490, 300);
+
+    // Title label
+    lv_obj_t* filterEnvTitle = lv_label_create(filterEnvCard);
+    lv_label_set_text(filterEnvTitle, "FILTER ENVELOPE");
+    lv_obj_set_style_text_font(filterEnvTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(filterEnvTitle, trackColor, 0);
 
     // Row for the 4 filter ADSR sliders
-    lv_obj_t* faderRow2 = lv_obj_create(filterCard);
-    lv_obj_set_size(faderRow2, 335, 350);
+    lv_obj_t* faderRow2 = lv_obj_create(filterEnvCard);
+    lv_obj_set_size(faderRow2, 470, 220);
     lv_obj_set_style_bg_opa(faderRow2, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(faderRow2, 0, 0);
     lv_obj_set_style_pad_all(faderRow2, 0, 0);
@@ -12524,10 +12539,14 @@ void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow2, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow2, "A", 114, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "D", 115, 0.0f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "S", 116, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow2, "R", 117, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow2, "A", 114, 0.001f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow2, "D", 115, 0.0f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow2, "S", 116, 0.0f, 1.0f, 2, true, 220);
+    addSynthSlider(faderRow2, "R", 117, 0.001f, 4.0f, 2, false, 220);
+}
+
+void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamSubtractiveFilterTab
 }
 
 void UIManager::addSynthKnob(lv_obj_t* parent, const char* labelText, int paramId, float minVal, float maxVal, int decimals, bool isPercent) {
@@ -12890,22 +12909,35 @@ void UIManager::synthParamDropdownEventCb(lv_event_t* e) {
 // --- FM Synthesis Parameters Screen Tab Implementation ---
 // =========================================================================
 
-void UIManager::populateParamFmTab(lv_obj_t* tab1, lv_obj_t* tab2, lv_obj_t* tab3) {
+void UIManager::populateParamFmTab(lv_obj_t* tab1, lv_obj_t* tab2) {
     populateParamFmOperatorsTab(tab1);
-    populateParamFmRoutingTab(tab2);
-    populateParamFmFilterTab(tab3);
+    populateParamFmFilterTab(tab2);
 }
 
 void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_all(tab, 8, 0);
+
+    // =========================================================================
+    // LEFT SIDE (560px): OPERATOR SELECTION GRID & OP DETAIL CARD
+    // =========================================================================
+    lv_obj_t* opSide = lv_obj_create(tab);
+    lv_obj_set_size(opSide, 560, 640);
+    lv_obj_set_style_bg_opa(opSide, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(opSide, 0, 0);
+    lv_obj_set_style_pad_all(opSide, 0, 0);
+    lv_obj_remove_flag(opSide, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(opSide, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(opSide, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(opSide, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // 6-operator block buttons container
-    lv_obj_t* gridRow = lv_obj_create(tab);
-    lv_obj_set_size(gridRow, 760, 75);
+    lv_obj_t* gridRow = lv_obj_create(opSide);
+    lv_obj_set_size(gridRow, 560, 75);
     lv_obj_set_style_bg_opa(gridRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(gridRow, 0, 0);
     lv_obj_set_style_pad_all(gridRow, 0, 0);
@@ -12931,7 +12963,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
         }
 
         lv_obj_t* opBtn = lv_button_create(gridRow);
-        lv_obj_set_size(opBtn, 115, 65);
+        lv_obj_set_size(opBtn, 88, 68);
         lv_obj_set_style_bg_color(opBtn, btnColor, 0);
         lv_obj_set_style_radius(opBtn, 8, 0);
 
@@ -12949,7 +12981,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
         lv_obj_align(opLbl, LV_ALIGN_TOP_MID, 0, 8);
 
         lv_obj_t* stateLbl = lv_label_create(opBtn);
-        const char* stateStr = !isActive ? "OFF" : (!isCarrier ? "MODULATOR" : "CARRIER");
+        const char* stateStr = !isActive ? "OFF" : (!isCarrier ? "MOD" : "CARR");
         lv_label_set_text(stateLbl, stateStr);
         lv_obj_set_style_text_font(stateLbl, &lv_font_montserrat_10, 0);
         lv_obj_set_style_text_color(stateLbl, lv_color_hex(0xCCCCCC), 0);
@@ -12964,14 +12996,14 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     }
 
     // Detail card for the selected operator
-    lv_obj_t* detailCard = lv_obj_create(tab);
-    lv_obj_set_size(detailCard, 760, 315);
+    lv_obj_t* detailCard = lv_obj_create(opSide);
+    lv_obj_set_size(detailCard, 560, 545);
     lv_obj_set_style_bg_color(detailCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_bg_opa(detailCard, LV_OPA_90, 0);
     lv_obj_set_style_border_color(detailCard, trackColor, 0);
     lv_obj_set_style_border_width(detailCard, 2, 0);
     lv_obj_set_style_radius(detailCard, 12, 0);
-    lv_obj_set_style_pad_all(detailCard, 10, 0);
+    lv_obj_set_style_pad_all(detailCard, 8, 0);
     lv_obj_remove_flag(detailCard, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_set_layout(detailCard, LV_LAYOUT_FLEX);
@@ -12980,10 +13012,10 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
 
     // Left Column: Selector & Mode Dropdown
     lv_obj_t* leftCol = lv_obj_create(detailCard);
-    lv_obj_set_size(leftCol, 180, 285);
+    lv_obj_set_size(leftCol, 130, 510);
     lv_obj_set_style_bg_opa(leftCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(leftCol, 0, 0);
-    lv_obj_set_style_pad_all(leftCol, 5, 0);
+    lv_obj_set_style_pad_all(leftCol, 4, 0);
     lv_obj_remove_flag(leftCol, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(leftCol, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(leftCol, LV_FLEX_FLOW_COLUMN);
@@ -12991,7 +13023,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
 
     lv_obj_t* detTitle = lv_label_create(leftCol);
     lv_label_set_text_fmt(detTitle, "OPERATOR %d", mSelectedOpIdx + 1);
-    lv_obj_set_style_text_font(detTitle, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(detTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(detTitle, trackColor, 0);
 
     bool selActive = (activeMask & (1 << mSelectedOpIdx)) != 0;
@@ -12999,18 +13031,18 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     int currentSel = !selActive ? 0 : (!selCarrier ? 1 : 2);
 
     lv_obj_t* stLbl = lv_label_create(leftCol);
-    const char* stStr = (currentSel == 0) ? "STATE: OFF" : ((currentSel == 1) ? "STATE: MODULATOR" : "STATE: CARRIER");
+    const char* stStr = (currentSel == 0) ? "OFF" : ((currentSel == 1) ? "MODULATOR" : "CARRIER");
     lv_label_set_text(stLbl, stStr);
     lv_obj_set_style_text_font(stLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(stLbl, lv_color_hex(0x888888), 0);
 
     lv_obj_t* ddLbl = lv_label_create(leftCol);
-    lv_label_set_text(ddLbl, "SELECT MODE");
+    lv_label_set_text(ddLbl, "MODE");
     lv_obj_set_style_text_font(ddLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(ddLbl, lv_color_hex(0x888888), 0);
 
     lv_obj_t* modeDd = lv_dropdown_create(leftCol);
-    lv_obj_set_size(modeDd, 150, 32);
+    lv_obj_set_size(modeDd, 120, 34);
     lv_dropdown_set_options(modeDd, "Off\nModulator\nCarrier");
     lv_dropdown_set_selected(modeDd, currentSel);
 
@@ -13030,7 +13062,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
 
     // Middle Column: ADSR Sliders
     lv_obj_t* midCol = lv_obj_create(detailCard);
-    lv_obj_set_size(midCol, 335, 285);
+    lv_obj_set_size(midCol, 290, 510);
     lv_obj_set_style_bg_opa(midCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(midCol, 0, 0);
     lv_obj_set_style_pad_all(midCol, 0, 0);
@@ -13040,14 +13072,14 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(midCol, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     int base = 160 + mSelectedOpIdx * 6;
-    addSynthSlider(midCol, "A", base + 1, 0.001f, 4.0f, 2, false);
-    addSynthSlider(midCol, "D", base + 2, 0.0f, 4.0f, 2, false);
-    addSynthSlider(midCol, "S", base + 3, 0.0f, 1.0f, 2, true);
-    addSynthSlider(midCol, "R", base + 4, 0.001f, 4.0f, 2, false);
+    addSynthSlider(midCol, "A", base + 1, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(midCol, "D", base + 2, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(midCol, "S", base + 3, 0.0f, 1.0f, 2, true, 380);
+    addSynthSlider(midCol, "R", base + 4, 0.001f, 4.0f, 2, false, 380);
 
     // Right Column: Level & Ratio Knobs
     lv_obj_t* rightCol = lv_obj_create(detailCard);
-    lv_obj_set_size(rightCol, 180, 285);
+    lv_obj_set_size(rightCol, 120, 510);
     lv_obj_set_style_bg_opa(rightCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(rightCol, 0, 0);
     lv_obj_set_style_pad_all(rightCol, 0, 0);
@@ -13058,24 +13090,29 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
 
     addSynthKnob(rightCol, "LEVEL", base + 0, 0.0f, 1.0f, 2, true);
     addSynthKnob(rightCol, "RATIO", base + 5, 0.0f, 1.0f, 1, false);
-}
 
-void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    // =========================================================================
+    // RIGHT SIDE (470px): PRESET MANAGEMENT & ROUTING / ALGORITHM CARDS
+    // =========================================================================
+    lv_obj_t* routingSide = lv_obj_create(tab);
+    lv_obj_set_size(routingSide, 470, 640);
+    lv_obj_set_style_bg_opa(routingSide, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(routingSide, 0, 0);
+    lv_obj_set_style_pad_all(routingSide, 0, 0);
+    lv_obj_remove_flag(routingSide, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(routingSide, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(routingSide, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(routingSide, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    auto createRoutingCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
+    auto createRoutingCard = [trackColor](lv_obj_t* parent, const char* name, int height) -> lv_obj_t* {
         lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 410);
+        lv_obj_set_size(card, 470, height);
         lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 12, 0);
+        lv_obj_set_style_pad_all(card, 10, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         
         lv_obj_set_layout(card, LV_LAYOUT_FLEX);
@@ -13090,28 +13127,48 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
         return card;
     };
 
-    // --- PRESET MANAGEMENT CARD ---
-    lv_obj_t* leftCard = createRoutingCard(tab, "PRESET MANAGEMENT", 365);
+    // 1. PRESET MANAGEMENT CARD (Top: 270px)
+    lv_obj_t* presetCard = createRoutingCard(routingSide, "PRESET MANAGEMENT", 270);
 
-    int currentSel = s_activeFmPreset[mActiveTrack];
+    int currentSelPreset = s_activeFmPreset[mActiveTrack];
     const auto& custom = mEngine.getTracks()[mActiveTrack].fmEngine.mCustomPresets;
     int totalCount = 32 + (int)custom.size();
-    if (currentSel >= totalCount) {
-        currentSel = 0;
+    if (currentSelPreset >= totalCount) {
+        currentSelPreset = 0;
         s_activeFmPreset[mActiveTrack] = 0;
     }
-    std::string currentPresetName = (currentSel < 32) ? FM_PRESET_NAMES[currentSel] : (currentSel - 32 < (int)custom.size() ? custom[currentSel - 32].name : "Unknown");
+    std::string currentPresetName = (currentSelPreset < 32) ? FM_PRESET_NAMES[currentSelPreset] : (currentSelPreset - 32 < (int)custom.size() ? custom[currentSelPreset - 32].name : "Unknown");
 
-    mFmActivePresetLbl = lv_label_create(leftCard);
-    lv_label_set_text_fmt(mFmActivePresetLbl, "PRESET: %d - %s", currentSel, currentPresetName.c_str());
+    mFmActivePresetLbl = lv_label_create(presetCard);
+    lv_label_set_text_fmt(mFmActivePresetLbl, "PRESET: %d - %s", currentSelPreset, currentPresetName.c_str());
     lv_obj_set_style_text_font(mFmActivePresetLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(mFmActivePresetLbl, trackColor, 0);
     lv_label_set_long_mode(mFmActivePresetLbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(mFmActivePresetLbl, 330);
+    lv_obj_set_width(mFmActivePresetLbl, 440);
 
-    // Select Preset Button
-    lv_obj_t* selectPresetBtn = lv_button_create(leftCard);
-    lv_obj_set_size(selectPresetBtn, 330, 40);
+    lv_obj_t* presetActionRow = lv_obj_create(presetCard);
+    lv_obj_set_size(presetActionRow, 450, 150);
+    lv_obj_set_style_bg_opa(presetActionRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(presetActionRow, 0, 0);
+    lv_obj_set_style_pad_all(presetActionRow, 0, 0);
+    lv_obj_remove_flag(presetActionRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(presetActionRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(presetActionRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(presetActionRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Buttons sub-column
+    lv_obj_t* presetBtnsCol = lv_obj_create(presetActionRow);
+    lv_obj_set_size(presetBtnsCol, 330, 140);
+    lv_obj_set_style_bg_opa(presetBtnsCol, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(presetBtnsCol, 0, 0);
+    lv_obj_set_style_pad_all(presetBtnsCol, 0, 0);
+    lv_obj_remove_flag(presetBtnsCol, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(presetBtnsCol, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(presetBtnsCol, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(presetBtnsCol, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* selectPresetBtn = lv_button_create(presetBtnsCol);
+    lv_obj_set_size(selectPresetBtn, 320, 42);
     lv_obj_set_style_bg_color(selectPresetBtn, lv_color_hex(0x242424), 0);
     lv_obj_set_style_border_color(selectPresetBtn, lv_color_hex(0x3E3E3E), 0);
     lv_obj_set_style_border_width(selectPresetBtn, 1, 0);
@@ -13122,21 +13179,18 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(selectPresetLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(selectPresetLbl, lv_color_hex(0xEEEEEE), 0);
     lv_obj_center(selectPresetLbl);
-
     lv_obj_add_event_cb(selectPresetBtn, UIManager::fmPresetSelectCb, LV_EVENT_CLICKED, this);
 
-    // Import Button
-    lv_obj_t* importBtn = lv_button_create(leftCard);
-    lv_obj_set_size(importBtn, 330, 45);
+    lv_obj_t* importBtn = lv_button_create(presetBtnsCol);
+    lv_obj_set_size(importBtn, 320, 45);
     lv_obj_set_style_bg_color(importBtn, trackColor, 0);
     lv_obj_set_style_radius(importBtn, 8, 0);
 
     lv_obj_t* importLbl = lv_label_create(importBtn);
-    lv_label_set_text(importLbl, "IMPORT CUSTOM PRESET (.fmp, .syx)");
+    lv_label_set_text(importLbl, "IMPORT PRESET (.fmp, .syx)");
     lv_obj_set_style_text_font(importLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(importLbl, lv_color_hex(0xFFFFFF), 0);
     lv_obj_center(importLbl);
-
     lv_obj_add_event_cb(importBtn, [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         if (!ui) return;
@@ -13144,14 +13198,24 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
         ui->openFileBrowser(false);
     }, LV_EVENT_CLICKED, this);
 
-    // Preset selection knob directly in Preset Management card
-    addSynthKnob(leftCard, "PRESET", 196, 0.0f, 1.0f, 0, false);
+    // Preset knob on the right
+    lv_obj_t* presetKnobCont = lv_obj_create(presetActionRow);
+    lv_obj_set_size(presetKnobCont, 100, 140);
+    lv_obj_set_style_bg_opa(presetKnobCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(presetKnobCont, 0, 0);
+    lv_obj_set_style_pad_all(presetKnobCont, 0, 0);
+    lv_obj_remove_flag(presetKnobCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(presetKnobCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(presetKnobCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(presetKnobCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // --- ROUTING & ALGORITHM CARD ---
-    lv_obj_t* rightCard = createRoutingCard(tab, "ROUTING & ALGORITHM", 365);
+    addSynthKnob(presetKnobCont, "PRESET", 196, 0.0f, 1.0f, 0, false);
+
+    // 2. ROUTING & ALGORITHM CARD (Bottom: 350px)
+    lv_obj_t* rightCard = createRoutingCard(routingSide, "ROUTING & ALGORITHM", 350);
 
     lv_obj_t* row1 = lv_obj_create(rightCard);
-    lv_obj_set_size(row1, 330, 110);
+    lv_obj_set_size(row1, 450, 120);
     lv_obj_set_style_bg_opa(row1, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row1, 0, 0);
     lv_obj_set_style_pad_all(row1, 0, 0);
@@ -13165,7 +13229,7 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
     addSynthKnob(row1, "DRIVE", 159, 0.0f, 1.0f, 2, true);
 
     lv_obj_t* row2 = lv_obj_create(rightCard);
-    lv_obj_set_size(row2, 330, 110);
+    lv_obj_set_size(row2, 450, 120);
     lv_obj_set_style_bg_opa(row2, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row2, 0, 0);
     lv_obj_set_style_pad_all(row2, 0, 0);
@@ -13179,22 +13243,27 @@ void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
     addSynthKnob(row2, "PRESET", 196, 0.0f, 1.0f, 0, false);
 }
 
+void UIManager::populateParamFmRoutingTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamFmOperatorsTab
+}
+
 void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(tab, 10, 0);
 
     auto createFmCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
         lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 410);
+        lv_obj_set_size(card, width, 640);
         lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 6, 0);
+        lv_obj_set_style_pad_all(card, 10, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
         
         lv_obj_set_layout(card, LV_LAYOUT_FLEX);
@@ -13209,11 +13278,11 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
         return card;
     };
 
-    // --- FILTER CONFIGURATION CARD ---
-    lv_obj_t* filterCard = createFmCard(tab, "FILTER", 172);
+    // --- FILTER CONFIGURATION CARD (260px) ---
+    lv_obj_t* filterCard = createFmCard(tab, "FILTER", 260);
 
     lv_obj_t* knobCol = lv_obj_create(filterCard);
-    lv_obj_set_size(knobCol, 160, 360);
+    lv_obj_set_size(knobCol, 236, 560);
     lv_obj_set_style_bg_opa(knobCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(knobCol, 0, 0);
     lv_obj_set_style_pad_all(knobCol, 0, 0);
@@ -13222,16 +13291,15 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(knobCol, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(knobCol, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
+    addSynthDropdown(knobCol, "FILTER TYPE", 156, "Lowpass\nBandpass\nHighpass\nBypass", (int)mEngine.getTracks()[mActiveTrack].parameters[156], false, 180);
     addSynthKnob(knobCol, "CUTOFF", 151, 0.0f, 1.0f, 2, true);
     addSynthKnob(knobCol, "RES", 152, 0.0f, 1.0f, 2, true);
 
-    addSynthDropdown(knobCol, "FILTER TYPE", 156, "Lowpass\nBandpass\nHighpass\nBypass", (int)mEngine.getTracks()[mActiveTrack].parameters[156], false);
-
-    // --- FILTER ENVELOPE CARD ---
-    lv_obj_t* filterEnvCard = createFmCard(tab, "FILTER ENVELOPE", 294);
+    // --- FILTER ENVELOPE CARD (380px) ---
+    lv_obj_t* filterEnvCard = createFmCard(tab, "FILTER ENVELOPE", 380);
 
     lv_obj_t* faderRow1 = lv_obj_create(filterEnvCard);
-    lv_obj_set_size(faderRow1, 282, 280);
+    lv_obj_set_size(faderRow1, 356, 420);
     lv_obj_set_style_bg_opa(faderRow1, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(faderRow1, 0, 0);
     lv_obj_set_style_pad_all(faderRow1, 0, 0);
@@ -13240,13 +13308,13 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow1, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow1, "A", 114, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "D", 115, 0.0f, 4.0f, 2, false);
-    addSynthSlider(faderRow1, "S", 116, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow1, "R", 117, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow1, "A", 114, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow1, "D", 115, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow1, "S", 116, 0.0f, 1.0f, 2, true, 380);
+    addSynthSlider(faderRow1, "R", 117, 0.001f, 4.0f, 2, false, 380);
 
     lv_obj_t* bottomAmt = lv_obj_create(filterEnvCard);
-    lv_obj_set_size(bottomAmt, 282, 85);
+    lv_obj_set_size(bottomAmt, 356, 120);
     lv_obj_set_style_bg_opa(bottomAmt, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bottomAmt, 0, 0);
     lv_obj_set_style_pad_all(bottomAmt, 0, 0);
@@ -13257,11 +13325,11 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
 
     addSynthKnob(bottomAmt, "ENV AMT", 118, 0.0f, 1.0f, 2, true);
 
-    // --- AMPLITUDE ENVELOPE CARD ---
-    lv_obj_t* ampEnvCard = createFmCard(tab, "AMPLITUDE ENVELOPE", 294);
+    // --- AMPLITUDE ENVELOPE CARD (380px) ---
+    lv_obj_t* ampEnvCard = createFmCard(tab, "AMPLITUDE ENVELOPE", 380);
 
     lv_obj_t* faderRow2 = lv_obj_create(ampEnvCard);
-    lv_obj_set_size(faderRow2, 282, 280);
+    lv_obj_set_size(faderRow2, 356, 420);
     lv_obj_set_style_bg_opa(faderRow2, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(faderRow2, 0, 0);
     lv_obj_set_style_pad_all(faderRow2, 0, 0);
@@ -13270,14 +13338,14 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow2, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow2, "A", 100, 0.001f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "D", 101, 0.0f, 4.0f, 2, false);
-    addSynthSlider(faderRow2, "S", 102, 0.0f, 1.0f, 2, true);
-    addSynthSlider(faderRow2, "R", 103, 0.001f, 4.0f, 2, false);
+    addSynthSlider(faderRow2, "A", 100, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow2, "D", 101, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow2, "S", 102, 0.0f, 1.0f, 2, true, 380);
+    addSynthSlider(faderRow2, "R", 103, 0.001f, 4.0f, 2, false, 380);
 
     // Spacer block to keep symmetry
     lv_obj_t* spacer = lv_obj_create(ampEnvCard);
-    lv_obj_set_size(spacer, 282, 85);
+    lv_obj_set_size(spacer, 356, 120);
     lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(spacer, 0, 0);
 }
@@ -13385,20 +13453,9 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(tab, 8, 0);
 
-    // Row 1: Character & Unison/Lofi cards
-    lv_obj_t* row1 = lv_obj_create(tab);
-    lv_obj_set_size(row1, 760, 185);
-    lv_obj_set_style_bg_opa(row1, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(row1, 0, 0);
-    lv_obj_set_style_pad_all(row1, 0, 0);
-    lv_obj_remove_flag(row1, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(row1, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(row1, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(row1, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    auto createSmallCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
+    auto createCard = [trackColor](lv_obj_t* parent, const char* name, int width, int height) -> lv_obj_t* {
         lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 180);
+        lv_obj_set_size(card, width, height);
         lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
         lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
         lv_obj_set_style_border_color(card, trackColor, 0);
@@ -13419,9 +13476,9 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
         return card;
     };
 
-    auto createKnobRow = [](lv_obj_t* parent) -> lv_obj_t* {
+    auto createKnobRow = [](lv_obj_t* parent, int width, int height) -> lv_obj_t* {
         lv_obj_t* row = lv_obj_create(parent);
-        lv_obj_set_size(row, 355, 125);
+        lv_obj_set_size(row, width, height);
         lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
@@ -13433,31 +13490,76 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
         return row;
     };
 
-    // --- CHARACTER CARD ---
-    lv_obj_t* charCard = createSmallCard(row1, "CHARACTER", 372);
-    lv_obj_t* charKnobs = createKnobRow(charCard);
+    // =========================================================================
+    // ROW 1 (180px): CHARACTER (320px), UNISON & LOFI (320px), FILTER (390px)
+    // =========================================================================
+    lv_obj_t* row1 = lv_obj_create(tab);
+    lv_obj_set_size(row1, 1050, 180);
+    lv_obj_set_style_bg_opa(row1, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(row1, 0, 0);
+    lv_obj_set_style_pad_all(row1, 0, 0);
+    lv_obj_remove_flag(row1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(row1, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(row1, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row1, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // --- CHARACTER CARD (320px) ---
+    lv_obj_t* charCard = createCard(row1, "CHARACTER", 320, 180);
+    lv_obj_t* charKnobs = createKnobRow(charCard, 300, 130);
     addSynthKnob(charKnobs, "MORPH", 450, 0.0f, 1.0f, 2, true);
     addSynthKnob(charKnobs, "WARP", 465, -1.0f, 1.0f, 2, false);
     addSynthKnob(charKnobs, "CRUSH", 466, 0.0f, 1.0f, 2, true);
     addSynthKnob(charKnobs, "DRIVE", 467, 0.0f, 1.0f, 2, true);
 
-    // --- UNISON & LOFI CARD ---
-    lv_obj_t* unisonCard = createSmallCard(row1, "UNISON & LOFI", 372);
-    lv_obj_t* unisonKnobs = createKnobRow(unisonCard);
+    // --- UNISON & LOFI CARD (320px) ---
+    lv_obj_t* unisonCard = createCard(row1, "UNISON & LOFI", 320, 180);
+    lv_obj_t* unisonKnobs = createKnobRow(unisonCard, 300, 130);
     addSynthKnob(unisonKnobs, "DETUNE", 451, 0.0f, 1.0f, 2, true);
     addSynthKnob(unisonKnobs, "GLIDE", 355, 0.0f, 1.0f, 2, true);
     addSynthKnob(unisonKnobs, "BITRATE", 475, 0.0f, 1.0f, 2, true);
     addSynthKnob(unisonKnobs, "SAMPLERATE", 476, 0.0f, 1.0f, 2, true);
 
-    // Row 2: Select Wavetable card
+    // --- FILTER CARD (390px) ---
+    lv_obj_t* filterCard = createCard(row1, "FILTER", 390, 180);
+    lv_obj_t* filterContentRow = lv_obj_create(filterCard);
+    lv_obj_set_size(filterContentRow, 370, 140);
+    lv_obj_set_style_bg_opa(filterContentRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(filterContentRow, 0, 0);
+    lv_obj_set_style_pad_all(filterContentRow, 0, 0);
+    lv_obj_remove_flag(filterContentRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(filterContentRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(filterContentRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(filterContentRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Dropdown on left side of filter card
+    lv_obj_t* filterDdCont = lv_obj_create(filterContentRow);
+    lv_obj_set_size(filterDdCont, 125, 130);
+    lv_obj_set_style_bg_opa(filterDdCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(filterDdCont, 0, 0);
+    lv_obj_set_style_pad_all(filterDdCont, 0, 0);
+    lv_obj_remove_flag(filterDdCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(filterDdCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(filterDdCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(filterDdCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    addSynthDropdown(filterDdCont, "FILTER TYPE", 470, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, false, 115);
+
+    // Knobs on right side of filter card
+    lv_obj_t* filterKnobs = createKnobRow(filterContentRow, 240, 130);
+    addSynthKnob(filterKnobs, "CUTOFF", 458, 0.0f, 1.0f, 2, true);
+    addSynthKnob(filterKnobs, "RESONANCE", 459, 0.0f, 1.0f, 2, true);
+    addSynthKnob(filterKnobs, "ENV AMT", 464, 0.0f, 1.0f, 2, true);
+
+    // =========================================================================
+    // ROW 2 (160px): WAVETABLE SELECTION CARD (1050px FULL WIDTH)
+    // =========================================================================
     lv_obj_t* selectCard = lv_obj_create(tab);
-    lv_obj_set_size(selectCard, 760, 225);
+    lv_obj_set_size(selectCard, 1050, 160);
     lv_obj_set_style_bg_color(selectCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_bg_opa(selectCard, LV_OPA_90, 0);
     lv_obj_set_style_border_color(selectCard, trackColor, 0);
     lv_obj_set_style_border_width(selectCard, 2, 0);
     lv_obj_set_style_radius(selectCard, 12, 0);
-    lv_obj_set_style_pad_all(selectCard, 12, 0);
+    lv_obj_set_style_pad_all(selectCard, 10, 0);
     lv_obj_remove_flag(selectCard, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(selectCard, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(selectCard, LV_FLEX_FLOW_ROW);
@@ -13465,7 +13567,7 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
 
     // Left container: Title, Active label box, Button row
     lv_obj_t* selectLeft = lv_obj_create(selectCard);
-    lv_obj_set_size(selectLeft, 610, 201);
+    lv_obj_set_size(selectLeft, 910, 138);
     lv_obj_set_style_bg_opa(selectLeft, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(selectLeft, 0, 0);
     lv_obj_set_style_pad_all(selectLeft, 0, 0);
@@ -13481,7 +13583,7 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
 
     // Active wavetable text box
     lv_obj_t* activeBox = lv_obj_create(selectLeft);
-    lv_obj_set_size(activeBox, 590, 50);
+    lv_obj_set_size(activeBox, 890, 42);
     lv_obj_set_style_bg_color(activeBox, lv_color_hex(0x0F0F0F), 0);
     lv_obj_set_style_border_color(activeBox, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(activeBox, 1, 0);
@@ -13501,7 +13603,7 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
 
     // Action buttons row
     lv_obj_t* btnRow = lv_obj_create(selectLeft);
-    lv_obj_set_size(btnRow, 590, 56);
+    lv_obj_set_size(btnRow, 890, 50);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
     lv_obj_set_style_pad_all(btnRow, 0, 0);
@@ -13512,7 +13614,7 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
 
     auto addActionButton = [this, trackColor](lv_obj_t* parent, const char* labelText, lv_event_cb_t cb) {
         lv_obj_t* btn = lv_button_create(parent);
-        lv_obj_set_size(btn, 185, 44);
+        lv_obj_set_size(btn, 285, 42);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_color(btn, trackColor, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
@@ -13540,7 +13642,7 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
 
     // Right container: SELECT WT Knob
     lv_obj_t* selectRight = lv_obj_create(selectCard);
-    lv_obj_set_size(selectRight, 100, 201);
+    lv_obj_set_size(selectRight, 110, 138);
     lv_obj_set_style_bg_opa(selectRight, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(selectRight, 0, 0);
     lv_obj_set_style_pad_all(selectRight, 0, 0);
@@ -13550,70 +13652,24 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(selectRight, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthKnob(selectRight, "SELECT WT", 477, 0.0f, 1.0f, 2, true);
-}
 
-void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    // =========================================================================
+    // ROW 3 (280px): AMP ENVELOPE (515px) & FILTER ENVELOPE (515px)
+    // =========================================================================
+    lv_obj_t* row3 = lv_obj_create(tab);
+    lv_obj_set_size(row3, 1050, 280);
+    lv_obj_set_style_bg_opa(row3, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(row3, 0, 0);
+    lv_obj_set_style_pad_all(row3, 0, 0);
+    lv_obj_remove_flag(row3, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(row3, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(row3, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row3, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    auto createEnvCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
-        lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 418);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
-        lv_obj_set_style_border_color(card, trackColor, 0);
-        lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 6, 0);
-        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        
-        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        
-        lv_obj_t* title = lv_label_create(card);
-        lv_label_set_text(title, name);
-        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(title, trackColor, 0);
-        
-        return card;
-    };
-
-    // --- FILTER CARD ---
-    lv_obj_t* filterCard = createEnvCard(tab, "FILTER", 170);
-    
-    // Filter dropdown at top
-    addSynthDropdown(filterCard, "FILTER TYPE", 470, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, false);
-
-    // Flex wrapping grid for Cutoff, Resonance, and Filter Env Amt
-    lv_obj_t* filterGrid = lv_obj_create(filterCard);
-    lv_obj_set_size(filterGrid, 150, 300);
-    lv_obj_set_style_bg_opa(filterGrid, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(filterGrid, 0, 0);
-    lv_obj_set_style_pad_all(filterGrid, 0, 0);
-    lv_obj_remove_flag(filterGrid, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(filterGrid, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(filterGrid, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(filterGrid, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    addSynthKnob(filterGrid, "CUTOFF", 458, 0.0f, 1.0f, 2, true);
-    addSynthKnob(filterGrid, "RESONANCE", 459, 0.0f, 1.0f, 2, true);
-    addSynthKnob(filterGrid, "ENV AMT", 464, 0.0f, 1.0f, 2, true);
-
-    // Spacer to balance height
-    lv_obj_t* spacer = lv_obj_create(filterCard);
-    lv_obj_set_size(spacer, 10, 10);
-    lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(spacer, 0, 0);
-
-    // --- AMP ENVELOPE CARD ---
-    lv_obj_t* ampCard = createEnvCard(tab, "AMP ENVELOPE", 290);
-    
+    // --- AMP ENVELOPE CARD (515px) ---
+    lv_obj_t* ampCard = createCard(row3, "AMP ENVELOPE", 515, 280);
     lv_obj_t* ampRow = lv_obj_create(ampCard);
-    lv_obj_set_size(ampRow, 275, 350);
+    lv_obj_set_size(ampRow, 490, 230);
     lv_obj_set_style_bg_opa(ampRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(ampRow, 0, 0);
     lv_obj_set_style_pad_all(ampRow, 0, 0);
@@ -13622,16 +13678,15 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(ampRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(ampRow, "A", 454, 0.001f, 4.0f, 2, false);
-    addSynthSlider(ampRow, "D", 455, 0.0f, 4.0f, 2, false);
-    addSynthSlider(ampRow, "S", 456, 0.0f, 1.0f, 2, true);
-    addSynthSlider(ampRow, "R", 457, 0.001f, 4.0f, 2, false);
+    addSynthSlider(ampRow, "A", 454, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "D", 455, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "S", 456, 0.0f, 1.0f, 2, true, 230);
+    addSynthSlider(ampRow, "R", 457, 0.001f, 4.0f, 2, false, 230);
 
-    // --- FILTER ENVELOPE CARD ---
-    lv_obj_t* filterEnvCard = createEnvCard(tab, "FILTER ENVELOPE", 290);
-
+    // --- FILTER ENVELOPE CARD (515px) ---
+    lv_obj_t* filterEnvCard = createCard(row3, "FILTER ENVELOPE", 515, 280);
     lv_obj_t* filterEnvRow = lv_obj_create(filterEnvCard);
-    lv_obj_set_size(filterEnvRow, 275, 350);
+    lv_obj_set_size(filterEnvRow, 490, 230);
     lv_obj_set_style_bg_opa(filterEnvRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterEnvRow, 0, 0);
     lv_obj_set_style_pad_all(filterEnvRow, 0, 0);
@@ -13640,10 +13695,14 @@ void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(filterEnvRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(filterEnvRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(filterEnvRow, "A", 471, 0.001f, 4.0f, 2, false);
-    addSynthSlider(filterEnvRow, "D", 472, 0.0f, 4.0f, 2, false);
-    addSynthSlider(filterEnvRow, "S", 473, 0.0f, 1.0f, 2, true);
-    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 4.0f, 2, false);
+    addSynthSlider(filterEnvRow, "A", 471, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "D", 472, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "S", 473, 0.0f, 1.0f, 2, true, 230);
+    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 4.0f, 2, false, 230);
+}
+
+void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamWavetableTab
 }
 
 void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
@@ -13651,13 +13710,14 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(tab, 8, 0);
-    lv_obj_set_style_pad_row(tab, 12, 0);
 
-    // Row 1: Action Row (Latch, Record, Trim, Load, Save)
+    // =========================================================================
+    // ROW 1 (45px): ACTION BUTTONS ROW (1050px FULL WIDTH)
+    // =========================================================================
     lv_obj_t* topRow = lv_obj_create(tab);
-    lv_obj_set_size(topRow, 760, 45);
+    lv_obj_set_size(topRow, 1050, 45);
     lv_obj_set_style_bg_opa(topRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(topRow, 0, 0);
     lv_obj_set_style_pad_all(topRow, 0, 0);
@@ -13668,7 +13728,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     // 1. LATCH button
     mSamplerLatchBtn = lv_btn_create(topRow);
-    lv_obj_set_size(mSamplerLatchBtn, 100, 36);
+    lv_obj_set_size(mSamplerLatchBtn, 130, 40);
     lv_obj_add_flag(mSamplerLatchBtn, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(mSamplerLatchBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_bg_color(mSamplerLatchBtn, trackColor, LV_STATE_CHECKED);
@@ -13686,7 +13746,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     // 2. RECORD button
     mSamplerRecordBtn = lv_btn_create(topRow);
-    lv_obj_set_size(mSamplerRecordBtn, 120, 36);
+    lv_obj_set_size(mSamplerRecordBtn, 170, 40);
     lv_obj_set_style_bg_color(mSamplerRecordBtn, lv_color_hex(0x2A1515), 0);
     lv_obj_set_style_bg_color(mSamplerRecordBtn, lv_color_hex(0x881111), LV_STATE_PRESSED);
     lv_obj_set_style_radius(mSamplerRecordBtn, 8, 0);
@@ -13698,19 +13758,19 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_style_bg_color(recDot, lv_color_hex(0xFF3333), 0);
     lv_obj_set_style_radius(recDot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_border_width(recDot, 0, 0);
-    lv_obj_align(recDot, LV_ALIGN_LEFT_MID, 18, 0);
+    lv_obj_align(recDot, LV_ALIGN_LEFT_MID, 20, 0);
     
     lv_obj_t* recLbl = lv_label_create(mSamplerRecordBtn);
     lv_label_set_text(recLbl, "RECORD");
     lv_obj_set_style_text_font(recLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(recLbl, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(recLbl, LV_ALIGN_LEFT_MID, 38, 0);
+    lv_obj_align(recLbl, LV_ALIGN_LEFT_MID, 40, 0);
 
     lv_obj_add_event_cb(mSamplerRecordBtn, UIManager::samplerRecordBtnEventCb, LV_EVENT_ALL, this);
 
     // 3. TRIM button
     lv_obj_t* trimBtn = lv_btn_create(topRow);
-    lv_obj_set_size(trimBtn, 100, 36);
+    lv_obj_set_size(trimBtn, 130, 40);
     lv_obj_set_style_bg_color(trimBtn, lv_color_hex(0x2A2215), 0);
     lv_obj_set_style_bg_color(trimBtn, lv_color_hex(0x885511), LV_STATE_PRESSED);
     lv_obj_set_style_radius(trimBtn, 8, 0);
@@ -13727,7 +13787,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     // 4. LOAD button
     lv_obj_t* loadBtn = lv_btn_create(topRow);
-    lv_obj_set_size(loadBtn, 100, 36);
+    lv_obj_set_size(loadBtn, 130, 40);
     lv_obj_set_style_bg_color(loadBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_radius(loadBtn, 8, 0);
     lv_obj_set_style_border_color(loadBtn, lv_color_hex(0x444444), 0);
@@ -13743,7 +13803,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     // 5. SAVE button
     lv_obj_t* saveBtn = lv_btn_create(topRow);
-    lv_obj_set_size(saveBtn, 100, 36);
+    lv_obj_set_size(saveBtn, 130, 40);
     lv_obj_set_style_bg_color(saveBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_radius(saveBtn, 8, 0);
     lv_obj_set_style_border_color(saveBtn, lv_color_hex(0x444444), 0);
@@ -13759,7 +13819,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     // Source Selector Dropdown
     lv_obj_t* srcDd = lv_dropdown_create(topRow);
-    lv_obj_set_size(srcDd, 120, 36);
+    lv_obj_set_size(srcDd, 150, 40);
     lv_dropdown_set_options(srcDd, "MIC\nLINE-IN\nRESAMPLE");
     int currentSrc = mEngine.mRecordingSource.load();
     if (currentSrc > 2) currentSrc = 0;
@@ -13772,9 +13832,11 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(srcDd, lv_color_hex(0xEEEEEE), 0);
     lv_obj_add_event_cb(srcDd, UIManager::audioInSourceDropdownEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Row 2: Waveform Container
+    // =========================================================================
+    // ROW 2 (200px): WAVEFORM CONTAINER (1050px FULL WIDTH)
+    // =========================================================================
     mSamplerWaveformContainer = lv_obj_create(tab);
-    lv_obj_set_size(mSamplerWaveformContainer, 750, 220);
+    lv_obj_set_size(mSamplerWaveformContainer, 1050, 200);
     lv_obj_set_style_bg_color(mSamplerWaveformContainer, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(mSamplerWaveformContainer, trackColor, 0);
     lv_obj_set_style_border_width(mSamplerWaveformContainer, 2, 0);
@@ -13782,14 +13844,14 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_layout(mSamplerWaveformContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(mSamplerWaveformContainer, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(mSamplerWaveformContainer, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_hor(mSamplerWaveformContainer, 4, 0);
+    lv_obj_set_style_pad_hor(mSamplerWaveformContainer, 8, 0);
     lv_obj_set_style_pad_ver(mSamplerWaveformContainer, 10, 0);
     lv_obj_remove_flag(mSamplerWaveformContainer, LV_OBJ_FLAG_SCROLLABLE);
 
     // Create 150 vertical bars representing amplitude
     for (int i = 0; i < 150; ++i) {
         mSamplerWaveformBars[i] = lv_obj_create(mSamplerWaveformContainer);
-        lv_obj_set_size(mSamplerWaveformBars[i], 3, 2);
+        lv_obj_set_size(mSamplerWaveformBars[i], 5, 2);
         lv_obj_set_style_bg_color(mSamplerWaveformBars[i], lv_color_hex(0x444444), 0);
         lv_obj_set_style_bg_opa(mSamplerWaveformBars[i], LV_OPA_40, 0);
         lv_obj_set_style_border_width(mSamplerWaveformBars[i], 0, 0);
@@ -13801,7 +13863,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     // Green Start Marker
     mSamplerStartLine = lv_obj_create(mSamplerWaveformContainer);
     lv_obj_add_flag(mSamplerStartLine, LV_OBJ_FLAG_FLOATING);
-    lv_obj_set_size(mSamplerStartLine, 2, 220);
+    lv_obj_set_size(mSamplerStartLine, 2, 200);
     lv_obj_set_style_bg_color(mSamplerStartLine, lv_color_hex(0x00FF66), 0);
     lv_obj_set_style_border_width(mSamplerStartLine, 0, 0);
     lv_obj_set_style_radius(mSamplerStartLine, 0, 0);
@@ -13810,7 +13872,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     // Red End Marker
     mSamplerEndLine = lv_obj_create(mSamplerWaveformContainer);
     lv_obj_add_flag(mSamplerEndLine, LV_OBJ_FLAG_FLOATING);
-    lv_obj_set_size(mSamplerEndLine, 2, 220);
+    lv_obj_set_size(mSamplerEndLine, 2, 200);
     lv_obj_set_style_bg_color(mSamplerEndLine, lv_color_hex(0xFF3366), 0);
     lv_obj_set_style_border_width(mSamplerEndLine, 0, 0);
     lv_obj_set_style_radius(mSamplerEndLine, 0, 0);
@@ -13820,7 +13882,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     for (int i = 0; i < 16; ++i) {
         mSamplerPlayheadShades[i] = lv_obj_create(mSamplerWaveformContainer);
         lv_obj_add_flag(mSamplerPlayheadShades[i], LV_OBJ_FLAG_FLOATING);
-        lv_obj_set_size(mSamplerPlayheadShades[i], 0, 220);
+        lv_obj_set_size(mSamplerPlayheadShades[i], 0, 200);
         lv_obj_set_style_bg_color(mSamplerPlayheadShades[i], trackColor, 0);
         lv_obj_set_style_bg_opa(mSamplerPlayheadShades[i], 64, 0);
         lv_obj_set_style_border_width(mSamplerPlayheadShades[i], 0, 0);
@@ -13833,7 +13895,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     for (int i = 0; i < 16; ++i) {
         mSamplerPlayheadLines[i] = lv_obj_create(mSamplerWaveformContainer);
         lv_obj_add_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_FLOATING);
-        lv_obj_set_size(mSamplerPlayheadLines[i], 2, 220);
+        lv_obj_set_size(mSamplerPlayheadLines[i], 2, 200);
         lv_obj_set_style_bg_color(mSamplerPlayheadLines[i], trackColor, 0);
         lv_obj_set_style_border_width(mSamplerPlayheadLines[i], 0, 0);
         lv_obj_set_style_radius(mSamplerPlayheadLines[i], 0, 0);
@@ -13860,7 +13922,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     for (int i = 0; i < 16; ++i) {
         mSamplerSliceLines[i] = lv_obj_create(mSamplerWaveformContainer);
         lv_obj_add_flag(mSamplerSliceLines[i], LV_OBJ_FLAG_FLOATING);
-        lv_obj_set_size(mSamplerSliceLines[i], 2, 220);
+        lv_obj_set_size(mSamplerSliceLines[i], 2, 200);
         lv_obj_set_style_bg_color(mSamplerSliceLines[i], lv_color_hex(0x00D2FF), 0); // Cyan
         lv_obj_set_style_border_width(mSamplerSliceLines[i], 0, 0);
         lv_obj_set_style_radius(mSamplerSliceLines[i], 0, 0);
@@ -13880,9 +13942,11 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
         lv_obj_add_event_cb(mSamplerSliceHandles[i], samplerSliceHandleEventCb, LV_EVENT_PRESSING, this);
     }
 
-    // Row 3: Sample Edits (Bottom Row)
+    // =========================================================================
+    // ROW 3 (380px): SAMPLE EDITS (315px), SYNTHESIS (355px), ENVELOPE (360px)
+    // =========================================================================
     lv_obj_t* bottomRow = lv_obj_create(tab);
-    lv_obj_set_size(bottomRow, 760, 115);
+    lv_obj_set_size(bottomRow, 1050, 380);
     lv_obj_set_style_bg_opa(bottomRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(bottomRow, 0, 0);
     lv_obj_set_style_pad_all(bottomRow, 0, 0);
@@ -13891,26 +13955,73 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(bottomRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(bottomRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthKnob(bottomRow, "START", 330, 0.0f, 1.0f, 2, true);
-    addSynthKnob(bottomRow, "END", 331, 0.0f, 1.0f, 2, true);
-    addSynthKnob(bottomRow, "SLICES", 340, 0.0f, 1.0f, 0, false);
-    addSynthKnob(bottomRow, "MODE", 320, 0.0f, 1.0f, 0, false);
-    addSynthKnob(bottomRow, "SLICE SEL", 341, 0.0f, 1.0f, 0, false);
+    auto createBottomCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
+        lv_obj_t* card = lv_obj_create(parent);
+        lv_obj_set_size(card, width, 380);
+        lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
+        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
+        lv_obj_set_style_border_color(card, trackColor, 0);
+        lv_obj_set_style_border_width(card, 2, 0);
+        lv_obj_set_style_radius(card, 12, 0);
+        lv_obj_set_style_pad_all(card, 8, 0);
+        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+        
+        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        
+        lv_obj_t* title = lv_label_create(card);
+        lv_label_set_text(title, name);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(title, trackColor, 0);
+        
+        return card;
+    };
 
-    // Symmetrical Buttons Column (Reverse and Lock)
-    lv_obj_t* btnCol = lv_obj_create(bottomRow);
-    lv_obj_set_size(btnCol, 110, 100);
-    lv_obj_set_style_bg_opa(btnCol, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(btnCol, 0, 0);
-    lv_obj_set_style_pad_all(btnCol, 0, 0);
-    lv_obj_remove_flag(btnCol, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(btnCol, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(btnCol, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(btnCol, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    // --- CARD 1: SAMPLE EDITS & SLICES (315px) ---
+    lv_obj_t* editsCard = createBottomCard(bottomRow, "SAMPLE & SLICES", 315);
+
+    lv_obj_t* editsRow1 = lv_obj_create(editsCard);
+    lv_obj_set_size(editsRow1, 295, 100);
+    lv_obj_set_style_bg_opa(editsRow1, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(editsRow1, 0, 0);
+    lv_obj_set_style_pad_all(editsRow1, 0, 0);
+    lv_obj_remove_flag(editsRow1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(editsRow1, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(editsRow1, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(editsRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    addSynthKnob(editsRow1, "START", 330, 0.0f, 1.0f, 2, true);
+    addSynthKnob(editsRow1, "END", 331, 0.0f, 1.0f, 2, true);
+    addSynthKnob(editsRow1, "MODE", 320, 0.0f, 1.0f, 0, false);
+
+    lv_obj_t* editsRow2 = lv_obj_create(editsCard);
+    lv_obj_set_size(editsRow2, 295, 100);
+    lv_obj_set_style_bg_opa(editsRow2, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(editsRow2, 0, 0);
+    lv_obj_set_style_pad_all(editsRow2, 0, 0);
+    lv_obj_remove_flag(editsRow2, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(editsRow2, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(editsRow2, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(editsRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    addSynthKnob(editsRow2, "SLICES", 340, 0.0f, 1.0f, 0, false);
+    addSynthKnob(editsRow2, "SLICE SEL", 341, 0.0f, 1.0f, 0, false);
+
+    // Button Row (Reverse & Slice Lock)
+    lv_obj_t* editsBtnRow = lv_obj_create(editsCard);
+    lv_obj_set_size(editsBtnRow, 295, 110);
+    lv_obj_set_style_bg_opa(editsBtnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(editsBtnRow, 0, 0);
+    lv_obj_set_style_pad_all(editsBtnRow, 0, 0);
+    lv_obj_remove_flag(editsBtnRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(editsBtnRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(editsBtnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(editsBtnRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // REVERSE Button
-    lv_obj_t* revBtn = lv_btn_create(btnCol);
-    lv_obj_set_size(revBtn, 100, 36);
+    lv_obj_t* revBtn = lv_btn_create(editsBtnRow);
+    lv_obj_set_size(revBtn, 135, 42);
     lv_obj_add_flag(revBtn, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(revBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_bg_color(revBtn, trackColor, LV_STATE_CHECKED);
@@ -13938,8 +14049,8 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(revBtn, freeRevCb, LV_EVENT_DELETE, revData);
 
     // LOCK Button
-    lv_obj_t* lockBtn = lv_btn_create(btnCol);
-    lv_obj_set_size(lockBtn, 100, 36);
+    lv_obj_t* lockBtn = lv_btn_create(editsBtnRow);
+    lv_obj_set_size(lockBtn, 135, 42);
     lv_obj_add_flag(lockBtn, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(lockBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_bg_color(lockBtn, trackColor, LV_STATE_CHECKED);
@@ -13966,96 +14077,58 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(lockBtn, freeLockCb, LV_EVENT_DELETE, lockData);
 
-    // Trigger initial preview draw
-    updateSamplerWaveformPreview();
-}
+    // --- CARD 2: SYNTHESIS (355px) ---
+    lv_obj_t* synthCard = createBottomCard(bottomRow, "SYNTHESIS", 355);
 
-void UIManager::populateParamSamplerSynthesisTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    lv_obj_t* sRow1 = lv_obj_create(synthCard);
+    lv_obj_set_size(sRow1, 335, 100);
+    lv_obj_set_style_bg_opa(sRow1, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(sRow1, 0, 0);
+    lv_obj_set_style_pad_all(sRow1, 0, 0);
+    lv_obj_remove_flag(sRow1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(sRow1, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(sRow1, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(sRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(tab, 16, 0);
-    lv_obj_set_style_pad_all(tab, 8, 0);
+    addSynthKnob(sRow1, "PITCH", 300, 0.0f, 1.0f, 0, false);
+    addSynthKnob(sRow1, "SPEED", 302, 0.0f, 1.0f, 2, false);
+    addSynthKnob(sRow1, "STRETCH", 301, 0.0f, 1.0f, 2, false);
 
-    auto createSynthCard = [trackColor](lv_obj_t* parent, const char* name, int width) -> lv_obj_t* {
-        lv_obj_t* card = lv_obj_create(parent);
-        lv_obj_set_size(card, width, 380);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_90, 0);
-        lv_obj_set_style_border_color(card, trackColor, 0);
-        lv_obj_set_style_border_width(card, 2, 0);
-        lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 10, 0);
-        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        
-        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        
-        lv_obj_t* title = lv_label_create(card);
-        lv_label_set_text(title, name);
-        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(title, trackColor, 0);
-        
-        return card;
-    };
+    lv_obj_t* sRow2 = lv_obj_create(synthCard);
+    lv_obj_set_size(sRow2, 335, 100);
+    lv_obj_set_style_bg_opa(sRow2, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(sRow2, 0, 0);
+    lv_obj_set_style_pad_all(sRow2, 0, 0);
+    lv_obj_remove_flag(sRow2, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(sRow2, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(sRow2, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(sRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // --- SYNTHESIS CARD (Left) ---
-    lv_obj_t* synthCard = createSynthCard(tab, "SYNTHESIS", 370);
+    addSynthKnob(sRow2, "CUTOFF", 303, 0.0f, 1.0f, 2, true);
+    addSynthKnob(sRow2, "RES", 304, 0.0f, 1.0f, 2, true);
+    addSynthDropdown(sRow2, "FILTER TYPE", 305, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, false, 110);
 
-    lv_obj_t* rowsContainer = lv_obj_create(synthCard);
-    lv_obj_set_size(rowsContainer, 350, 320);
-    lv_obj_set_style_bg_opa(rowsContainer, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(rowsContainer, 0, 0);
-    lv_obj_set_style_pad_all(rowsContainer, 0, 0);
-    lv_obj_remove_flag(rowsContainer, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(rowsContainer, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(rowsContainer, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(rowsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t* sRow3 = lv_obj_create(synthCard);
+    lv_obj_set_size(sRow3, 335, 110);
+    lv_obj_set_style_bg_opa(sRow3, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(sRow3, 0, 0);
+    lv_obj_set_style_pad_all(sRow3, 0, 0);
+    lv_obj_remove_flag(sRow3, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(sRow3, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(sRow3, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(sRow3, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    auto createSynthRow = [](lv_obj_t* parent, int height) -> lv_obj_t* {
-        lv_obj_t* row = lv_obj_create(parent);
-        lv_obj_set_size(row, 350, height);
-        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(row, 0, 0);
-        lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
-        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        return row;
-    };
+    addSynthKnob(sRow3, "GLIDE", 355, 0.0f, 1.0f, 2, true);
 
-    lv_obj_t* row1 = createSynthRow(rowsContainer, 100);
-    lv_obj_t* row2 = createSynthRow(rowsContainer, 100);
-    lv_obj_t* row3 = createSynthRow(rowsContainer, 100);
+    // --- CARD 3: ENVELOPE (360px) ---
+    lv_obj_t* envCard = createBottomCard(bottomRow, "ENVELOPE", 360);
 
-    // Row 1: Pitch, Speed, Stretch
-    addSynthKnob(row1, "PITCH", 300, 0.0f, 1.0f, 0, false);
-    addSynthKnob(row1, "SPEED", 302, 0.0f, 1.0f, 2, false);
-    addSynthKnob(row1, "STRETCH", 301, 0.0f, 1.0f, 2, false);
-
-    // Row 2: Cutoff, Resonance, Filter Type
-    addSynthKnob(row2, "CUTOFF", 303, 0.0f, 1.0f, 2, true);
-    addSynthKnob(row2, "RES", 304, 0.0f, 1.0f, 2, true);
-    addSynthDropdown(row2, "FILTER TYPE", 305, "LowPass\nHighPass\nBandPass\nNotch\nPeak", 0, false);
-
-    // Row 3: Glide
-    addSynthKnob(row3, "GLIDE", 355, 0.0f, 1.0f, 2, true);
-
-    // --- ENVELOPE CARD (Right) ---
-    lv_obj_t* envCard = createSynthCard(tab, "ENVELOPE", 370);
-
-    // ADSR sliders row
     lv_obj_t* adsrRow = lv_obj_create(envCard);
-    lv_obj_set_size(adsrRow, 350, 230);
+    lv_obj_set_size(adsrRow, 340, 230);
     lv_obj_set_style_bg_opa(adsrRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(adsrRow, 0, 0);
     lv_obj_set_style_pad_all(adsrRow, 0, 0);
     lv_obj_remove_flag(adsrRow, LV_OBJ_FLAG_SCROLLABLE);
-    
     lv_obj_set_layout(adsrRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(adsrRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(adsrRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -14065,8 +14138,24 @@ void UIManager::populateParamSamplerSynthesisTab(lv_obj_t* tab) {
     addSynthSlider(adsrRow, "S", 312, 0.0f, 1.0f, 2, true, 230);
     addSynthSlider(adsrRow, "R", 313, 0.001f, 4.0f, 2, false, 230);
 
-    // Envelope modulation intensity knob below
-    addSynthKnob(envCard, "ENV AMT", 314, 0.0f, 1.0f, 2, true);
+    lv_obj_t* envAmtCont = lv_obj_create(envCard);
+    lv_obj_set_size(envAmtCont, 340, 90);
+    lv_obj_set_style_bg_opa(envAmtCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(envAmtCont, 0, 0);
+    lv_obj_set_style_pad_all(envAmtCont, 0, 0);
+    lv_obj_remove_flag(envAmtCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(envAmtCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(envAmtCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(envAmtCont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    addSynthKnob(envAmtCont, "ENV AMT", 314, 0.0f, 1.0f, 2, true);
+
+    // Trigger initial preview draw
+    updateSamplerWaveformPreview();
+}
+
+void UIManager::populateParamSamplerSynthesisTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamSamplerTab
 }
 
 void UIManager::samplerLatchBtnEventCb(lv_event_t* e) {
@@ -15118,25 +15207,37 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 12, 0);
-    lv_obj_set_style_pad_row(tab, 16, 0);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_all(tab, 8, 0);
+
+    // =========================================================================
+    // LEFT COLUMN (490px): ACTIONS, BANK/PRESET INFO, MASTER KNOBS
+    // =========================================================================
+    lv_obj_t* leftCol = lv_obj_create(tab);
+    lv_obj_set_size(leftCol, 490, 640);
+    lv_obj_set_style_bg_opa(leftCol, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(leftCol, 0, 0);
+    lv_obj_set_style_pad_all(leftCol, 0, 0);
+    lv_obj_remove_flag(leftCol, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(leftCol, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(leftCol, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(leftCol, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // 1. Actions Row (Top Bar)
-    lv_obj_t* actionsRow = lv_obj_create(tab);
-    lv_obj_set_size(actionsRow, 760, 50);
+    lv_obj_t* actionsRow = lv_obj_create(leftCol);
+    lv_obj_set_size(actionsRow, 490, 52);
     lv_obj_set_style_bg_opa(actionsRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(actionsRow, 0, 0);
     lv_obj_set_style_pad_all(actionsRow, 0, 0);
     lv_obj_remove_flag(actionsRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(actionsRow, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(actionsRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(actionsRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(actionsRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     auto createActionBtn = [this, trackColor](lv_obj_t* parent, const char* labelText, lv_event_cb_t cb) {
         lv_obj_t* btn = lv_button_create(parent);
-        lv_obj_set_size(btn, 180, 40);
+        lv_obj_set_size(btn, 155, 44);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x222222), 0);
         lv_obj_set_style_bg_color(btn, trackColor, LV_STATE_PRESSED);
         lv_obj_set_style_radius(btn, 8, 0);
@@ -15156,21 +15257,19 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     createActionBtn(actionsRow, "IMPORT BANK", UIManager::soundfontImportBtnCb);
     createActionBtn(actionsRow, "SELECT PRESET", UIManager::soundfontPresetSelectCb);
 
-    // 2. Center Info Status Card
-    lv_obj_t* infoCard = lv_obj_create(tab);
-    lv_obj_set_size(infoCard, 760, 240);
+    // 2. Status / Info Card
+    lv_obj_t* infoCard = lv_obj_create(leftCol);
+    lv_obj_set_size(infoCard, 490, 565);
     lv_obj_set_style_bg_color(infoCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(infoCard, trackColor, 0);
     lv_obj_set_style_border_width(infoCard, 1, 0);
-    lv_obj_set_style_radius(infoCard, 16, 0);
+    lv_obj_set_style_radius(infoCard, 14, 0);
     lv_obj_set_style_pad_all(infoCard, 16, 0);
     lv_obj_remove_flag(infoCard, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(infoCard, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(infoCard, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(infoCard, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(infoCard, 8, 0);
+    lv_obj_set_flex_align(infoCard, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // active bank label
     std::string bankPath = mEngine.getTracks()[mActiveTrack].lastSamplePath;
     std::string bankName = bankPath.empty() ? "None (Default GS)" : bankPath;
     size_t lastSlash = bankName.find_last_of("/\\");
@@ -15179,23 +15278,28 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     }
 
     mSoundFontActiveBankLbl = lv_label_create(infoCard);
-    lv_label_set_text_fmt(mSoundFontActiveBankLbl, "ACTIVE BANK: %s", bankName.c_str());
-    lv_obj_set_style_text_font(mSoundFontActiveBankLbl, &lv_font_montserrat_16, 0);
+    lv_label_set_text_fmt(mSoundFontActiveBankLbl, "BANK: %s", bankName.c_str());
+    lv_obj_set_style_text_font(mSoundFontActiveBankLbl, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mSoundFontActiveBankLbl, lv_color_hex(0xFFFFFF), 0);
+    lv_label_set_long_mode(mSoundFontActiveBankLbl, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(mSoundFontActiveBankLbl, 450);
+    lv_obj_set_style_text_align(mSoundFontActiveBankLbl, LV_TEXT_ALIGN_CENTER, 0);
 
-    // active preset label
     int activeP = mEngine.getTracks()[mActiveTrack].soundFontEngine.getPresetIndex();
     std::string pName = mEngine.getSoundFontPresetName(mActiveTrack, activeP);
     if (pName.empty()) pName = "General User GS Default";
 
     mSoundFontActivePresetLbl = lv_label_create(infoCard);
-    lv_label_set_text_fmt(mSoundFontActivePresetLbl, "PRESET: %d - %s", activeP, pName.c_str());
+    lv_label_set_text_fmt(mSoundFontActivePresetLbl, "PRESET %d: %s", activeP, pName.c_str());
     lv_obj_set_style_text_font(mSoundFontActivePresetLbl, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(mSoundFontActivePresetLbl, trackColor, 0);
+    lv_label_set_long_mode(mSoundFontActivePresetLbl, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(mSoundFontActivePresetLbl, 450);
+    lv_obj_set_style_text_align(mSoundFontActivePresetLbl, LV_TEXT_ALIGN_CENTER, 0);
 
-    // 2.3 Row for encoder/knob parameters 180 and 181
+    // Knobs for Preset and Bank
     lv_obj_t* knobsRow = lv_obj_create(infoCard);
-    lv_obj_set_size(knobsRow, 300, 100);
+    lv_obj_set_size(knobsRow, 340, 110);
     lv_obj_set_style_bg_opa(knobsRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(knobsRow, 0, 0);
     lv_obj_set_style_pad_all(knobsRow, 0, 0);
@@ -15206,20 +15310,23 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
 
     addSynthKnob(knobsRow, "PRESET", 180, 0.0f, 1.0f, 2, true);
     addSynthKnob(knobsRow, "BANK", 181, 0.0f, 1.0f, 2, true);
-}
 
-void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
-
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
-    lv_obj_set_style_pad_row(tab, 8, 0);
+    // =========================================================================
+    // RIGHT COLUMN (550px): FILTER LFO, FILTER CONTROLS, ADSR ENVELOPE
+    // =========================================================================
+    lv_obj_t* rightCol = lv_obj_create(tab);
+    lv_obj_set_size(rightCol, 550, 640);
+    lv_obj_set_style_bg_opa(rightCol, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(rightCol, 0, 0);
+    lv_obj_set_style_pad_all(rightCol, 0, 0);
+    lv_obj_remove_flag(rightCol, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(rightCol, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(rightCol, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(rightCol, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // Row 1: side-by-side LFO and Filter Cards
-    lv_obj_t* row1 = lv_obj_create(tab);
-    lv_obj_set_size(row1, 760, 205);
+    lv_obj_t* row1 = lv_obj_create(rightCol);
+    lv_obj_set_size(row1, 550, 260);
     lv_obj_set_style_bg_opa(row1, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row1, 0, 0);
     lv_obj_set_style_pad_all(row1, 0, 0);
@@ -15230,7 +15337,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
 
     // 1.1 LFO Card
     lv_obj_t* lfoCard = lv_obj_create(row1);
-    lv_obj_set_size(lfoCard, 370, 200);
+    lv_obj_set_size(lfoCard, 268, 260);
     lv_obj_set_style_bg_color(lfoCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(lfoCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(lfoCard, 1, 0);
@@ -15239,13 +15346,13 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_remove_flag(lfoCard, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* lfoTitle = lv_label_create(lfoCard);
-    lv_label_set_text(lfoTitle, "FILTER LFO MODULATION");
+    lv_label_set_text(lfoTitle, "FILTER LFO MOD");
     lv_obj_set_style_text_font(lfoTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(lfoTitle, lv_color_hex(0x888888), 0);
     lv_obj_align(lfoTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* lfoContent = lv_obj_create(lfoCard);
-    lv_obj_set_size(lfoContent, 350, 165);
+    lv_obj_set_size(lfoContent, 252, 220);
     lv_obj_set_style_bg_opa(lfoContent, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lfoContent, 0, 0);
     lv_obj_set_style_pad_all(lfoContent, 0, 0);
@@ -15256,7 +15363,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(lfoContent, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* lfoDropdownRow = lv_obj_create(lfoContent);
-    lv_obj_set_size(lfoDropdownRow, 350, 52);
+    lv_obj_set_size(lfoDropdownRow, 252, 45);
     lv_obj_set_style_bg_opa(lfoDropdownRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lfoDropdownRow, 0, 0);
     lv_obj_set_style_pad_all(lfoDropdownRow, 0, 0);
@@ -15265,10 +15372,10 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(lfoDropdownRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(lfoDropdownRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthDropdown(lfoDropdownRow, "LFO SHAPE", 114, "Sine\nTriangle\nSaw\nSquare\nRandom", 0, false, 105);
+    addSynthDropdown(lfoDropdownRow, "LFO SHAPE", 114, "Sine\nTriangle\nSaw\nSquare\nRandom", 0, false, 110);
 
     lv_obj_t* lfoKnobRow = lv_obj_create(lfoContent);
-    lv_obj_set_size(lfoKnobRow, 350, 96);
+    lv_obj_set_size(lfoKnobRow, 252, 100);
     lv_obj_set_style_bg_opa(lfoKnobRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(lfoKnobRow, 0, 0);
     lv_obj_set_style_pad_all(lfoKnobRow, 0, 0);
@@ -15277,12 +15384,12 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(lfoKnobRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(lfoKnobRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthKnob(lfoKnobRow, "LFO RATE", 7, 0.0f, 1.0f, 2, true);
-    addSynthKnob(lfoKnobRow, "LFO DEPTH", 8, 0.0f, 1.0f, 2, true);
+    addSynthKnob(lfoKnobRow, "RATE", 7, 0.0f, 1.0f, 2, true);
+    addSynthKnob(lfoKnobRow, "DEPTH", 8, 0.0f, 1.0f, 2, true);
 
     // 1.2 Filter Card
     lv_obj_t* filterCard = lv_obj_create(row1);
-    lv_obj_set_size(filterCard, 370, 200);
+    lv_obj_set_size(filterCard, 268, 260);
     lv_obj_set_style_bg_color(filterCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(filterCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(filterCard, 1, 0);
@@ -15297,7 +15404,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_align(filterTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* filterContent = lv_obj_create(filterCard);
-    lv_obj_set_size(filterContent, 350, 165);
+    lv_obj_set_size(filterContent, 252, 220);
     lv_obj_set_style_bg_opa(filterContent, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterContent, 0, 0);
     lv_obj_set_style_pad_all(filterContent, 0, 0);
@@ -15308,7 +15415,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(filterContent, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     lv_obj_t* filterDropdownRow = lv_obj_create(filterContent);
-    lv_obj_set_size(filterDropdownRow, 350, 52);
+    lv_obj_set_size(filterDropdownRow, 252, 45);
     lv_obj_set_style_bg_opa(filterDropdownRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterDropdownRow, 0, 0);
     lv_obj_set_style_pad_all(filterDropdownRow, 0, 0);
@@ -15317,10 +15424,10 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(filterDropdownRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(filterDropdownRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthDropdown(filterDropdownRow, "FILTER TYPE", 20, "LowPass\nHighPass\nBandPass\nBypass", 0, false, 105);
+    addSynthDropdown(filterDropdownRow, "TYPE", 20, "LowPass\nHighPass\nBandPass\nBypass", 0, false, 110);
 
     lv_obj_t* filterKnobRow = lv_obj_create(filterContent);
-    lv_obj_set_size(filterKnobRow, 350, 96);
+    lv_obj_set_size(filterKnobRow, 252, 100);
     lv_obj_set_style_bg_opa(filterKnobRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterKnobRow, 0, 0);
     lv_obj_set_style_pad_all(filterKnobRow, 0, 0);
@@ -15330,11 +15437,11 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(filterKnobRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthKnob(filterKnobRow, "CUTOFF", 112, 0.0f, 1.0f, 2, true);
-    addSynthKnob(filterKnobRow, "RESONANCE", 113, 0.0f, 1.0f, 2, true);
+    addSynthKnob(filterKnobRow, "RES", 113, 0.0f, 1.0f, 2, true);
 
-    // Row 2: ADSR card
-    lv_obj_t* adsrCard = lv_obj_create(tab);
-    lv_obj_set_size(adsrCard, 760, 235);
+    // Row 2: ADSR Card
+    lv_obj_t* adsrCard = lv_obj_create(rightCol);
+    lv_obj_set_size(adsrCard, 550, 360);
     lv_obj_set_style_bg_color(adsrCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(adsrCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(adsrCard, 1, 0);
@@ -15349,7 +15456,7 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_align(adsrTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* faderRow = lv_obj_create(adsrCard);
-    lv_obj_set_size(faderRow, 740, 195);
+    lv_obj_set_size(faderRow, 530, 320);
     lv_obj_set_style_bg_opa(faderRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(faderRow, 0, 0);
     lv_obj_set_style_pad_all(faderRow, 0, 0);
@@ -15359,10 +15466,14 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(faderRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(faderRow, "DECAY", 101, 0.0f, 4.0f, 2, false, 140);
-    addSynthSlider(faderRow, "SUSTAIN", 102, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 4.0f, 2, false, 140);
+    addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 4.0f, 2, false, 240);
+    addSynthSlider(faderRow, "DECAY", 101, 0.0f, 4.0f, 2, false, 240);
+    addSynthSlider(faderRow, "SUSTAIN", 102, 0.0f, 1.0f, 2, true, 240);
+    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 4.0f, 2, false, 240);
+}
+
+void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamSoundFontLibraryTab
 }
 
 void UIManager::soundfontLoadBtnCb(lv_event_t* e) {
@@ -15404,7 +15515,7 @@ void UIManager::soundfontPresetSelectCb(lv_event_t* e) {
     int presetCount = ui->mEngine.getSoundFontPresetCount(ui->mActiveTrack);
     if (presetCount <= 0) {
         lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-        lv_obj_set_size(overlay, 1024, 600);
+        lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
         lv_obj_set_pos(overlay, 0, 0);
         lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
         lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
@@ -15449,7 +15560,7 @@ void UIManager::soundfontPresetSelectCb(lv_event_t* e) {
     }
 
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(overlay, 0, 0);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
@@ -15578,7 +15689,7 @@ void UIManager::fmPresetSelectCb(lv_event_t* e) {
 
     // Overlay
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(overlay, 0, 0);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
@@ -15788,28 +15899,40 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
 
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(tab, 8, 0);
-    lv_obj_set_style_pad_row(tab, 8, 0);
 
-    // Row 1: Source / Gain / Fold card
-    lv_obj_t* ioCard = lv_obj_create(tab);
-    lv_obj_set_size(ioCard, 760, 200);
+    // =========================================================================
+    // ROW 1: INPUT CONTROL (490px) & CHARACTER EQ (550px) - Height 290px
+    // =========================================================================
+    lv_obj_t* row1 = lv_obj_create(tab);
+    lv_obj_set_size(row1, 1050, 290);
+    lv_obj_set_style_bg_opa(row1, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(row1, 0, 0);
+    lv_obj_set_style_pad_all(row1, 0, 0);
+    lv_obj_remove_flag(row1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(row1, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(row1, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row1, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // 1.1 Audio Input Control Card
+    lv_obj_t* ioCard = lv_obj_create(row1);
+    lv_obj_set_size(ioCard, 490, 290);
     lv_obj_set_style_bg_color(ioCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(ioCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(ioCard, 1, 0);
-    lv_obj_set_style_radius(ioCard, 10, 0);
-    lv_obj_set_style_pad_all(ioCard, 8, 0);
+    lv_obj_set_style_radius(ioCard, 12, 0);
+    lv_obj_set_style_pad_all(ioCard, 10, 0);
     lv_obj_remove_flag(ioCard, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* ioTitle = lv_label_create(ioCard);
     lv_label_set_text(ioTitle, "AUDIO INPUT CONTROL");
-    lv_obj_set_style_text_font(ioTitle, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(ioTitle, lv_color_hex(0x888888), 0);
+    lv_obj_set_style_text_font(ioTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(ioTitle, trackColor, 0);
     lv_obj_align(ioTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* ioContent = lv_obj_create(ioCard);
-    lv_obj_set_size(ioContent, 740, 165);
+    lv_obj_set_size(ioContent, 470, 245);
     lv_obj_set_style_bg_opa(ioContent, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(ioContent, 0, 0);
     lv_obj_set_style_pad_all(ioContent, 0, 0);
@@ -15821,7 +15944,7 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
 
     // Left half: Source and Gate Mode Selectors
     lv_obj_t* selectorsCol = lv_obj_create(ioContent);
-    lv_obj_set_size(selectorsCol, 360, 150);
+    lv_obj_set_size(selectorsCol, 260, 235);
     lv_obj_set_style_bg_opa(selectorsCol, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(selectorsCol, 0, 0);
     lv_obj_set_style_pad_all(selectorsCol, 0, 0);
@@ -15832,14 +15955,14 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
 
     // Source Selector Dropdown
     lv_obj_t* sourceRow = lv_obj_create(selectorsCol);
-    lv_obj_set_size(sourceRow, 360, 60);
+    lv_obj_set_size(sourceRow, 260, 70);
     lv_obj_set_style_bg_opa(sourceRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(sourceRow, 0, 0);
     lv_obj_set_style_pad_all(sourceRow, 0, 0);
     lv_obj_remove_flag(sourceRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(sourceRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(sourceRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(sourceRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_flow(sourceRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(sourceRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
 
     lv_obj_t* srcLbl = lv_label_create(sourceRow);
     lv_label_set_text(srcLbl, "INPUT SELECTOR");
@@ -15847,7 +15970,7 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(srcLbl, lv_color_hex(0xCCCCCC), 0);
 
     lv_obj_t* srcDd = lv_dropdown_create(sourceRow);
-    lv_obj_set_size(srcDd, 180, 36);
+    lv_obj_set_size(srcDd, 250, 36);
     lv_dropdown_set_options(srcDd, "MICROPHONE\nLINE-IN\nRESAMPLING");
     int currentSrc = mEngine.mRecordingSource.load();
     if (currentSrc > 2) currentSrc = 0;
@@ -15862,25 +15985,25 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
 
     // Gate mode selector
     lv_obj_t* gateRow = lv_obj_create(selectorsCol);
-    lv_obj_set_size(gateRow, 360, 60);
+    lv_obj_set_size(gateRow, 260, 70);
     lv_obj_set_style_bg_opa(gateRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(gateRow, 0, 0);
     lv_obj_set_style_pad_all(gateRow, 0, 0);
     lv_obj_remove_flag(gateRow, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(gateRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(gateRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(gateRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_flow(gateRow, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(gateRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
 
     lv_obj_t* gateLbl = lv_label_create(gateRow);
     lv_label_set_text(gateLbl, "MODE / GATE TYPE");
     lv_obj_set_style_text_font(gateLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(gateLbl, lv_color_hex(0xCCCCCC), 0);
 
-    addSynthDropdown(gateRow, "GATE MODE", 120, "GATED\nOPEN", 0, false, 180);
+    addSynthDropdown(gateRow, "GATE MODE", 120, "GATED\nOPEN", 0, false, 250);
 
     // Right half: Gain & Fold Knobs
     lv_obj_t* knobsRow = lv_obj_create(ioContent);
-    lv_obj_set_size(knobsRow, 340, 150);
+    lv_obj_set_size(knobsRow, 190, 235);
     lv_obj_set_style_bg_opa(knobsRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(knobsRow, 0, 0);
     lv_obj_set_style_pad_all(knobsRow, 0, 0);
@@ -15892,24 +16015,24 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
     addSynthKnob(knobsRow, "GAIN", 121, 0.0f, 1.0f, 2, true);
     addSynthKnob(knobsRow, "FOLD", 122, 0.0f, 1.0f, 2, true);
 
-    // Row 2: Character EQ card
-    lv_obj_t* eqCard = lv_obj_create(tab);
-    lv_obj_set_size(eqCard, 760, 235);
+    // 1.2 Character EQ card
+    lv_obj_t* eqCard = lv_obj_create(row1);
+    lv_obj_set_size(eqCard, 550, 290);
     lv_obj_set_style_bg_color(eqCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(eqCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(eqCard, 1, 0);
-    lv_obj_set_style_radius(eqCard, 10, 0);
+    lv_obj_set_style_radius(eqCard, 12, 0);
     lv_obj_set_style_pad_all(eqCard, 8, 0);
     lv_obj_remove_flag(eqCard, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* eqTitle = lv_label_create(eqCard);
-    lv_label_set_text(eqTitle, "CHARACTER EQ CONTROLS (+/- 12dB)");
+    lv_label_set_text(eqTitle, "CHARACTER EQ (+/- 12dB)");
     lv_obj_set_style_text_font(eqTitle, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(eqTitle, lv_color_hex(0x888888), 0);
     lv_obj_align(eqTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* eqFadersRow = lv_obj_create(eqCard);
-    lv_obj_set_size(eqFadersRow, 740, 195);
+    lv_obj_set_size(eqFadersRow, 530, 250);
     lv_obj_set_style_bg_opa(eqFadersRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(eqFadersRow, 0, 0);
     lv_obj_set_style_pad_all(eqFadersRow, 0, 0);
@@ -15919,29 +16042,32 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(eqFadersRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(eqFadersRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(eqFadersRow, "LOW", 1530, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(eqFadersRow, "L-MID", 1531, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(eqFadersRow, "MID", 1532, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(eqFadersRow, "H-MID", 1533, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(eqFadersRow, "HIGH", 1534, 0.0f, 1.0f, 2, true, 140);
-}
+    addSynthSlider(eqFadersRow, "LOW", 1530, 0.0f, 1.0f, 2, true, 180);
+    addSynthSlider(eqFadersRow, "L-MID", 1531, 0.0f, 1.0f, 2, true, 180);
+    addSynthSlider(eqFadersRow, "MID", 1532, 0.0f, 1.0f, 2, true, 180);
+    addSynthSlider(eqFadersRow, "H-MID", 1533, 0.0f, 1.0f, 2, true, 180);
+    addSynthSlider(eqFadersRow, "HIGH", 1534, 0.0f, 1.0f, 2, true, 180);
 
-void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    // =========================================================================
+    // ROW 2: FILTER (370px), AMP ENVELOPE (330px), FILTER ENVELOPE (330px) - Height 350px
+    // =========================================================================
+    lv_obj_t* row2 = lv_obj_create(tab);
+    lv_obj_set_size(row2, 1050, 350);
+    lv_obj_set_style_bg_opa(row2, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(row2, 0, 0);
+    lv_obj_set_style_pad_all(row2, 0, 0);
+    lv_obj_remove_flag(row2, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(row2, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(row2, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row2, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
-    lv_obj_set_style_pad_row(tab, 8, 0);
-
-    // Row 1: Filter Card
-    lv_obj_t* filterCard = lv_obj_create(tab);
-    lv_obj_set_size(filterCard, 760, 200);
+    // 2.1 Filter Card (370px)
+    lv_obj_t* filterCard = lv_obj_create(row2);
+    lv_obj_set_size(filterCard, 370, 350);
     lv_obj_set_style_bg_color(filterCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(filterCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(filterCard, 1, 0);
-    lv_obj_set_style_radius(filterCard, 10, 0);
+    lv_obj_set_style_radius(filterCard, 12, 0);
     lv_obj_set_style_pad_all(filterCard, 8, 0);
     lv_obj_remove_flag(filterCard, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -15952,62 +16078,49 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_align(filterTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* filterContent = lv_obj_create(filterCard);
-    lv_obj_set_size(filterContent, 740, 165);
+    lv_obj_set_size(filterContent, 350, 310);
     lv_obj_set_style_bg_opa(filterContent, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterContent, 0, 0);
     lv_obj_set_style_pad_all(filterContent, 0, 0);
     lv_obj_align(filterContent, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_remove_flag(filterContent, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(filterContent, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(filterContent, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(filterContent, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(filterContent, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Left side: Type Selector
     lv_obj_t* typeBox = lv_obj_create(filterContent);
-    lv_obj_set_size(typeBox, 220, 150);
+    lv_obj_set_size(typeBox, 350, 48);
     lv_obj_set_style_bg_opa(typeBox, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(typeBox, 0, 0);
     lv_obj_set_style_pad_all(typeBox, 0, 0);
     lv_obj_remove_flag(typeBox, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(typeBox, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(typeBox, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_flow(typeBox, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(typeBox, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthDropdown(typeBox, "FILTER MODE", 123, "LP (Lowpass)\nHP (Highpass)\nBP (Bandpass)", 0, false, 180);
+    addSynthDropdown(typeBox, "FILTER MODE", 123, "LP (Lowpass)\nHP (Highpass)\nBP (Bandpass)", 0, false, 200);
 
-    // Right side: Cutoff, Resonance, Env Amount Knobs
     lv_obj_t* filterKnobs = lv_obj_create(filterContent);
-    lv_obj_set_size(filterKnobs, 480, 150);
+    lv_obj_set_size(filterKnobs, 350, 240);
     lv_obj_set_style_bg_opa(filterKnobs, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterKnobs, 0, 0);
     lv_obj_set_style_pad_all(filterKnobs, 0, 0);
     lv_obj_remove_flag(filterKnobs, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(filterKnobs, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(filterKnobs, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(filterKnobs, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_flex_align(filterKnobs, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     addSynthKnob(filterKnobs, "CUTOFF", 112, 0.0f, 1.0f, 2, true);
     addSynthKnob(filterKnobs, "RESONANCE", 113, 0.0f, 1.0f, 2, true);
     addSynthKnob(filterKnobs, "ENV AMOUNT", 118, -1.0f, 1.0f, 2, false);
 
-    // Row 2: Twin Envelope Cards
-    lv_obj_t* envsRow = lv_obj_create(tab);
-    lv_obj_set_size(envsRow, 760, 235);
-    lv_obj_set_style_bg_opa(envsRow, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(envsRow, 0, 0);
-    lv_obj_set_style_pad_all(envsRow, 0, 0);
-    lv_obj_remove_flag(envsRow, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout(envsRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(envsRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(envsRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    // 2.1 Amp Envelope Card
-    lv_obj_t* ampCard = lv_obj_create(envsRow);
-    lv_obj_set_size(ampCard, 370, 235);
+    // 2.2 Amp Envelope Card (330px)
+    lv_obj_t* ampCard = lv_obj_create(row2);
+    lv_obj_set_size(ampCard, 330, 350);
     lv_obj_set_style_bg_color(ampCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(ampCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(ampCard, 1, 0);
-    lv_obj_set_style_radius(ampCard, 10, 0);
+    lv_obj_set_style_radius(ampCard, 12, 0);
     lv_obj_set_style_pad_all(ampCard, 8, 0);
     lv_obj_remove_flag(ampCard, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -16018,7 +16131,7 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_align(ampTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* ampRow = lv_obj_create(ampCard);
-    lv_obj_set_size(ampRow, 350, 195);
+    lv_obj_set_size(ampRow, 310, 310);
     lv_obj_set_style_bg_opa(ampRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(ampRow, 0, 0);
     lv_obj_set_style_pad_all(ampRow, 0, 0);
@@ -16028,18 +16141,18 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(ampRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(ampRow, "A", 100, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(ampRow, "D", 101, 0.0f, 4.0f, 2, false, 140);
-    addSynthSlider(ampRow, "S", 102, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(ampRow, "R", 103, 0.001f, 8.0f, 2, false, 140);
+    addSynthSlider(ampRow, "A", 100, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "D", 101, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "S", 102, 0.0f, 1.0f, 2, true, 230);
+    addSynthSlider(ampRow, "R", 103, 0.001f, 8.0f, 2, false, 230);
 
-    // 2.2 Filter Envelope Card
-    lv_obj_t* filterEnvCard = lv_obj_create(envsRow);
-    lv_obj_set_size(filterEnvCard, 370, 235);
+    // 2.3 Filter Envelope Card (330px)
+    lv_obj_t* filterEnvCard = lv_obj_create(row2);
+    lv_obj_set_size(filterEnvCard, 330, 350);
     lv_obj_set_style_bg_color(filterEnvCard, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(filterEnvCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(filterEnvCard, 1, 0);
-    lv_obj_set_style_radius(filterEnvCard, 10, 0);
+    lv_obj_set_style_radius(filterEnvCard, 12, 0);
     lv_obj_set_style_pad_all(filterEnvCard, 8, 0);
     lv_obj_remove_flag(filterEnvCard, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -16050,7 +16163,7 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_align(filterEnvTitle, LV_ALIGN_TOP_LEFT, 2, 0);
 
     lv_obj_t* filterEnvRow = lv_obj_create(filterEnvCard);
-    lv_obj_set_size(filterEnvRow, 350, 195);
+    lv_obj_set_size(filterEnvRow, 310, 310);
     lv_obj_set_style_bg_opa(filterEnvRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(filterEnvRow, 0, 0);
     lv_obj_set_style_pad_all(filterEnvRow, 0, 0);
@@ -16060,10 +16173,14 @@ void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(filterEnvRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(filterEnvRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(filterEnvRow, "A", 114, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(filterEnvRow, "D", 115, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(filterEnvRow, "S", 116, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(filterEnvRow, "R", 117, 0.001f, 8.0f, 2, false, 140);
+    addSynthSlider(filterEnvRow, "A", 114, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "D", 115, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "S", 116, 0.0f, 1.0f, 2, true, 230);
+    addSynthSlider(filterEnvRow, "R", 117, 0.001f, 8.0f, 2, false, 230);
+}
+
+void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamAudioInTab
 }
 
 void UIManager::audioInSourceDropdownEventCb(lv_event_t* e) {
@@ -16083,47 +16200,43 @@ void UIManager::audioInSourceDropdownEventCb(lv_event_t* e) {
 void UIManager::populateParamFmDrumTab1(lv_obj_t* tab) {
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(tab, 4, 0);
 
     addDrumVoiceStrip(tab, "KICK", 0);
     addDrumVoiceStrip(tab, "SNARE", 1);
     addDrumVoiceStrip(tab, "TOM", 2);
     addDrumVoiceStrip(tab, "HIHAT", 3);
-}
-
-void UIManager::populateParamFmDrumTab2(lv_obj_t* tab) {
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
-
     addDrumVoiceStrip(tab, "OHH", 4);
     addDrumVoiceStrip(tab, "CYMB", 5);
     addDrumVoiceStrip(tab, "PERC", 6);
     addDrumVoiceStrip(tab, "NOISE", 7);
 }
 
+void UIManager::populateParamFmDrumTab2(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamFmDrumTab1
+}
+
 void UIManager::addDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumIdx) {
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
     lv_obj_t* card = lv_obj_create(parent);
-    lv_obj_set_size(card, 175, 450);
+    lv_obj_set_size(card, 126, 640);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(card, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(card, 1, 0);
     lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_pad_all(card, 8, 0);
+    lv_obj_set_style_pad_all(card, 6, 0);
     lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_set_layout(card, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(card, 12, 0);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // Title
     lv_obj_t* title = lv_label_create(card);
     lv_label_set_text(title, name);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(title, trackColor, 0);
 
     // 4 Knobs (Pitch, Snap, Decay, Level)
     int baseParam = 200 + drumIdx * 10;
@@ -16141,47 +16254,43 @@ void UIManager::addDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumId
 void UIManager::populateParamAnalogDrumTab1(lv_obj_t* tab) {
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
+    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(tab, 4, 0);
 
     addAnalogDrumVoiceStrip(tab, "KICK", 0);
     addAnalogDrumVoiceStrip(tab, "SNARE", 1);
     addAnalogDrumVoiceStrip(tab, "CLAP", 2);
     addAnalogDrumVoiceStrip(tab, "HAT C", 3);
-}
-
-void UIManager::populateParamAnalogDrumTab2(lv_obj_t* tab) {
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 8, 0);
-
     addAnalogDrumVoiceStrip(tab, "HAT O", 4);
     addAnalogDrumVoiceStrip(tab, "CYMBAL", 5);
     addAnalogDrumVoiceStrip(tab, "PERC", 6);
     addAnalogDrumVoiceStrip(tab, "NOISE", 7);
 }
 
+void UIManager::populateParamAnalogDrumTab2(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamAnalogDrumTab1
+}
+
 void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumIdx) {
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
     lv_obj_t* card = lv_obj_create(parent);
-    lv_obj_set_size(card, 220, 450);
+    lv_obj_set_size(card, 126, 640);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(card, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(card, 1, 0);
     lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_pad_all(card, 8, 0);
+    lv_obj_set_style_pad_all(card, 6, 0);
     lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_set_layout(card, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(card, 10, 0);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // Title
     lv_obj_t* title = lv_label_create(card);
     lv_label_set_text(title, name);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(title, trackColor, 0);
 
     // 4 Knobs (or 3 for Hats)
     int baseParam = 600 + drumIdx * 10;
@@ -16200,7 +16309,7 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
         addMiniDrumKnob("SNAP", baseParam + 3);
         addMiniDrumKnob("TUNE", baseParam + 2);
         addMiniDrumKnob("GAIN", baseParam + 5);
-    } else if (drumIdx == 2) { // RIM: DCY (0), COL (1), TUNE (2), GAIN (5)
+    } else if (drumIdx == 2) { // RIM / CLAP: DCY (0), COL (1), TUNE (2), GAIN (5)
         addMiniDrumKnob("DCY", baseParam + 0);
         addMiniDrumKnob("COL", baseParam + 1);
         addMiniDrumKnob("TUNE", baseParam + 2);
@@ -16210,7 +16319,7 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
         addMiniDrumKnob("COL", baseParam + 1);
         addMiniDrumKnob("GAIN", baseParam + 5);
         
-        // Add a spacer to keep layouts perfectly aligned!
+        // Spacer to keep vertical balance
         lv_obj_t* spacer = lv_obj_create(card);
         lv_obj_set_size(spacer, 74, 95);
         lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
@@ -16220,6 +16329,21 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
         addMiniDrumKnob("DCY", baseParam + 0);
         addMiniDrumKnob("COL", baseParam + 1);
         addMiniDrumKnob("GAIN", baseParam + 5);
+    } else if (drumIdx == 6) { // PERC: DCY (0), TONE (1), TUNE (2), GAIN (5)
+        addMiniDrumKnob("DCY", baseParam + 0);
+        addMiniDrumKnob("TONE", baseParam + 1);
+        addMiniDrumKnob("TUNE", baseParam + 2);
+        addMiniDrumKnob("GAIN", baseParam + 5);
+    } else if (drumIdx == 7) { // NOISE: DCY (0), TONE (1), GAIN (5)
+        addMiniDrumKnob("DCY", baseParam + 0);
+        addMiniDrumKnob("TONE", baseParam + 1);
+        addMiniDrumKnob("GAIN", baseParam + 5);
+
+        // Spacer to keep vertical balance
+        lv_obj_t* spacer = lv_obj_create(card);
+        lv_obj_set_size(spacer, 74, 95);
+        lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(spacer, 0, 0);
     }
 }
 
@@ -16227,33 +16351,62 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(tab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(tab, 20, 0);
-    lv_obj_set_style_pad_row(tab, 20, 0);
+    lv_obj_set_style_pad_all(tab, 8, 0);
+    lv_obj_set_style_pad_row(tab, 12, 0);
 
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     auto& track = mEngine.getTracks()[mActiveTrack];
 
     mEngine.scanMidiDevices();
 
-    // TARGET DEVICE
-    lv_obj_t* targetRow = lv_obj_create(tab);
-    lv_obj_set_size(targetRow, 500, 50);
-    lv_obj_set_style_bg_color(targetRow, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_border_color(targetRow, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(targetRow, 1, 0);
-    lv_obj_set_style_radius(targetRow, 8, 0);
-    lv_obj_set_layout(targetRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(targetRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(targetRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(targetRow, 10, 0);
+    // =========================================================================
+    // TOP ROUTING CONTAINER (1050x95px)
+    // =========================================================================
+    lv_obj_t* routingCard = lv_obj_create(tab);
+    lv_obj_set_size(routingCard, 1050, 95);
+    lv_obj_set_style_bg_color(routingCard, lv_color_hex(0x161616), 0);
+    lv_obj_set_style_border_color(routingCard, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(routingCard, 1, 0);
+    lv_obj_set_style_radius(routingCard, 12, 0);
+    lv_obj_set_style_pad_all(routingCard, 8, 0);
+    lv_obj_remove_flag(routingCard, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t* targetLbl = lv_label_create(targetRow);
+    lv_obj_t* routingTitle = lv_label_create(routingCard);
+    lv_label_set_text(routingTitle, "MIDI ROUTING");
+    lv_obj_set_style_text_font(routingTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(routingTitle, trackColor, 0);
+    lv_obj_align(routingTitle, LV_ALIGN_TOP_LEFT, 2, 0);
+
+    lv_obj_t* routingRow = lv_obj_create(routingCard);
+    lv_obj_set_size(routingRow, 1030, 60);
+    lv_obj_set_style_bg_opa(routingRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(routingRow, 0, 0);
+    lv_obj_set_style_pad_all(routingRow, 0, 0);
+    lv_obj_align(routingRow, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_remove_flag(routingRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(routingRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(routingRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(routingRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // TARGET DEVICE ITEM
+    lv_obj_t* targetBox = lv_obj_create(routingRow);
+    lv_obj_set_size(targetBox, 330, 52);
+    lv_obj_set_style_bg_color(targetBox, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(targetBox, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(targetBox, 1, 0);
+    lv_obj_set_style_radius(targetBox, 8, 0);
+    lv_obj_set_layout(targetBox, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(targetBox, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(targetBox, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(targetBox, 8, 0);
+
+    lv_obj_t* targetLbl = lv_label_create(targetBox);
     lv_label_set_text(targetLbl, "Target Device");
     lv_obj_set_style_text_font(targetLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(targetLbl, lv_color_hex(0xFFFFFF), 0);
 
-    lv_obj_t* targetDd = lv_dropdown_create(targetRow);
-    lv_obj_set_size(targetDd, 300, 32);
+    lv_obj_t* targetDd = lv_dropdown_create(targetBox);
+    lv_obj_set_size(targetDd, 200, 32);
     lv_obj_set_style_text_font(targetDd, &lv_font_montserrat_12, 0);
     
     std::string deviceOptions = "ALL\n";
@@ -16263,13 +16416,11 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         }
     }
     if (!deviceOptions.empty()) deviceOptions.pop_back();
-    
     lv_dropdown_set_options(targetDd, deviceOptions.c_str());
     
-    // Find selected index by iterating the filtered list
     int selectedIdx = 0;
     if (track.targetMidiDevice != "ALL") {
-        int idx = 1; // "ALL" is 0
+        int idx = 1;
         for (size_t i = 0; i < mEngine.mMidiDevices.size(); ++i) {
             if (mEngine.mMidiDevices[i].isOutput) {
                 if (mEngine.mMidiDevices[i].name == track.targetMidiDevice) {
@@ -16298,25 +16449,25 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         std::cout << "MIDI Engine set target device: " << trk.targetMidiDevice << std::endl;
     }, LV_EVENT_VALUE_CHANGED, this);
 
-    // OUT CHANNEL
-    lv_obj_t* outRow = lv_obj_create(tab);
-    lv_obj_set_size(outRow, 500, 50);
-    lv_obj_set_style_bg_color(outRow, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_border_color(outRow, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(outRow, 1, 0);
-    lv_obj_set_style_radius(outRow, 8, 0);
-    lv_obj_set_layout(outRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(outRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(outRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(outRow, 10, 0);
+    // OUT CHANNEL ITEM
+    lv_obj_t* outBox = lv_obj_create(routingRow);
+    lv_obj_set_size(outBox, 330, 52);
+    lv_obj_set_style_bg_color(outBox, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(outBox, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(outBox, 1, 0);
+    lv_obj_set_style_radius(outBox, 8, 0);
+    lv_obj_set_layout(outBox, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(outBox, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(outBox, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(outBox, 8, 0);
 
-    lv_obj_t* outLbl = lv_label_create(outRow);
+    lv_obj_t* outLbl = lv_label_create(outBox);
     lv_label_set_text(outLbl, "Out Channel");
     lv_obj_set_style_text_font(outLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(outLbl, lv_color_hex(0xFFFFFF), 0);
 
-    lv_obj_t* outDd = lv_dropdown_create(outRow);
-    lv_obj_set_size(outDd, 300, 32);
+    lv_obj_t* outDd = lv_dropdown_create(outBox);
+    lv_obj_set_size(outDd, 200, 32);
     lv_obj_set_style_text_font(outDd, &lv_font_montserrat_12, 0);
     
     std::string chanOptions = "OFF\n";
@@ -16334,25 +16485,25 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         ui->mEngine.setParameter(ui->mActiveTrack, 901, (float)selected);
     }, LV_EVENT_VALUE_CHANGED, this);
 
-    // IN CHANNEL
-    lv_obj_t* inRow = lv_obj_create(tab);
-    lv_obj_set_size(inRow, 500, 50);
-    lv_obj_set_style_bg_color(inRow, lv_color_hex(0x1A1A1A), 0);
-    lv_obj_set_style_border_color(inRow, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(inRow, 1, 0);
-    lv_obj_set_style_radius(inRow, 8, 0);
-    lv_obj_set_layout(inRow, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(inRow, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(inRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_all(inRow, 10, 0);
+    // IN CHANNEL ITEM
+    lv_obj_t* inBox = lv_obj_create(routingRow);
+    lv_obj_set_size(inBox, 330, 52);
+    lv_obj_set_style_bg_color(inBox, lv_color_hex(0x1E1E1E), 0);
+    lv_obj_set_style_border_color(inBox, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(inBox, 1, 0);
+    lv_obj_set_style_radius(inBox, 8, 0);
+    lv_obj_set_layout(inBox, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(inBox, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(inBox, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_all(inBox, 8, 0);
 
-    lv_obj_t* inLbl = lv_label_create(inRow);
+    lv_obj_t* inLbl = lv_label_create(inBox);
     lv_label_set_text(inLbl, "In Channel");
     lv_obj_set_style_text_font(inLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(inLbl, lv_color_hex(0xFFFFFF), 0);
 
-    lv_obj_t* inDd = lv_dropdown_create(inRow);
-    lv_obj_set_size(inDd, 300, 32);
+    lv_obj_t* inDd = lv_dropdown_create(inBox);
+    lv_obj_set_size(inDd, 200, 32);
     lv_obj_set_style_text_font(inDd, &lv_font_montserrat_12, 0);
     
     std::string inChanOptions = "NONE\n";
@@ -16369,22 +16520,36 @@ void UIManager::populateParamMidiRoutingTab(lv_obj_t* tab) {
         int selected = lv_dropdown_get_selected(dd);
         ui->mEngine.setParameter(ui->mActiveTrack, 900, (float)selected);
     }, LV_EVENT_VALUE_CHANGED, this);
-}
 
-void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
-    lv_obj_t* listContainer = lv_obj_create(tab);
-    lv_obj_set_size(listContainer, 750, 400);
-    lv_obj_align(listContainer, LV_ALIGN_TOP_MID, 0, 0);
+    // =========================================================================
+    // BOTTOM CONTROLLER MAPPING CARD & SCROLLABLE LIST (1050x535px)
+    // =========================================================================
+    lv_obj_t* mappingCard = lv_obj_create(tab);
+    lv_obj_set_size(mappingCard, 1050, 535);
+    lv_obj_set_style_bg_color(mappingCard, lv_color_hex(0x161616), 0);
+    lv_obj_set_style_border_color(mappingCard, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(mappingCard, 1, 0);
+    lv_obj_set_style_radius(mappingCard, 12, 0);
+    lv_obj_set_style_pad_all(mappingCard, 8, 0);
+    lv_obj_remove_flag(mappingCard, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* mapTitle = lv_label_create(mappingCard);
+    lv_label_set_text(mapTitle, "CONTROLLER MAPPING (VIRTUAL CONTROLS)");
+    lv_obj_set_style_text_font(mapTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mapTitle, trackColor, 0);
+    lv_obj_align(mapTitle, LV_ALIGN_TOP_LEFT, 2, 0);
+
+    lv_obj_t* listContainer = lv_obj_create(mappingCard);
+    lv_obj_set_size(listContainer, 1030, 490);
+    lv_obj_align(listContainer, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_style_bg_opa(listContainer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(listContainer, 0, 0);
-    lv_obj_set_style_pad_all(listContainer, 10, 0);
+    lv_obj_set_style_pad_all(listContainer, 6, 0);
     lv_obj_set_layout(listContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(listContainer, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(listContainer, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(listContainer, 10, 0);
-
-    lv_color_t trackColor = getTrackColor(mActiveTrack);
-    auto& track = mEngine.getTracks()[mActiveTrack];
+    lv_obj_set_style_pad_row(listContainer, 8, 0);
+    lv_obj_add_flag(listContainer, LV_OBJ_FLAG_SCROLLABLE);
 
     std::string ccOptions = "";
     for (int i = 0; i <= 127; ++i) {
@@ -16394,7 +16559,7 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
 
     auto createMappingRow = [&](const std::string& labelText, int parameterId, bool isKnob, int index) {
         lv_obj_t* row = lv_obj_create(listContainer);
-        lv_obj_set_size(row, 700, 48);
+        lv_obj_set_size(row, 1000, 48);
         lv_obj_set_style_bg_color(row, lv_color_hex(0x1E1E1E), 0);
         lv_obj_set_style_border_color(row, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_width(row, 1, 0);
@@ -16410,10 +16575,10 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
         lv_label_set_text(lbl, labelText.c_str());
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_set_width(lbl, 80);
+        lv_obj_set_width(lbl, 120);
 
         lv_obj_t* slider = lv_slider_create(row);
-        lv_obj_set_size(slider, 180, 10);
+        lv_obj_set_size(slider, 320, 10);
         lv_slider_set_range(slider, 0, 127);
         lv_obj_set_style_bg_color(slider, lv_color_hex(0x333333), LV_PART_MAIN);
         lv_obj_set_style_bg_color(slider, trackColor, LV_PART_INDICATOR);
@@ -16436,7 +16601,7 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
         }, LV_EVENT_DELETE, sud);
 
         lv_obj_t* ccDd = lv_dropdown_create(row);
-        lv_obj_set_size(ccDd, 120, 30);
+        lv_obj_set_size(ccDd, 140, 32);
         lv_obj_set_style_text_font(ccDd, &lv_font_montserrat_10, 0);
         lv_dropdown_set_options(ccDd, ccOptions.c_str());
         
@@ -16467,7 +16632,7 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
         }, LV_EVENT_DELETE, dud);
 
         lv_obj_t* ccMappingLbl = lv_label_create(row);
-        lv_obj_set_width(ccMappingLbl, 130);
+        lv_obj_set_width(ccMappingLbl, 180);
         
         int hwCc = -1;
         int hwChan = -1;
@@ -16498,7 +16663,7 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
         lv_obj_set_style_text_font(ccMappingLbl, &lv_font_montserrat_10, 0);
 
         lv_obj_t* learnBtn = lv_button_create(row);
-        lv_obj_set_size(learnBtn, 80, 30);
+        lv_obj_set_size(learnBtn, 100, 32);
         
         bool isThisLearning = (mMidiLearnActive && mMidiLearnTargetParamId == parameterId);
         if (isThisLearning) {
@@ -16548,6 +16713,10 @@ void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
     for (int i = 0; i < mSettingsSliderCount; ++i) {
         createMappingRow("V-FADER " + std::to_string(i + 1), 2416 + i, false, i);
     }
+}
+
+void UIManager::populateParamMidiMappingTab(lv_obj_t* tab) {
+    // Deprecated: merged into populateParamMidiRoutingTab
 }
 
 void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
@@ -16955,6 +17124,14 @@ void UIManager::saveSettings(const std::string& path) {
     for (int i = 0; i < 24; ++i) file << mSettingsPadDrumAssign[i] << (i < 23 ? " " : "");
     file << "\n";
 
+    file << "DRUM_ROW_TRACK:" << mDrumRowTargetTrack << "\n";
+    file << "DRUM_ROW_NOTES:";
+    for (int i = 0; i < 8; ++i) file << mDrumRowNotes[i] << (i < 7 ? " " : "");
+    file << "\n";
+    file << "DRUM_ROW_RATCHETS:";
+    for (int i = 0; i < 8; ++i) file << mDrumRowRatchets[i] << (i < 7 ? " " : "");
+    file << "\n";
+
     for (int i = 0; i < 24; ++i) {
         file << "PAD_CHORD:" << i << ":" << mSettingsPadChordCount[i];
         for (int n = 0; n < mSettingsPadChordCount[i]; ++n) {
@@ -17059,6 +17236,18 @@ void UIManager::loadSettings(const std::string& path) {
                 std::stringstream ss(val);
                 for (int i = 0; i < 24; ++i) {
                     if (ss >> mSettingsPadDrumAssign[i]) {}
+                }
+            } else if (key == "DRUM_ROW_TRACK") {
+                mDrumRowTargetTrack = std::stoi(val);
+            } else if (key == "DRUM_ROW_NOTES") {
+                std::stringstream ss(val);
+                for (int i = 0; i < 8; ++i) {
+                    if (ss >> mDrumRowNotes[i]) {}
+                }
+            } else if (key == "DRUM_ROW_RATCHETS") {
+                std::stringstream ss(val);
+                for (int i = 0; i < 8; ++i) {
+                    if (ss >> mDrumRowRatchets[i]) {}
                 }
             } else if (key == "PAD_CHORD") {
                 size_t p2 = val.find(':');
@@ -17390,7 +17579,7 @@ void UIManager::openBtPairModal() {
     }
 
     lv_obj_t* overlay = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(overlay, 0, 0);
     lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(overlay, LV_OPA_70, 0);
@@ -17521,8 +17710,8 @@ void UIManager::startBluetoothScan() {
         std::system("bluetoothctl agent on 2>/dev/null");
         std::system("bluetoothctl default-agent 2>/dev/null");
 
-        // Run scan with line-buffering to ensure output is written to file before process is terminated
-        std::system("timeout 10 stdbuf -oL bluetoothctl scan on > /tmp/bt_scan.log 2>&1");
+        // Run scan inside the interactive shell by holding stdin open for 10 seconds
+        std::system("(echo \"scan on\"; sleep 10) | stdbuf -oL bluetoothctl > /tmp/bt_scan.log 2>&1");
 
         std::vector<BtDevice> foundDevices;
         
@@ -17617,7 +17806,7 @@ void UIManager::openWizard(int type) {
 
     // Full screen dimmed background
     mWizardModal = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(mWizardModal, 1024, 600);
+    lv_obj_set_size(mWizardModal, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_set_pos(mWizardModal, 0, 0);
     lv_obj_set_style_bg_color(mWizardModal, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(mWizardModal, LV_OPA_80, 0);
@@ -17796,7 +17985,7 @@ void UIManager::openConsoleModal() {
     if (mConsoleModal) return;
     
     mConsoleModal = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(mConsoleModal, 1024, 600);
+    lv_obj_set_size(mConsoleModal, SCREEN_WIDTH, SCREEN_HEIGHT);
     lv_obj_center(mConsoleModal);
     lv_obj_set_style_bg_color(mConsoleModal, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(mConsoleModal, 0, 0);
@@ -17930,3 +18119,624 @@ void UIManager::consoleCloseCb(lv_event_t* e) {
         ui->mConsoleKb = nullptr;
     }
 }
+
+// =========================================================================
+// --- Play Screen (Expansive Multitouch Pads + X/Y Modulation + Chords) ---
+// =========================================================================
+
+void UIManager::populatePlayScreen() {
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    // Root container filling the full 1280x800 center area
+    lv_obj_t* playRoot = lv_obj_create(mCenterArea);
+    lv_obj_set_size(playRoot, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_color(playRoot, lv_color_hex(0x121212), 0);
+    lv_obj_set_style_border_width(playRoot, 0, 0);
+    lv_obj_set_style_pad_all(playRoot, 10, 0);
+    lv_obj_remove_flag(playRoot, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(playRoot, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(playRoot, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(playRoot, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(playRoot, 8, 0);
+
+    // -------------------------------------------------------------------------
+    // 1. Top Performance Control Bar (Root Key, Scale, Chords, Octave, X/Y Mod)
+    // -------------------------------------------------------------------------
+    lv_obj_t* topBar = lv_obj_create(playRoot);
+    lv_obj_set_size(topBar, lv_pct(100), 50);
+    lv_obj_set_style_bg_color(topBar, lv_color_hex(0x1A1A1A), 0);
+    lv_obj_set_style_border_color(topBar, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(topBar, 1, 0);
+    lv_obj_set_style_radius(topBar, 10, 0);
+    lv_obj_set_style_pad_hor(topBar, 8, 0);
+    lv_obj_set_style_pad_ver(topBar, 4, 0);
+    lv_obj_remove_flag(topBar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(topBar, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(topBar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(topBar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(topBar, 14, 0);
+
+    // Left Group: Root & Scale
+    lv_obj_t* scaleGrp = lv_obj_create(topBar);
+    lv_obj_set_size(scaleGrp, LV_SIZE_CONTENT, 40);
+    lv_obj_set_style_bg_opa(scaleGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(scaleGrp, 0, 0);
+    lv_obj_set_style_pad_all(scaleGrp, 0, 0);
+    lv_obj_set_layout(scaleGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(scaleGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(scaleGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(scaleGrp, 6, 0);
+
+    lv_obj_t* rootLbl = lv_label_create(scaleGrp);
+    lv_label_set_text(rootLbl, "ROOT:");
+    lv_obj_set_style_text_font(rootLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(rootLbl, lv_color_hex(0x888888), 0);
+
+    mPlayRootDd = lv_dropdown_create(scaleGrp);
+    lv_dropdown_set_options(mPlayRootDd, "C\nC#\nD\nD#\nE\nF\nF#\nG\nG#\nA\nA#\nB");
+    lv_dropdown_set_selected(mPlayRootDd, mPlaySelectedRoot);
+    lv_obj_set_size(mPlayRootDd, 65, 34);
+    lv_obj_set_style_text_font(mPlayRootDd, &lv_font_montserrat_12, 0);
+    lv_obj_add_event_cb(mPlayRootDd, playRootDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    lv_obj_t* scaleLbl = lv_label_create(scaleGrp);
+    lv_label_set_text(scaleLbl, "SCALE:");
+    lv_obj_set_style_text_font(scaleLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(scaleLbl, lv_color_hex(0x888888), 0);
+
+    mPlayScaleDd = lv_dropdown_create(scaleGrp);
+    lv_dropdown_set_options(mPlayScaleDd, 
+        "Chromatic\nMajor\nNatural Minor\nHarmonic Minor\nMelodic Minor\nDorian\nPhrygian\nLydian\nMixolydian\nLocrian\n"
+        "Phrygian Dom\nLydian Dom\nPentatonic Maj\nPentatonic Min\nBlues\nBlues Maj\nWhole Tone\nHirajoshi\nIn-Sen\nYo\nIwato");
+    lv_dropdown_set_selected(mPlayScaleDd, mPlaySelectedScaleIdx);
+    lv_obj_set_size(mPlayScaleDd, 65, 34);
+    lv_obj_set_style_text_font(mPlayScaleDd, &lv_font_montserrat_10, 0);
+    lv_obj_add_event_cb(mPlayScaleDd, playScaleDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Center Group: Chord Mode & Octave (brought close to Scale group)
+    lv_obj_t* chordGrp = lv_obj_create(topBar);
+    lv_obj_set_size(chordGrp, LV_SIZE_CONTENT, 40);
+    lv_obj_set_style_bg_opa(chordGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(chordGrp, 0, 0);
+    lv_obj_set_style_pad_all(chordGrp, 0, 0);
+    lv_obj_set_layout(chordGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(chordGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(chordGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(chordGrp, 6, 0);
+
+    lv_obj_t* chordLbl = lv_label_create(chordGrp);
+    lv_label_set_text(chordLbl, "VOICE:");
+    lv_obj_set_style_text_font(chordLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(chordLbl, lv_color_hex(0x888888), 0);
+
+    mPlayChordDd = lv_dropdown_create(chordGrp);
+    lv_dropdown_set_options(mPlayChordDd, "Off (Single)\nTriad\n7th\n9th\nSus4");
+    lv_dropdown_set_selected(mPlayChordDd, mPlayChordType);
+    lv_obj_set_size(mPlayChordDd, 65, 34);
+    lv_obj_set_style_text_font(mPlayChordDd, &lv_font_montserrat_10, 0);
+    lv_obj_add_event_cb(mPlayChordDd, playChordDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Octave - / +
+    lv_obj_t* octDownBtn = lv_button_create(chordGrp);
+    lv_obj_set_size(octDownBtn, 32, 34);
+    lv_obj_set_style_bg_color(octDownBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_user_data(octDownBtn, (void*)(intptr_t)-1);
+    lv_obj_add_event_cb(octDownBtn, playOctaveBtnEventCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* octDownLbl = lv_label_create(octDownBtn);
+    lv_label_set_text(octDownLbl, "-");
+    lv_obj_center(octDownLbl);
+
+    mPlayOctaveLbl = lv_label_create(chordGrp);
+    lv_label_set_text_fmt(mPlayOctaveLbl, "OCT %s%d", (mPlayOctaveOffset >= 0 ? "+" : ""), mPlayOctaveOffset);
+    lv_obj_set_style_text_font(mPlayOctaveLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mPlayOctaveLbl, trackColor, 0);
+
+    lv_obj_t* octUpBtn = lv_button_create(chordGrp);
+    lv_obj_set_size(octUpBtn, 32, 34);
+    lv_obj_set_style_bg_color(octUpBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_user_data(octUpBtn, (void*)(intptr_t)1);
+    lv_obj_add_event_cb(octUpBtn, playOctaveBtnEventCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* octUpLbl = lv_label_create(octUpBtn);
+    lv_label_set_text(octUpLbl, "+");
+    lv_obj_center(octUpLbl);
+
+    // Right Group: X/Y Touch Modulation Assignment & Pad Grid Sizing
+    lv_obj_t* modGrp = lv_obj_create(topBar);
+    lv_obj_set_size(modGrp, LV_SIZE_CONTENT, 42);
+    lv_obj_set_style_bg_opa(modGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(modGrp, 0, 0);
+    lv_obj_set_style_pad_all(modGrp, 0, 0);
+    lv_obj_set_layout(modGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(modGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(modGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(modGrp, 8, 0);
+
+    // X Intensity Knob (Attenuates X modulation depth)
+    lv_obj_t* xIntGrp = lv_obj_create(modGrp);
+    lv_obj_set_size(xIntGrp, LV_SIZE_CONTENT, 42);
+    lv_obj_set_style_bg_opa(xIntGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(xIntGrp, 0, 0);
+    lv_obj_set_style_pad_all(xIntGrp, 0, 0);
+    lv_obj_set_layout(xIntGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(xIntGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(xIntGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(xIntGrp, 2, 0);
+
+    // Vertical label container for "X" and "INT" stacked
+    lv_obj_t* xIntLblGrp = lv_obj_create(xIntGrp);
+    lv_obj_set_size(xIntLblGrp, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(xIntLblGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(xIntLblGrp, 0, 0);
+    lv_obj_set_style_pad_all(xIntLblGrp, 0, 0);
+    lv_obj_set_layout(xIntLblGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(xIntLblGrp, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(xIntLblGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(xIntLblGrp, 0, 0);
+
+    lv_obj_t* xIntLbl1 = lv_label_create(xIntLblGrp);
+    lv_label_set_text(xIntLbl1, "X");
+    lv_obj_set_style_text_font(xIntLbl1, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(xIntLbl1, lv_color_hex(0x00FFFF), 0);
+
+    lv_obj_t* xIntLbl2 = lv_label_create(xIntLblGrp);
+    lv_label_set_text(xIntLbl2, "INT");
+    lv_obj_set_style_text_font(xIntLbl2, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(xIntLbl2, lv_color_hex(0x00FFFF), 0);
+
+    mPlayModXIntensityArc = lv_arc_create(xIntGrp);
+    lv_obj_set_size(mPlayModXIntensityArc, 32, 32);
+    lv_arc_set_range(mPlayModXIntensityArc, 0, 100);
+    lv_arc_set_value(mPlayModXIntensityArc, (int)(mPlayModXIntensity * 100.0f));
+    lv_obj_set_style_arc_color(mPlayModXIntensityArc, lv_color_hex(0x00FFFF), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(mPlayModXIntensityArc, 3, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(mPlayModXIntensityArc, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(mPlayModXIntensityArc, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_border_width(mPlayModXIntensityArc, 0, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(mPlayModXIntensityArc, 0, LV_PART_KNOB);
+    lv_obj_remove_flag(mPlayModXIntensityArc, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* xIntValLbl = lv_label_create(mPlayModXIntensityArc);
+    lv_label_set_text_fmt(xIntValLbl, "%d", (int)(mPlayModXIntensity * 100.0f));
+    lv_obj_set_style_text_font(xIntValLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(xIntValLbl, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_center(xIntValLbl);
+    lv_obj_set_user_data(mPlayModXIntensityArc, xIntValLbl);
+    lv_obj_add_event_cb(mPlayModXIntensityArc, playModXIntensityArcEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Y Intensity Knob (Attenuates Y modulation depth)
+    lv_obj_t* yIntGrp = lv_obj_create(modGrp);
+    lv_obj_set_size(yIntGrp, LV_SIZE_CONTENT, 42);
+    lv_obj_set_style_bg_opa(yIntGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(yIntGrp, 0, 0);
+    lv_obj_set_style_pad_all(yIntGrp, 0, 0);
+    lv_obj_set_layout(yIntGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(yIntGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(yIntGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(yIntGrp, 2, 0);
+
+    // Vertical label container for "Y" and "INT" stacked
+    lv_obj_t* yIntLblGrp = lv_obj_create(yIntGrp);
+    lv_obj_set_size(yIntLblGrp, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(yIntLblGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(yIntLblGrp, 0, 0);
+    lv_obj_set_style_pad_all(yIntLblGrp, 0, 0);
+    lv_obj_set_layout(yIntLblGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(yIntLblGrp, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(yIntLblGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(yIntLblGrp, 0, 0);
+
+    lv_obj_t* yIntLbl1 = lv_label_create(yIntLblGrp);
+    lv_label_set_text(yIntLbl1, "Y");
+    lv_obj_set_style_text_font(yIntLbl1, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(yIntLbl1, lv_color_hex(0xFF4081), 0);
+
+    lv_obj_t* yIntLbl2 = lv_label_create(yIntLblGrp);
+    lv_label_set_text(yIntLbl2, "INT");
+    lv_obj_set_style_text_font(yIntLbl2, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(yIntLbl2, lv_color_hex(0xFF4081), 0);
+
+    mPlayModYIntensityArc = lv_arc_create(yIntGrp);
+    lv_obj_set_size(mPlayModYIntensityArc, 32, 32);
+    lv_arc_set_range(mPlayModYIntensityArc, 0, 100);
+    lv_arc_set_value(mPlayModYIntensityArc, (int)(mPlayModYIntensity * 100.0f));
+    lv_obj_set_style_arc_color(mPlayModYIntensityArc, lv_color_hex(0xFF4081), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(mPlayModYIntensityArc, 3, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(mPlayModYIntensityArc, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(mPlayModYIntensityArc, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_border_width(mPlayModYIntensityArc, 0, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(mPlayModYIntensityArc, 0, LV_PART_KNOB);
+    lv_obj_remove_flag(mPlayModYIntensityArc, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* yIntValLbl = lv_label_create(mPlayModYIntensityArc);
+    lv_label_set_text_fmt(yIntValLbl, "%d", (int)(mPlayModYIntensity * 100.0f));
+    lv_obj_set_style_text_font(yIntValLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(yIntValLbl, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_center(yIntValLbl);
+    lv_obj_set_user_data(mPlayModYIntensityArc, yIntValLbl);
+    lv_obj_add_event_cb(mPlayModYIntensityArc, playModYIntensityArcEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // X MOD button: opens Loom's full Modulation Destination Picker Modal
+    mPlayModXDestBtn = lv_button_create(modGrp);
+    lv_obj_set_size(mPlayModXDestBtn, 100, 34);
+    lv_obj_set_style_bg_color(mPlayModXDestBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(mPlayModXDestBtn, lv_color_hex(0x00FFFF), 0);
+    lv_obj_set_style_border_width(mPlayModXDestBtn, 1, 0);
+    lv_obj_set_style_radius(mPlayModXDestBtn, 6, 0);
+    mPlayModXDestLbl = lv_label_create(mPlayModXDestBtn);
+    std::string xName = getCompactDestName(mPlayModXTrack, mPlayModXDest, &mEngine);
+    lv_label_set_text_fmt(mPlayModXDestLbl, "X: %s", xName.c_str());
+    lv_obj_set_style_text_font(mPlayModXDestLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mPlayModXDestLbl, lv_color_hex(0x00FFFF), 0);
+    lv_obj_center(mPlayModXDestLbl);
+    ModDestModalData* xClickData = new ModDestModalData{this, 4, 0, 0};
+    lv_obj_add_event_cb(mPlayModXDestBtn, openModDestModalEventCb, LV_EVENT_CLICKED, xClickData);
+    auto xFreeCb = [](lv_event_t* e) {
+        ModDestModalData* d = (ModDestModalData*)lv_event_get_user_data(e);
+        delete d;
+    };
+    lv_obj_add_event_cb(mPlayModXDestBtn, xFreeCb, LV_EVENT_DELETE, xClickData);
+
+    // Y MOD button: opens Loom's full Modulation Destination Picker Modal
+    mPlayModYDestBtn = lv_button_create(modGrp);
+    lv_obj_set_size(mPlayModYDestBtn, 100, 34);
+    lv_obj_set_style_bg_color(mPlayModYDestBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(mPlayModYDestBtn, lv_color_hex(0xFF4081), 0);
+    lv_obj_set_style_border_width(mPlayModYDestBtn, 1, 0);
+    lv_obj_set_style_radius(mPlayModYDestBtn, 6, 0);
+    mPlayModYDestLbl = lv_label_create(mPlayModYDestBtn);
+    std::string yName = getCompactDestName(mPlayModYTrack, mPlayModYDest, &mEngine);
+    lv_label_set_text_fmt(mPlayModYDestLbl, "Y: %s", yName.c_str());
+    lv_obj_set_style_text_font(mPlayModYDestLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mPlayModYDestLbl, lv_color_hex(0xFF4081), 0);
+    lv_obj_center(mPlayModYDestLbl);
+    ModDestModalData* yClickData = new ModDestModalData{this, 5, 0, 0};
+    lv_obj_add_event_cb(mPlayModYDestBtn, openModDestModalEventCb, LV_EVENT_CLICKED, yClickData);
+    auto yFreeCb = [](lv_event_t* e) {
+        ModDestModalData* d = (ModDestModalData*)lv_event_get_user_data(e);
+        delete d;
+    };
+    lv_obj_add_event_cb(mPlayModYDestBtn, yFreeCb, LV_EVENT_DELETE, yClickData);
+
+    // Toggle Pad Density (16 Large vs 24 Squares vs 40 Dense)
+    mPlayPadCountBtn = lv_button_create(modGrp);
+    lv_obj_set_size(mPlayPadCountBtn, 44, 34);
+    lv_obj_set_style_bg_color(mPlayPadCountBtn, trackColor, 0);
+    lv_obj_set_style_radius(mPlayPadCountBtn, 6, 0);
+    lv_obj_t* padCountLbl = lv_label_create(mPlayPadCountBtn);
+    const char* countText = (mPlayPadCount == 16) ? "16" : ((mPlayPadCount == 24) ? "24" : "40");
+    lv_label_set_text(padCountLbl, countText);
+    lv_obj_set_style_text_font(padCountLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(padCountLbl);
+    lv_obj_add_event_cb(mPlayPadCountBtn, playPadCountToggleEventCb, LV_EVENT_CLICKED, this);
+
+    // -------------------------------------------------------------------------
+    // 2. Maximized Pad Performance Grid Area (~720px height remaining)
+    // -------------------------------------------------------------------------
+    mPlayPadGrid = lv_obj_create(playRoot);
+    lv_obj_set_size(mPlayPadGrid, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_opa(mPlayPadGrid, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mPlayPadGrid, 0, 0);
+    lv_obj_set_style_pad_all(mPlayPadGrid, 4, 0);
+    lv_obj_remove_flag(mPlayPadGrid, LV_OBJ_FLAG_SCROLLABLE);
+
+    rebuildPlayPadGrid();
+}
+
+void UIManager::rebuildPlayPadGrid() {
+    if (!mPlayPadGrid) return;
+    lv_obj_clean(mPlayPadGrid);
+
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+    
+    // Determine grid columns and rows based on density mode
+    int cols = 4;
+    int rows = 4;
+    if (mPlayPadCount == 24) {
+        cols = 6;
+        rows = 4;
+    } else if (mPlayPadCount == 40) {
+        cols = 8;
+        rows = 5;
+    }
+    int totalPads = cols * rows;
+
+    // Available center area inside mPlayPadGrid: ~1070px width x ~710px height
+    const int availW = 1060;
+    const int availH = 700;
+
+    int gapX = 10;
+    int gapY = 10;
+    int padSize = 0;
+
+    if (mPlayPadCount == 16) {
+        // 4x4 layout: square pads with generous separation
+        padSize = 160;
+        gapX = 24;
+        gapY = 16;
+    } else if (mPlayPadCount == 24) {
+        // 6x4 layout: square pads
+        padSize = 155;
+        gapX = 14;
+        gapY = 16;
+    } else { // 40 pads (8x5)
+        // Square pads with comfortable spacing across 5 rows
+        padSize = 120;
+        gapX = 10;
+        gapY = 12;
+    }
+
+    int padW = padSize;
+    int padH = padSize;
+
+    // Center grid in available area to prevent edge/right border cutoffs
+    int totalGridW = cols * padW + (cols - 1) * gapX;
+    int totalGridH = rows * padH + (rows - 1) * gapY;
+    int startOffsetX = std::max(0, (availW - totalGridW) / 2);
+    int startOffsetY = std::max(0, (availH - totalGridH) / 2);
+
+    // Build Scale table intervals
+    static const int kPlayScaleIntervals[21][12] = {
+        {0,1,2,3,4,5,6,7,8,9,10,11},   // Chromatic
+        {0,2,4,5,7,9,11,-1,-1,-1,-1,-1}, // Major
+        {0,2,3,5,7,8,10,-1,-1,-1,-1,-1}, // Natural Minor
+        {0,2,3,5,7,8,11,-1,-1,-1,-1,-1}, // Harmonic Minor
+        {0,2,3,5,7,9,11,-1,-1,-1,-1,-1}, // Melodic Minor
+        {0,2,3,5,7,9,10,-1,-1,-1,-1,-1}, // Dorian
+        {0,1,3,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian
+        {0,2,4,6,7,9,11,-1,-1,-1,-1,-1}, // Lydian
+        {0,2,4,5,7,9,10,-1,-1,-1,-1,-1}, // Mixolydian
+        {0,1,3,5,6,8,10,-1,-1,-1,-1,-1}, // Locrian
+        {0,1,4,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian Dom
+        {0,2,4,6,7,9,10,-1,-1,-1,-1,-1}, // Lydian Dom
+        {0,2,4,7,9,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Maj
+        {0,3,5,7,10,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Min
+        {0,3,5,6,7,10,-1,-1,-1,-1,-1,-1},// Blues
+        {0,2,3,4,7,9,-1,-1,-1,-1,-1,-1}, // Blues Maj
+        {0,2,4,6,8,10,-1,-1,-1,-1,-1,-1},// Whole Tone
+        {0,2,3,7,8,-1,-1,-1,-1,-1,-1,-1},// Hirajoshi
+        {0,1,5,7,10,-1,-1,-1,-1,-1,-1,-1},// In-Sen
+        {0,2,5,7,9,-1,-1,-1,-1,-1,-1,-1},// Yo
+        {0,1,5,6,10,-1,-1,-1,-1,-1,-1,-1} // Iwato
+    };
+
+    std::vector<int> intervals;
+    int scaleIdx = (mPlaySelectedScaleIdx >= 0 && mPlaySelectedScaleIdx < 21) ? mPlaySelectedScaleIdx : 1;
+    const int* row = kPlayScaleIntervals[scaleIdx];
+    for (int i = 0; i < 12 && row[i] >= 0; ++i) intervals.push_back(row[i]);
+    if (intervals.empty()) intervals = {0,2,4,5,7,9,11};
+
+    int baseNote = 48 + mPlaySelectedRoot + mPlayOctaveOffset * 12;
+
+    for (int i = 0; i < totalPads; ++i) {
+        int r = rows - 1 - (i / cols); // Bottom to top like standard MPC/launchpad layout
+        int c = i % cols;
+        int x = startOffsetX + c * (padW + gapX);
+        int y = startOffsetY + r * (padH + gapY);
+
+        int octShift = i / (int)intervals.size();
+        int degIdx = i % (int)intervals.size();
+        int note = baseNote + octShift * 12 + intervals[degIdx];
+        if (note < 0) note = 0;
+        if (note > 127) note = 127;
+
+        bool isRoot = ((note % 12) == mPlaySelectedRoot);
+
+        lv_obj_t* pad = lv_obj_create(mPlayPadGrid);
+        lv_obj_set_size(pad, padW, padH);
+        lv_obj_set_pos(pad, x, y);
+        lv_obj_set_style_bg_color(pad, isRoot ? trackColor : lv_color_hex(0x1F1F1F), 0);
+        lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
+        lv_obj_set_style_border_color(pad, isRoot ? trackColor : lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
+        lv_obj_set_style_radius(pad, 12, 0);
+        lv_obj_remove_flag(pad, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(pad, LV_OBJ_FLAG_CLICKABLE);
+
+        // Store note value in user_data
+        lv_obj_set_user_data(pad, (void*)(intptr_t)note);
+
+        // Subdued crosshair line representing X/Y center
+        lv_obj_t* xLine = lv_obj_create(pad);
+        lv_obj_set_size(xLine, 1, padH - 24);
+        lv_obj_center(xLine);
+        lv_obj_set_style_bg_color(xLine, lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(xLine, 0, 0);
+        lv_obj_remove_flag(xLine, LV_OBJ_FLAG_CLICKABLE);
+
+        lv_obj_t* yLine = lv_obj_create(pad);
+        lv_obj_set_size(yLine, padW - 24, 1);
+        lv_obj_center(yLine);
+        lv_obj_set_style_bg_color(yLine, lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(yLine, 0, 0);
+        lv_obj_remove_flag(yLine, LV_OBJ_FLAG_CLICKABLE);
+
+        // Note name label in center
+        int noteName = note % 12;
+        int octave = (note / 12) - 1;
+        lv_obj_t* noteLbl = lv_label_create(pad);
+        lv_label_set_text_fmt(noteLbl, "%s%d", kNoteNames[noteName], octave);
+        lv_obj_set_style_text_font(noteLbl, (mPlayPadCount == 16) ? &lv_font_montserrat_16 : &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(noteLbl, isRoot ? lv_color_hex(0xFFFFFF) : lv_color_hex(0xCCCCCC), 0);
+        lv_obj_center(noteLbl);
+
+        // Pad index top-left
+        lv_obj_t* numLbl = lv_label_create(pad);
+        lv_label_set_text_fmt(numLbl, "%d", i + 1);
+        lv_obj_set_style_text_font(numLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(numLbl, lv_color_hex(0x666666), 0);
+        lv_obj_align(numLbl, LV_ALIGN_TOP_LEFT, 6, 6);
+
+        // Register press, drag/motion, and release callbacks for X/Y modulation
+        lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSED, this);
+        lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSING, this);
+        lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_RELEASED, this);
+        lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESS_LOST, this);
+    }
+}
+
+void UIManager::playPadTouchEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* pad = (lv_obj_t*)lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+    int note = (int)(intptr_t)lv_obj_get_user_data(pad);
+
+    if (code == LV_EVENT_PRESSED) {
+        lv_obj_set_style_bg_color(pad, ui->getTrackColor(ui->mActiveTrack), 0);
+        lv_obj_set_style_bg_opa(pad, LV_OPA_80, 0);
+        lv_obj_set_style_border_color(pad, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_border_width(pad, 3, 0);
+
+        // Trigger note or chord
+        if (ui->mPlayChordType == 0) {
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 110);
+        } else if (ui->mPlayChordType == 1) { // Triad
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+        } else if (ui->mPlayChordType == 2) { // 7th
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95);
+        } else if (ui->mPlayChordType == 3) { // 9th
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 14, 90);
+        } else if (ui->mPlayChordType == 4) { // Sus4
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 5, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+        }
+    }
+
+    if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
+        // Calculate finger touch position inside the pad (0.0 to 1.0 for X and Y)
+        lv_indev_t* indev = lv_indev_active();
+        if (indev) {
+            lv_point_t pt;
+            lv_indev_get_point(indev, &pt);
+            lv_area_t coords;
+            lv_obj_get_coords(pad, &coords);
+
+            float normX = (float)(pt.x - coords.x1) / (float)(coords.x2 - coords.x1);
+            float normY = 1.0f - ((float)(pt.y - coords.y1) / (float)(coords.y2 - coords.y1)); // Up = higher
+            normX = std::max(0.0f, std::min(1.0f, normX));
+            normY = std::max(0.0f, std::min(1.0f, normY));
+
+            // Modulate assigned parameters (if assigned) with intensity attenuation
+            if (ui->mPlayModXDest >= 0) {
+                float effectiveX = normX * ui->mPlayModXIntensity;
+                ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, effectiveX);
+            }
+            if (ui->mPlayModYDest >= 0) {
+                float effectiveY = normY * ui->mPlayModYIntensity;
+                ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, effectiveY);
+            }
+        }
+    }
+
+    if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        bool isRoot = ((note % 12) == ui->mPlaySelectedRoot);
+        lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
+        lv_obj_set_style_bg_color(pad, isRoot ? trackColor : lv_color_hex(0x1F1F1F), 0);
+        lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
+        lv_obj_set_style_border_color(pad, isRoot ? trackColor : lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
+
+        // Note off
+        ui->mEngine.releaseNote(ui->mActiveTrack, note);
+        if (ui->mPlayChordType > 0) {
+            ui->mEngine.releaseNote(ui->mActiveTrack, note + 4);
+            ui->mEngine.releaseNote(ui->mActiveTrack, note + 5);
+            ui->mEngine.releaseNote(ui->mActiveTrack, note + 7);
+            ui->mEngine.releaseNote(ui->mActiveTrack, note + 10);
+            ui->mEngine.releaseNote(ui->mActiveTrack, note + 14);
+        }
+    }
+}
+
+void UIManager::playRootDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->mPlaySelectedRoot = lv_dropdown_get_selected(ui->mPlayRootDd);
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playScaleDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->mPlaySelectedScaleIdx = lv_dropdown_get_selected(ui->mPlayScaleDd);
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playChordDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->mPlayChordType = lv_dropdown_get_selected(ui->mPlayChordDd);
+}
+
+void UIManager::playOctaveBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int dir = (int)(intptr_t)lv_obj_get_user_data(btn);
+    ui->mPlayOctaveOffset = std::max(-3, std::min(3, ui->mPlayOctaveOffset + dir));
+    if (ui->mPlayOctaveLbl) {
+        lv_label_set_text_fmt(ui->mPlayOctaveLbl, "OCT %s%d", (ui->mPlayOctaveOffset >= 0 ? "+" : ""), ui->mPlayOctaveOffset);
+    }
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playPadCountToggleEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    // Cycle 16 -> 24 -> 40 -> 16
+    if (ui->mPlayPadCount == 16) {
+        ui->mPlayPadCount = 24;
+    } else if (ui->mPlayPadCount == 24) {
+        ui->mPlayPadCount = 40;
+    } else {
+        ui->mPlayPadCount = 16;
+    }
+
+    if (ui->mPlayPadCountBtn) {
+        lv_obj_t* lbl = lv_obj_get_child(ui->mPlayPadCountBtn, 0);
+        if (lbl) {
+            const char* txt = (ui->mPlayPadCount == 16) ? "16" : ((ui->mPlayPadCount == 24) ? "24" : "40");
+            lv_label_set_text(lbl, txt);
+        }
+    }
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playModXDestDdEventCb(lv_event_t* e) {
+    (void)e;
+}
+
+void UIManager::playModYDestDdEventCb(lv_event_t* e) {
+    (void)e;
+}
+
+void UIManager::playModDestBtnEventCb(lv_event_t* e) {
+    (void)e;
+}
+
+void UIManager::playModXIntensityArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlayModXIntensity = (float)val / 100.0f;
+    if (valLbl) {
+        lv_label_set_text_fmt(valLbl, "%" PRId32, val);
+    }
+}
+
+void UIManager::playModYIntensityArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlayModYIntensity = (float)val / 100.0f;
+    if (valLbl) {
+        lv_label_set_text_fmt(valLbl, "%" PRId32, val);
+    }
+}
+

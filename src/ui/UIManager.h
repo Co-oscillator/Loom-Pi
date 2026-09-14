@@ -14,6 +14,9 @@ static void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, str
 
 class UIManager {
 public:
+    static constexpr int SCREEN_WIDTH = 1280;
+    static constexpr int SCREEN_HEIGHT = 800;
+
     friend void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data, int sourceClient);
     UIManager(AudioEngine& engine);
     ~UIManager();
@@ -27,10 +30,28 @@ public:
     // Public accessors for main loop keyboard handling
     int getActiveTrack() const { return mActiveTrack; }
     void setActiveTrack(int track) { mActiveTrack = track; }
+    int getActiveNav() const { return mActiveNav; }
     int getActiveDrumIdx() const { return mActiveDrumIdx; }
     bool isKeyboardModeEnabled() const { return mSettingsKeyboardMode; }
     bool isFileBrowserOpen() const { return mSeqModal != nullptr; }
     bool isConsoleModalOpen() const { return mConsoleModal != nullptr; }
+    int getDrumRowTargetTrack() const { return mDrumRowTargetTrack; }
+    void setDrumRowTargetTrack(int t) { mDrumRowTargetTrack = t; }
+    int getDrumRowNote(int idx) const { return (idx >= 0 && idx < 8) ? mDrumRowNotes[idx] : 36; }
+    void setDrumRowNote(int idx, int n) { if (idx >= 0 && idx < 8) mDrumRowNotes[idx] = n; }
+    int getDrumRowRatchet(int idx) const { return (idx >= 0 && idx < 8) ? mDrumRowRatchets[idx] : 1; }
+    void setDrumRowRatchet(int idx, int r) { if (idx >= 0 && idx < 8) mDrumRowRatchets[idx] = r; }
+    void setSeqStepState(int track, int step, bool active) {
+        if (track >= 0 && track < 8 && step >= 0 && step < 64) {
+            mSeqTrackSteps[track][step] = active;
+        }
+    }
+    bool getSeqStepState(int track, int step) const {
+        if (track >= 0 && track < 8 && step >= 0 && step < 64) {
+            return mSeqTrackSteps[track][step];
+        }
+        return false;
+    }
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
     int mSeqMidiKnobCC[8][40];
@@ -146,10 +167,10 @@ private:
     lv_obj_t* mTrackButtons[8];
     bool mTrackEnabled[8];
     bool mLongPressedTrack = false;
-    lv_obj_t* mNavButtons[7];
+    lv_obj_t* mNavButtons[8];
     
     int mActiveTrack = 0;
-    int mActiveNav = 4; // Default navigation page
+    int mActiveNav = 7; // Default to Play Screen (7)
     
     // Arpeggiator pattern grid
     lv_obj_t* mArpButtons[7][16];
@@ -189,6 +210,8 @@ private:
     static void arpChordMoodDdEventCb(lv_event_t* e);
     static void arpChordComplexityDdEventCb(lv_event_t* e);
     static void arpToggleBtnEventCb(lv_event_t* e);
+    static void arpCopyToDdEventCb(lv_event_t* e);
+    lv_obj_t* mArpCopyToDd = nullptr;
 
     // =========================================================================
     // --- Sequencer Screen ---
@@ -228,16 +251,20 @@ private:
     bool       mFileBrowserIsPresetSave   = false;
     std::string mFileBrowserCurrentPath;
     int        mSelectedOpIdx             = 0;
-    std::vector<bool> mSeqClipboard;
+    std::vector<Step> mSeqClipboard;
     std::string mSeqChainSlots[25]; // empty = unassigned
 
     // Chain slot cycle state (stub cycling index per slot)
     int mSeqChainCycleIndex[25] = {};
 
-    // Step option popup state
+    // Sequencer side-panel & step option state
     int mEditingStepIdx = -1;
     int mHeldStepIdx = -1;
     int mStepMidiEntryCount = 0;
+    lv_obj_t* mSeqSidePanel = nullptr;
+    lv_obj_t* mSeqSideTabview = nullptr;
+    lv_obj_t* mSeqTrackTab = nullptr;
+    lv_obj_t* mSeqStepTab = nullptr;
     lv_obj_t* mStepModal = nullptr;
     lv_obj_t* mStepModalActiveLocksList = nullptr;
     
@@ -258,6 +285,8 @@ private:
     lv_obj_t* mStepModalPLockSlider = nullptr;
 
     void openSeqStepModal(int stepIdx);
+    void rebuildSeqSidePanel();
+    void closeSeqStepEditor();
     void refreshStepModalLocksList();
 
     // Sequencer callbacks
@@ -435,7 +464,7 @@ private:
     void populateParamSubtractiveFilterTab(lv_obj_t* tab);
     void populateParamSubtractiveEnvTab(lv_obj_t* tab);
     
-    void populateParamFmTab(lv_obj_t* tab1, lv_obj_t* tab2, lv_obj_t* tab3);
+    void populateParamFmTab(lv_obj_t* tab1, lv_obj_t* tab2);
     void populateParamFmOperatorsTab(lv_obj_t* tab);
     void populateParamFmRoutingTab(lv_obj_t* tab);
     void populateParamFmFilterTab(lv_obj_t* tab);
@@ -525,7 +554,6 @@ private:
     void populateSettingsGeneralTab(lv_obj_t* tab);
     void populateSettingsMidiPadsTab(lv_obj_t* tab);
     void populateSettingsKnobsFadersTab(lv_obj_t* tab);
-    void populateSettingsSystemTab(lv_obj_t* tab);
     void populateSettingsUsbMidiTab(lv_obj_t* tab);
     void rebuildPadGrid();
     std::string detectChordName(const int* notes, int count);
@@ -606,6 +634,17 @@ public:
     int mLastLaunchkeyStep = -1;
     lv_obj_t* mPadLearnBtnLabel = nullptr;
 
+    // Drum Number Row 1-8 (Hardware Custom Keyboard & Dedicated Drum Row)
+    int mDrumRowTargetTrack = 5; // Default Track 6 (FM Drum)
+    int mDrumRowNotes[8] = { 36, 38, 42, 46, 39, 48, 49, 60 }; // Notes 20-120
+    int mDrumRowRatchets[8] = { 1, 1, 1, 1, 1, 1, 1, 1 };      // 1 to 5
+    lv_obj_t* mDrumRowTrackDd = nullptr;
+    lv_obj_t* mDrumRowNoteDd[8] = {};
+    lv_obj_t* mDrumRowRatchetBtn[8] = {};
+    static void drumRowTrackDdEventCb(lv_event_t* e);
+    static void drumRowNoteDdEventCb(lv_event_t* e);
+    static void drumRowRatchetBtnEventCb(lv_event_t* e);
+
     // Hardware MIDI Mapping Wizard state
     bool mWizardActive = false;
     int mWizardType = 0; // 0 = Knobs/Sliders/Transport, 1 = MIDI Pads
@@ -627,6 +666,45 @@ public:
     void openWizard(int type);
     void closeWizard();
     void advanceWizard(int incomingVal, int incomingChannel = 0);
+    
+    // Play Screen (Touch Pads with X/Y Modulation & Scale/Chords)
+    void populatePlayScreen();
+    void rebuildPlayPadGrid();
+    static void playPadTouchEventCb(lv_event_t* e);
+    static void playRootDdEventCb(lv_event_t* e);
+    static void playScaleDdEventCb(lv_event_t* e);
+    static void playChordDdEventCb(lv_event_t* e);
+    static void playOctaveBtnEventCb(lv_event_t* e);
+    static void playPadCountToggleEventCb(lv_event_t* e);
+    static void playModXDestDdEventCb(lv_event_t* e);
+    static void playModYDestDdEventCb(lv_event_t* e);
+    static void playModDestBtnEventCb(lv_event_t* e);
+    static void playModXIntensityArcEventCb(lv_event_t* e);
+    static void playModYIntensityArcEventCb(lv_event_t* e);
+
+    lv_obj_t* mPlayPadGrid = nullptr;
+    lv_obj_t* mPlayRootDd = nullptr;
+    lv_obj_t* mPlayScaleDd = nullptr;
+    lv_obj_t* mPlayChordDd = nullptr;
+    lv_obj_t* mPlayOctaveLbl = nullptr;
+    lv_obj_t* mPlayModXDestBtn = nullptr;
+    lv_obj_t* mPlayModXDestLbl = nullptr;
+    lv_obj_t* mPlayModYDestBtn = nullptr;
+    lv_obj_t* mPlayModYDestLbl = nullptr;
+    lv_obj_t* mPlayModXIntensityArc = nullptr;
+    lv_obj_t* mPlayModYIntensityArc = nullptr;
+    lv_obj_t* mPlayPadCountBtn = nullptr;
+    int mPlayPadCount = 16; // 16 (4x4), 24 (6x4), or 40 (8x5)
+    int mPlaySelectedScaleIdx = 1; // Default Major
+    int mPlaySelectedRoot = 0; // C
+    int mPlayOctaveOffset = 0;
+    int mPlayChordType = 0; // 0=Off/Single, 1=Triad, 2=7th, 3=9th, 4=Sus4
+    int mPlayModXTrack = 0;
+    int mPlayModXDest = 1; // Filter Cutoff default
+    int mPlayModYTrack = 0;
+    int mPlayModYDest = 2; // Filter Resonance default
+    float mPlayModXIntensity = 1.0f; // 0.0 to 1.0
+    float mPlayModYIntensity = 1.0f; // 0.0 to 1.0
     
     // Settings – Keyboard mode
     bool mSettingsKeyboardMode = true;

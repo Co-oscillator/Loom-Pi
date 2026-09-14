@@ -165,6 +165,8 @@ public:
   void setArpTriplet(int trackIndex, bool isTriplet);
   void setArpRate(int trackIndex, float rate, int divisionMode);
   void setArpStrum(int trackIndex, float strum);
+  void copyArpeggiator(int srcTrack, int destTrack);
+  void triggerDrumRowKey(int keyIdx, int track, int note, int ratchet, bool isDown);
   float getCpuLoad();
   void setInputDevice(int deviceId);
   void setSidechainConfig(int trackIndex, int drumIndex);
@@ -547,6 +549,15 @@ public:
   static constexpr int kAudioBlockSize = 256;
   const std::vector<Track> &getTracks() const { return mTracks; }
   std::vector<Track> &getTracks() { return mTracks; }
+
+  struct DrumRowActiveKey {
+    bool active = false;
+    int track = 0;
+    int note = 36;
+    int ratchet = 1;
+    float countdown = 0.0f;
+  };
+  DrumRowActiveKey mDrumRowActiveKeys[8];
 };
 
 #endif // AUDIO_ENGINE_H

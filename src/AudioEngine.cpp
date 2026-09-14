@@ -1433,6 +1433,36 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
       }
     }
   }
+  // Arpeggiator Parameters (2300-2309)
+  else if (parameterId >= 2300 && parameterId <= 2309) {
+    if (parameterId == 2300) { // Mode
+      int mode = static_cast<int>(value);
+      track.arpeggiator.setMode(static_cast<ArpMode>(mode));
+    } else if (parameterId == 2301) { // Rate
+      setArpRate(trackIndex, value, track.mArpDivisionMode);
+    } else if (parameterId == 2302) { // Octaves
+      int oct = static_cast<int>(roundf(value));
+      track.arpeggiator.setOctaves(oct);
+    } else if (parameterId == 2303) { // Latch
+      track.arpeggiator.setLatched(value > 0.5f);
+    } else if (parameterId == 2304) { // Strum
+      track.arpeggiator.setStrum(value);
+    } else if (parameterId == 2305) { // Probability
+      track.arpeggiator.setProbability(value);
+    } else if (parameterId == 2306) { // Chord Gen Enabled
+      bool en = value > 0.5f;
+      track.arpeggiator.setChordProgConfig(en, track.arpeggiator.getChordProgMood(), track.arpeggiator.getChordProgComplexity());
+    } else if (parameterId == 2307) { // Mood
+      int mood = static_cast<int>(roundf(value));
+      track.arpeggiator.setChordProgConfig(track.arpeggiator.isChordProgEnabled(), mood, track.arpeggiator.getChordProgComplexity());
+    } else if (parameterId == 2308) { // Complexity
+      int comp = static_cast<int>(roundf(value));
+      track.arpeggiator.setChordProgConfig(track.arpeggiator.isChordProgEnabled(), track.arpeggiator.getChordProgMood(), comp);
+    } else if (parameterId == 2309) { // Inversions
+      int inv = static_cast<int>(roundf(value));
+      track.arpeggiator.setInversion(inv);
+    }
+  }
   // Extra Global FX (1500-1599)
   else if (parameterId >= 1500 && parameterId < 1600) {
     updateGlobalParameter(parameterId, value);
@@ -2226,22 +2256,6 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
       return;
     }
 
-      if (!isSequencerTrigger) {
-        track.mPhysicallyHeldNoteCount--;
-        auto it = std::find(track.mLiveHeldNotes.begin(), track.mLiveHeldNotes.end(), note);
-        if (it != track.mLiveHeldNotes.end()) {
-          track.mLiveHeldNotes.erase(it);
-        }
-        if (track.mPhysicallyHeldNoteCount <= 0) {
-          track.mPhysicallyHeldNoteCount = 0;
-          track.arpeggiator.onAllPhysicallyReleased();
-          track.mArpCountdown = 0; // Reset for next gesture
-        }
-        if (track.arpeggiator.getMode() != ArpMode::OFF) {
-          track.arpeggiator.removeNote(note);
-        }
-      }
-
       // Apply Per-Track Transpose (Match triggerNoteLocked logic)
       int transposedNote = note;
       if (track.engineType != 5 && track.engineType != 6) {
@@ -2251,6 +2265,30 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
           transposedNote += track.transpose;
         }
       }
+
+      if (!isSequencerTrigger) {
+        auto it = std::find(track.mLiveHeldNotes.begin(), track.mLiveHeldNotes.end(), transposedNote);
+        if (it != track.mLiveHeldNotes.end()) {
+          track.mLiveHeldNotes.erase(it);
+          track.mPhysicallyHeldNoteCount--;
+          if (track.mPhysicallyHeldNoteCount < 0) track.mPhysicallyHeldNoteCount = 0;
+        } else {
+          // If the note wasn't manually triggered on this track, ignore the Note Off 
+          // to prevent broadcasting from killing other tracks' manual or sequencer notes.
+          return;
+        }
+
+        if (track.mPhysicallyHeldNoteCount <= 0) {
+          track.mPhysicallyHeldNoteCount = 0;
+          track.arpeggiator.onAllPhysicallyReleased();
+          track.mArpCountdown = 0; // Reset for next gesture
+        }
+        if (track.arpeggiator.getMode() != ArpMode::OFF) {
+          track.arpeggiator.removeNote(transposedNote);
+        }
+      }
+
+
 
       // ALWAYS release engine notes for manual interaction,
       // even if Arp is ON, otherwise they get stuck when unlatching or
@@ -2829,6 +2867,26 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
         }
       }
 
+      // Process Drum Number Row 1-8 ratchet rolls
+      for (int k = 0; k < 8; ++k) {
+        if (mDrumRowActiveKeys[k].active && mDrumRowActiveKeys[k].ratchet > 1) {
+          mDrumRowActiveKeys[k].countdown -= framesToDo;
+          float stepSamples = (mSamplesPerStep > 0) ? mSamplesPerStep : ((mSampleRate * 60.0f) / std::max(1.0f, mBpm) / 4.0f);
+          float interval = stepSamples / (float)mDrumRowActiveKeys[k].ratchet;
+          while (mDrumRowActiveKeys[k].countdown <= 0.0f) {
+            mDrumRowActiveKeys[k].countdown += interval;
+            int trk = mDrumRowActiveKeys[k].track;
+            int nt = mDrumRowActiveKeys[k].note;
+            if (trk >= 0 && trk < (int)mTracks.size()) {
+              if (mTracks[trk].engineType != 5 && mTracks[trk].engineType != 6) {
+                releaseNoteLocked(trk, nt, true);
+              }
+              triggerNoteLocked(trk, nt, 100, false, 0.8f, false, true);
+            }
+          }
+        }
+      }
+
       // Audio Block Rendering
       renderStereo(&output[frameIdx * numChannels], framesToDo);
     }
@@ -2949,6 +3007,51 @@ void AudioEngine::setArpStrum(int trackIndex, float strum) {
   cmd.value = strum;
   std::lock_guard<std::mutex> lock(mCommandLock);
   mCommandQueue.push_back(cmd);
+}
+
+void AudioEngine::copyArpeggiator(int srcTrack, int destTrack) {
+  std::lock_guard<std::recursive_mutex> lock(mLock);
+  if (srcTrack >= 0 && srcTrack < (int)mTracks.size() &&
+      destTrack >= 0 && destTrack < (int)mTracks.size()) {
+    Track &src = mTracks[srcTrack];
+    Track &dest = mTracks[destTrack];
+
+    dest.arpeggiator.copyFrom(src.arpeggiator);
+    dest.mArpRate = src.mArpRate;
+    dest.mArpDivisionMode = src.mArpDivisionMode;
+    dest.mLiveHeldNotes = src.mLiveHeldNotes;
+    dest.mPhysicallyHeldNoteCount = src.mPhysicallyHeldNoteCount;
+    dest.mArpCountdown = 0.0;
+    dest.isTrackEnabled = true;
+    dest.isActive = true;
+  }
+}
+
+void AudioEngine::triggerDrumRowKey(int keyIdx, int track, int note, int ratchet, bool isDown) {
+  std::lock_guard<std::recursive_mutex> lock(mLock);
+  if (keyIdx < 0 || keyIdx >= 8) return;
+  if (track < 0 || track >= (int)mTracks.size()) return;
+
+  if (isDown) {
+    mDrumRowActiveKeys[keyIdx].active = true;
+    mDrumRowActiveKeys[keyIdx].track = track;
+    mDrumRowActiveKeys[keyIdx].note = note;
+    mDrumRowActiveKeys[keyIdx].ratchet = std::max(1, std::min(5, ratchet));
+
+    // Retrigger cleanly if already playing
+    if (mTracks[track].engineType != 5 && mTracks[track].engineType != 6) {
+      releaseNoteLocked(track, note, true);
+    }
+    triggerNoteLocked(track, note, 100, false, 0.8f, false, true);
+
+    if (mDrumRowActiveKeys[keyIdx].ratchet > 1) {
+      float stepSamples = (mSamplesPerStep > 0) ? mSamplesPerStep : ((mSampleRate * 60.0f) / std::max(1.0f, mBpm) / 4.0f);
+      mDrumRowActiveKeys[keyIdx].countdown = stepSamples / (float)mDrumRowActiveKeys[keyIdx].ratchet;
+    }
+  } else {
+    mDrumRowActiveKeys[keyIdx].active = false;
+    releaseNoteLocked(track, note, true);
+  }
 }
 
 void AudioEngine::setStep(int trackIndex, int stepIndex, bool active,
