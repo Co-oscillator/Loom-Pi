@@ -2499,7 +2499,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
 
     // --- Content Row: Left (Square Pads Grid) + Right (Drum Number Row 1-8) ---
     lv_obj_t* contentRow = lv_obj_create(tab);
-    lv_obj_set_size(contentRow, lv_pct(100), 615);
+    lv_obj_set_size(contentRow, lv_pct(100), 665);
     lv_obj_set_style_bg_opa(contentRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(contentRow, 0, 0);
     lv_obj_set_style_pad_all(contentRow, 0, 0);
@@ -2511,23 +2511,24 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
 
     // Left container for Pad Grid and bottom buttons
     lv_obj_t* padGridWrapper = lv_obj_create(contentRow);
-    lv_obj_set_size(padGridWrapper, 580, 610);
+    lv_obj_set_size(padGridWrapper, 580, 660);
     lv_obj_set_style_bg_opa(padGridWrapper, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(padGridWrapper, 0, 0);
     lv_obj_set_style_pad_all(padGridWrapper, 0, 0);
     lv_obj_remove_flag(padGridWrapper, LV_OBJ_FLAG_SCROLLABLE);
 
     mSettingsPadGrid = lv_obj_create(padGridWrapper);
-    lv_obj_set_size(mSettingsPadGrid, 580, 560);
+    lv_obj_set_size(mSettingsPadGrid, 580, 565);
+    lv_obj_align(mSettingsPadGrid, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_opa(mSettingsPadGrid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(mSettingsPadGrid, 0, 0);
-    lv_obj_set_style_pad_all(mSettingsPadGrid, 2, 0);
+    lv_obj_set_style_pad_all(mSettingsPadGrid, 0, 0);
     lv_obj_remove_flag(mSettingsPadGrid, LV_OBJ_FLAG_SCROLLABLE);
 
     // Floating Pads Wizard Button (anchored at bottom left of pad area)
     lv_obj_t* padsWizardBtn = lv_button_create(padGridWrapper);
     lv_obj_set_size(padsWizardBtn, 140, 36);
-    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_LEFT, 10, 0);
+    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_LEFT, 10, -8);
     lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_radius(padsWizardBtn, 6, 0);
     lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
@@ -2544,7 +2545,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     // Pad Learn Button (next to wizard button)
     lv_obj_t* padLearnBtn = lv_button_create(padGridWrapper);
     lv_obj_set_size(padLearnBtn, 150, 36);
-    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_LEFT, 160, 0);
+    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_LEFT, 160, -8);
     if (mPadLearnActive) {
         lv_obj_set_style_bg_color(padLearnBtn, trackColor, 0);
     } else {
@@ -2585,7 +2586,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     // -------------------------------------------------------------------------
     lv_obj_t* drumRowPanel = lv_obj_create(contentRow);
     lv_obj_set_flex_grow(drumRowPanel, 1);
-    lv_obj_set_height(drumRowPanel, 608);
+    lv_obj_set_height(drumRowPanel, 660);
     lv_obj_set_style_bg_color(drumRowPanel, lv_color_hex(0x181818), 0);
     lv_obj_set_style_bg_opa(drumRowPanel, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(drumRowPanel, lv_color_hex(0x2E2E2E), 0);
@@ -2784,15 +2785,20 @@ void UIManager::rebuildPadGrid() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     int cols = 4;
     int rows = (mSettingsPadCount + cols - 1) / cols;
-    int padH = (rows <= 1) ? 550 : (rows <= 2) ? 270 : (rows <= 3) ? 180 : (rows <= 4) ? 134 : 95;
-    int padW = padH; // Square pads!
     int gapX = 10;
     int gapY = 10;
+    int padW = 132;
+    int padH = (rows <= 4) ? 132 : std::max(40, (565 - (rows - 1) * gapY) / rows);
+    if (rows > 4) {
+        padW = padH; // keep square if more rows
+    }
+    int totalGridW = cols * padW + (cols - 1) * gapX;
+    int startX = std::max(0, (580 - totalGridW) / 2);
 
     for (int i = 0; i < mSettingsPadCount; ++i) {
         int r = (mSettingsPadMode == 5) ? (i / cols) : (rows - 1 - (i / cols));
         int c = i % cols;
-        int x = c * (padW + gapX);
+        int x = startX + c * (padW + gapX);
         int y = r * (padH + gapY);
 
         int noteMapVal = mSettingsPadNoteMap[i];
