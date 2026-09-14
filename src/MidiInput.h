@@ -326,6 +326,34 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                         continue;
                     }
 
+                    // Sequencer Step Trigger from Hardware MIDI Pads (when on Sequencer screen)
+                    if (data->ui->getActiveNav() == 2 && velocity > 0) {
+                        int seqPadIdx = -1;
+                        for (int i = 0; i < 16 && i < data->ui->mSettingsPadCount; ++i) {
+                            if (note == data->ui->mSettingsPadNoteMap[i]) {
+                                seqPadIdx = i;
+                                break;
+                            }
+                        }
+                        if (seqPadIdx >= 0) {
+                            auto& track = data->engine->getTracks()[activeTrack];
+                            bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
+                                          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                            auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
+                                                 : track.sequencer.getStepsMutable();
+                            if (seqPadIdx < (int)steps.size()) {
+                                steps[seqPadIdx].active = !steps[seqPadIdx].active;
+                                if (steps[seqPadIdx].active && steps[seqPadIdx].notes.empty()) {
+                                    steps[seqPadIdx].addNote(isDrum ? (60 + data->ui->getActiveDrumIdx()) : 60, 0.8f);
+                                }
+                                data->ui->setSeqStepState(activeTrack, seqPadIdx, steps[seqPadIdx].active);
+                                data->ui->mNeedsScreenRebuild = true;
+                            }
+                            b += 3;
+                            continue;
+                        }
+                    }
+
                     int padIdx = -1;
                     if (data->ui->mSettingsPadMode != 0) {
                         for (int i = 0; i < data->ui->mSettingsPadCount; ++i) {
@@ -1045,6 +1073,34 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             return;
         }
 
+        // Sequencer Step Trigger from Hardware MIDI Pads (when on Sequencer screen)
+        if (data->ui->getActiveNav() == 2 && velocity > 0) {
+            int seqPadIdx = -1;
+            for (int i = 0; i < 16 && i < data->ui->mSettingsPadCount; ++i) {
+                if (note == data->ui->mSettingsPadNoteMap[i]) {
+                    seqPadIdx = i;
+                    break;
+                }
+            }
+            if (seqPadIdx >= 0) {
+                int activeTrack = data->ui->getActiveTrack();
+                auto& track = data->engine->getTracks()[activeTrack];
+                bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
+                              (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
+                                     : track.sequencer.getStepsMutable();
+                if (seqPadIdx < (int)steps.size()) {
+                    steps[seqPadIdx].active = !steps[seqPadIdx].active;
+                    if (steps[seqPadIdx].active && steps[seqPadIdx].notes.empty()) {
+                        steps[seqPadIdx].addNote(isDrum ? (60 + data->ui->getActiveDrumIdx()) : 60, 0.8f);
+                    }
+                    data->ui->mSeqTrackSteps[activeTrack][seqPadIdx] = steps[seqPadIdx].active;
+                    data->ui->mNeedsScreenRebuild = true;
+                }
+                return;
+            }
+        }
+
         if (velocity > 0 && (data->ui->mEditingStepIdx != -1 || data->ui->mHeldStepIdx != -1)) {
             int stepIdx = (data->ui->mEditingStepIdx != -1) ? data->ui->mEditingStepIdx : data->ui->mHeldStepIdx;
             int activeTrack = data->ui->getActiveTrack();
@@ -1222,7 +1278,10 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                         finalNote = snapNoteToScale(note, scaleIdx, rootKey);
                     }
                     data->engine->triggerNote(trk, finalNote, velocity);
-                } else {
+                }
+            }
+            if (velocity == 0) {
+                for (int trk = 0; trk < 8; ++trk) {
                     int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
                     int scaleIdx = data->ui->mSelectedScaleIdx;
                     int finalNote = note;
@@ -1325,24 +1384,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             }
         } else {
             // Standard note off
-            std::vector<int> targetTracks;
-            bool explicitlyClaimed = false;
-            for (int t = 0; t < 8; ++t) {
-                int inCh = data->engine->getTracks()[t].midiInChannel;
-                if (inCh == (channel + 1)) {
-                    targetTracks.push_back(t);
-                    explicitlyClaimed = true;
-                }
-            }
-            
-            if (!explicitlyClaimed) {
-                int activeInCh = data->engine->getTracks()[activeTrack].midiInChannel;
-                if (activeInCh == 17 || activeInCh == (channel + 1)) {
-                    targetTracks.push_back(activeTrack);
-                }
-            }
-            
-            for (int trk : targetTracks) {
+            for (int trk = 0; trk < 8; ++trk) {
                 int rootKey = data->ui->mSettingsRootDd ? lv_dropdown_get_selected(data->ui->mSettingsRootDd) : 0;
                 int scaleIdx = data->ui->mSelectedScaleIdx;
                 int finalNote = note;
@@ -1935,7 +1977,7 @@ static inline void setupMidiInput(MidiCallbackData* data) {
         SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
         
-    int errOut = snd_seq_open(&gSeqOut, "default", SND_SEQ_OPEN_OUTPUT, 0);
+    int errOut = snd_seq_open(&gSeqOut, "default", SND_SEQ_OPEN_OUTPUT, SND_SEQ_NONBLOCK);
     if (errOut >= 0) {
         snd_seq_set_client_name(gSeqOut, "LoomPi Out");
         gOutPort = snd_seq_create_simple_port(gSeqOut, "LoomPi Output",

@@ -116,6 +116,9 @@ public:
   }
   int getStep() const { return mStep; }
   void setIsMutated(bool mutated) { mIsMutated = mutated; }
+  bool getIsMutated() const { return mIsMutated; }
+  const std::vector<int>& getRandomSequence() const { return mRandomSequence; }
+  const std::vector<float>& getGateLengths() const { return mGateLengths; }
 
   bool isLatched() const { return mIsLatched; }
   bool isChordProgEnabled() const { return mIsChordProgEnabled; }
@@ -129,6 +132,38 @@ public:
       mSequence.clear();
       mIsWaitingForNewGesture = false;
     }
+  }
+
+  void copyFrom(const Arpeggiator& other) {
+    mMode = other.mMode;
+    mOctaves = other.mOctaves;
+    mInversion = other.mInversion;
+    mStrum = other.mStrum;
+    mIsLatched = other.mIsLatched;
+    mIsMutated = other.mIsMutated;
+    mIsWaitingForNewGesture = other.mIsWaitingForNewGesture;
+    mHeldNotes = other.mHeldNotes;
+    mSequence = other.mSequence;
+    mRhythms = other.mRhythms;
+    mGateLengths = other.mGateLengths;
+    mRandomSequence = other.mRandomSequence;
+    mIsChordProgEnabled = other.mIsChordProgEnabled;
+    mChordProgMood = other.mChordProgMood;
+    mChordProgComplexity = other.mChordProgComplexity;
+    mRootNote = other.mRootNote;
+    mScaleIntervals = other.mScaleIntervals;
+    mGeneratedChordProgression = other.mGeneratedChordProgression;
+    mLastHarmonicStep = other.mLastHarmonicStep;
+    mProbability = other.mProbability;
+    mWeird = other.mWeird;
+    mRateMultiplier = other.mRateMultiplier;
+    mSpeedMultiplier = other.mSpeedMultiplier;
+    mHasDropsInCurrentGesture = other.mHasDropsInCurrentGesture;
+    mIsWeirdInCurrentGesture = other.mIsWeirdInCurrentGesture;
+    mDroppedNotes = other.mDroppedNotes;
+    mStep = other.mStep;
+    mNoteIndex = other.mNoteIndex;
+    updateSequence();
   }
 
   const std::vector<int> &getNotes() const { return mHeldNotes; }

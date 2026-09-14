@@ -31,6 +31,24 @@ public:
     bool isKeyboardModeEnabled() const { return mSettingsKeyboardMode; }
     bool isFileBrowserOpen() const { return mSeqModal != nullptr; }
     bool isConsoleModalOpen() const { return mConsoleModal != nullptr; }
+    int getActiveNav() const { return mActiveNav; }
+    int getDrumRowTargetTrack() const { return mDrumRowTargetTrack; }
+    void setDrumRowTargetTrack(int t) { mDrumRowTargetTrack = t; }
+    int getDrumRowNote(int idx) const { return (idx >= 0 && idx < 8) ? mDrumRowNotes[idx] : 36; }
+    void setDrumRowNote(int idx, int n) { if (idx >= 0 && idx < 8) mDrumRowNotes[idx] = n; }
+    int getDrumRowRatchet(int idx) const { return (idx >= 0 && idx < 8) ? mDrumRowRatchets[idx] : 1; }
+    void setDrumRowRatchet(int idx, int r) { if (idx >= 0 && idx < 8) mDrumRowRatchets[idx] = r; }
+    void setSeqStepState(int track, int step, bool active) {
+        if (track >= 0 && track < 8 && step >= 0 && step < 64) {
+            mSeqTrackSteps[track][step] = active;
+        }
+    }
+    bool getSeqStepState(int track, int step) const {
+        if (track >= 0 && track < 8 && step >= 0 && step < 64) {
+            return mSeqTrackSteps[track][step];
+        }
+        return false;
+    }
 
     // Dynamic MIDI and screen controls mappings (publicly accessible by MIDI thread)
     int mSeqMidiKnobCC[8][40];
@@ -189,6 +207,8 @@ private:
     static void arpChordMoodDdEventCb(lv_event_t* e);
     static void arpChordComplexityDdEventCb(lv_event_t* e);
     static void arpToggleBtnEventCb(lv_event_t* e);
+    static void arpCopyToDdEventCb(lv_event_t* e);
+    lv_obj_t* mArpCopyToDd = nullptr;
 
     // =========================================================================
     // --- Sequencer Screen ---
@@ -228,7 +248,7 @@ private:
     bool       mFileBrowserIsPresetSave   = false;
     std::string mFileBrowserCurrentPath;
     int        mSelectedOpIdx             = 0;
-    std::vector<bool> mSeqClipboard;
+    std::vector<Step> mSeqClipboard;
     std::string mSeqChainSlots[25]; // empty = unassigned
 
     // Chain slot cycle state (stub cycling index per slot)
@@ -605,6 +625,17 @@ public:
     
     int mLastLaunchkeyStep = -1;
     lv_obj_t* mPadLearnBtnLabel = nullptr;
+
+    // Drum Number Row 1-8 (Hardware Custom Keyboard & Dedicated Drum Row)
+    int mDrumRowTargetTrack = 5; // Default Track 6 (FM Drum)
+    int mDrumRowNotes[8] = { 36, 38, 42, 46, 39, 48, 49, 60 }; // Notes 20-120
+    int mDrumRowRatchets[8] = { 1, 1, 1, 1, 1, 1, 1, 1 };      // 1 to 5
+    lv_obj_t* mDrumRowTrackDd = nullptr;
+    lv_obj_t* mDrumRowNoteDd[8] = {};
+    lv_obj_t* mDrumRowRatchetBtn[8] = {};
+    static void drumRowTrackDdEventCb(lv_event_t* e);
+    static void drumRowNoteDdEventCb(lv_event_t* e);
+    static void drumRowRatchetBtnEventCb(lv_event_t* e);
 
     // Hardware MIDI Mapping Wizard state
     bool mWizardActive = false;

@@ -1477,8 +1477,19 @@ void UIManager::populateArpScreen() {
     lv_obj_t* randNotLbl = lv_label_create(randNotBtn);
     lv_label_set_text(randNotLbl, "Rand Notes");
     lv_obj_set_style_text_font(randNotLbl, &lv_font_montserrat_12, 0);
-    lv_obj_center(randNotLbl);
     lv_obj_add_event_cb(randNotBtn, randNotesBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Copy To Track Dropdown
+    mArpCopyToDd = lv_dropdown_create(randCont);
+    lv_obj_set_size(mArpCopyToDd, 110, 40);
+    lv_dropdown_set_options(mArpCopyToDd, "Copy To...\nTrack 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
+    lv_dropdown_set_selected(mArpCopyToDd, 0);
+    lv_obj_set_style_bg_color(mArpCopyToDd, lv_color_hex(0x2A2A2A), 0);
+    lv_obj_set_style_border_color(mArpCopyToDd, lv_color_hex(0x555555), 0);
+    lv_obj_set_style_border_width(mArpCopyToDd, 1, 0);
+    lv_obj_set_style_radius(mArpCopyToDd, 8, 0);
+    lv_obj_set_style_text_font(mArpCopyToDd, &lv_font_montserrat_12, 0);
+    lv_obj_add_event_cb(mArpCopyToDd, arpCopyToDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 }
 
 // =========================================================================
@@ -1679,6 +1690,19 @@ void UIManager::randNotesBtnEventCb(lv_event_t* e) {
     ui->randomizeNotes();
 }
 
+void UIManager::arpCopyToDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    int sel = lv_dropdown_get_selected(dd);
+    if (sel > 0 && sel <= 8) {
+        int targetTrack = sel - 1;
+        ui->mEngine.copyArpeggiator(ui->mActiveTrack, targetTrack);
+        ui->mTrackEnabled[targetTrack] = true;
+        ui->updateHighlighting();
+        lv_dropdown_set_selected(dd, 0); // Reset to "Copy To..."
+    }
+}
+
 void UIManager::arpButtonEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
@@ -1699,6 +1723,7 @@ void UIManager::randomizeRhythm() {
             lv_obj_add_state(mArpButtons[3][col], LV_STATE_CHECKED); // Root note row is row index 3
         }
     }
+    updateArpConfig();
 }
 
 void UIManager::randomizeNotes() {
@@ -1711,6 +1736,7 @@ void UIManager::randomizeNotes() {
             lv_obj_add_state(mArpButtons[activeRow][col], LV_STATE_CHECKED);
         }
     }
+    updateArpConfig();
 }
 
 void UIManager::populateSettingsScreen() {
@@ -2271,19 +2297,67 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
         lv_obj_add_event_cb(fxBehSw, settingsFxPadBehaviorSwitchEventCb, LV_EVENT_VALUE_CHANGED, this);
     }
 
-    // --- Pad Grid Area ---
-    mSettingsPadGrid = lv_obj_create(tab);
-    lv_obj_set_size(mSettingsPadGrid, lv_pct(100), 465);
+    // Helper to generate notes list from 20 to 120
+    auto buildNoteOptions = []() -> std::string {
+        static const char* kNotes[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+        std::string opt;
+        for (int n = 20; n <= 120; ++n) {
+            int oct = (n / 12) - 1;
+            int idx = n % 12;
+            opt += std::to_string(n) + " (" + kNotes[idx] + std::to_string(oct) + ")";
+            if (n < 120) opt += "\n";
+        }
+        return opt;
+    };
+
+    // --- Content Row: Left (Square Pads Grid) + Right (Drum Number Row 1-8) ---
+    lv_obj_t* contentRow = lv_obj_create(tab);
+    lv_obj_set_size(contentRow, lv_pct(100), 475);
+    lv_obj_set_style_bg_opa(contentRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(contentRow, 0, 0);
+    lv_obj_set_style_pad_all(contentRow, 0, 0);
+    lv_obj_set_layout(contentRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(contentRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(contentRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_column(contentRow, 10, 0);
+    lv_obj_remove_flag(contentRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Left container for Pad Grid and bottom buttons
+    lv_obj_t* padGridWrapper = lv_obj_create(contentRow);
+    lv_obj_set_size(padGridWrapper, 460, 470);
+    lv_obj_set_style_bg_opa(padGridWrapper, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(padGridWrapper, 0, 0);
+    lv_obj_set_style_pad_all(padGridWrapper, 0, 0);
+    lv_obj_remove_flag(padGridWrapper, LV_OBJ_FLAG_SCROLLABLE);
+
+    mSettingsPadGrid = lv_obj_create(padGridWrapper);
+    lv_obj_set_size(mSettingsPadGrid, 460, 430);
     lv_obj_set_style_bg_opa(mSettingsPadGrid, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(mSettingsPadGrid, 0, 0);
-    lv_obj_set_style_pad_all(mSettingsPadGrid, 8, 0);
+    lv_obj_set_style_pad_all(mSettingsPadGrid, 2, 0);
     lv_obj_remove_flag(mSettingsPadGrid, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Pad Learn Button in the lower right
-    lv_obj_t* padLearnBtn = lv_button_create(tab);
-    lv_obj_set_size(padLearnBtn, 150, 40);
-    lv_obj_add_flag(padLearnBtn, LV_OBJ_FLAG_FLOATING);
-    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
+    // Floating Pads Wizard Button (anchored at bottom left of pad area)
+    lv_obj_t* padsWizardBtn = lv_button_create(padGridWrapper);
+    lv_obj_set_size(padsWizardBtn, 130, 32);
+    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_LEFT, 5, 0);
+    lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_radius(padsWizardBtn, 6, 0);
+    lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
+    lv_label_set_text(padsWizardLbl, "PADS WIZARD");
+    lv_obj_set_style_text_font(padsWizardLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(padsWizardLbl);
+    
+    auto padsWizardClickCb = [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->openWizard(1); // 1 = MIDI Pads
+    };
+    lv_obj_add_event_cb(padsWizardBtn, padsWizardClickCb, LV_EVENT_CLICKED, this);
+
+    // Pad Learn Button (next to wizard button)
+    lv_obj_t* padLearnBtn = lv_button_create(padGridWrapper);
+    lv_obj_set_size(padLearnBtn, 130, 32);
+    lv_obj_align(padLearnBtn, LV_ALIGN_BOTTOM_LEFT, 145, 0);
     if (mPadLearnActive) {
         lv_obj_set_style_bg_color(padLearnBtn, trackColor, 0);
     } else {
@@ -2319,23 +2393,137 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(padLearnBtn, padLearnCb, LV_EVENT_CLICKED, this);
 
-    // Floating Pads Wizard Button in the bottom right
-    lv_obj_t* padsWizardBtn = lv_button_create(tab);
-    lv_obj_set_size(padsWizardBtn, 150, 40);
-    lv_obj_add_flag(padsWizardBtn, LV_OBJ_FLAG_FLOATING);
-    lv_obj_align(padsWizardBtn, LV_ALIGN_BOTTOM_RIGHT, -180, -10);
-    lv_obj_set_style_bg_color(padsWizardBtn, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_radius(padsWizardBtn, 6, 0);
-    lv_obj_t* padsWizardLbl = lv_label_create(padsWizardBtn);
-    lv_label_set_text(padsWizardLbl, "PADS WIZARD");
-    lv_obj_set_style_text_font(padsWizardLbl, &lv_font_montserrat_10, 0);
-    lv_obj_center(padsWizardLbl);
-    
-    auto padsWizardClickCb = [](lv_event_t* e) {
-        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-        ui->openWizard(1); // 1 = MIDI Pads
-    };
-    lv_obj_add_event_cb(padsWizardBtn, padsWizardClickCb, LV_EVENT_CLICKED, this);
+    // -------------------------------------------------------------------------
+    // RIGHT PANEL: DRUM NUMBER ROW 1-8 (Hardware Custom Keyboard & Drum Trigger)
+    // -------------------------------------------------------------------------
+    lv_obj_t* drumRowPanel = lv_obj_create(contentRow);
+    lv_obj_set_flex_grow(drumRowPanel, 1);
+    lv_obj_set_height(drumRowPanel, 470);
+    lv_obj_set_style_bg_color(drumRowPanel, lv_color_hex(0x181818), 0);
+    lv_obj_set_style_bg_opa(drumRowPanel, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(drumRowPanel, lv_color_hex(0x2E2E2E), 0);
+    lv_obj_set_style_border_width(drumRowPanel, 1, 0);
+    lv_obj_set_style_radius(drumRowPanel, 8, 0);
+    lv_obj_set_style_pad_all(drumRowPanel, 6, 0);
+    lv_obj_set_layout(drumRowPanel, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(drumRowPanel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(drumRowPanel, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(drumRowPanel, 3, 0);
+    lv_obj_remove_flag(drumRowPanel, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Title
+    lv_obj_t* drumRowTitle = lv_label_create(drumRowPanel);
+    lv_label_set_text(drumRowTitle, "DRUM NUMBER ROW 1-8");
+    lv_obj_set_style_text_font(drumRowTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(drumRowTitle, trackColor, 0);
+
+    // Target Track Selector Row
+    lv_obj_t* trkRow = lv_obj_create(drumRowPanel);
+    lv_obj_set_size(trkRow, lv_pct(100), 32);
+    lv_obj_set_style_bg_opa(trkRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(trkRow, 0, 0);
+    lv_obj_set_style_pad_all(trkRow, 0, 0);
+    lv_obj_set_layout(trkRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(trkRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(trkRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(trkRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* trkLbl = lv_label_create(trkRow);
+    lv_label_set_text(trkLbl, "Target Track:");
+    lv_obj_set_style_text_font(trkLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(trkLbl, lv_color_hex(0xCCCCCC), 0);
+
+    mDrumRowTrackDd = lv_dropdown_create(trkRow);
+    lv_obj_set_size(mDrumRowTrackDd, 130, 28);
+    lv_dropdown_set_options(mDrumRowTrackDd, "Track 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
+    lv_dropdown_set_selected(mDrumRowTrackDd, mDrumRowTargetTrack);
+    lv_obj_set_style_text_font(mDrumRowTrackDd, &lv_font_montserrat_10, 0);
+    lv_obj_add_event_cb(mDrumRowTrackDd, drumRowTrackDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Sub-header explaining columns: Key | Note Value (20-120) | Ratchet
+    lv_obj_t* subHdr = lv_obj_create(drumRowPanel);
+    lv_obj_set_size(subHdr, lv_pct(100), 18);
+    lv_obj_set_style_bg_opa(subHdr, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(subHdr, 0, 0);
+    lv_obj_set_style_pad_all(subHdr, 0, 0);
+    lv_obj_set_layout(subHdr, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(subHdr, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(subHdr, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(subHdr, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* hdrKey = lv_label_create(subHdr);
+    lv_label_set_text(hdrKey, "Key");
+    lv_obj_set_style_text_font(hdrKey, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrKey, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* hdrNote = lv_label_create(subHdr);
+    lv_label_set_text(hdrNote, "Assigned Note (20-120)");
+    lv_obj_set_style_text_font(hdrNote, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrNote, lv_color_hex(0x888888), 0);
+
+    lv_obj_t* hdrRatch = lv_label_create(subHdr);
+    lv_label_set_text(hdrRatch, "Ratchet");
+    lv_obj_set_style_text_font(hdrRatch, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(hdrRatch, lv_color_hex(0x888888), 0);
+
+    std::string noteOptions = buildNoteOptions();
+
+    for (int i = 0; i < 8; ++i) {
+        lv_obj_t* row = lv_obj_create(drumRowPanel);
+        lv_obj_set_size(row, lv_pct(100), 40);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x1F1F1F), 0);
+        lv_obj_set_style_border_color(row, lv_color_hex(0x2E2E2E), 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_radius(row, 6, 0);
+        lv_obj_set_style_pad_hor(row, 6, 0);
+        lv_obj_set_style_pad_ver(row, 2, 0);
+        lv_obj_set_layout(row, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        // Key badge
+        lv_obj_t* badge = lv_obj_create(row);
+        lv_obj_set_size(badge, 24, 24);
+        lv_obj_set_style_bg_color(badge, lv_color_hex(0x141414), 0);
+        lv_obj_set_style_border_color(badge, trackColor, 0);
+        lv_obj_set_style_border_width(badge, 1, 0);
+        lv_obj_set_style_radius(badge, 4, 0);
+        lv_obj_set_style_pad_all(badge, 0, 0);
+        lv_obj_remove_flag(badge, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_t* badgeLbl = lv_label_create(badge);
+        lv_label_set_text_fmt(badgeLbl, "%d", i + 1);
+        lv_obj_set_style_text_font(badgeLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(badgeLbl, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_center(badgeLbl);
+
+        // Note Dropdown (20 to 120)
+        mDrumRowNoteDd[i] = lv_dropdown_create(row);
+        lv_obj_set_size(mDrumRowNoteDd[i], 150, 30);
+        lv_dropdown_set_options(mDrumRowNoteDd[i], noteOptions.c_str());
+        int selIdx = std::max(0, std::min(100, mDrumRowNotes[i] - 20));
+        lv_dropdown_set_selected(mDrumRowNoteDd[i], selIdx);
+        lv_obj_set_style_text_font(mDrumRowNoteDd[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_user_data(mDrumRowNoteDd[i], (void*)(intptr_t)i);
+        lv_obj_add_event_cb(mDrumRowNoteDd[i], drumRowNoteDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+        // Ratchet Button
+        mDrumRowRatchetBtn[i] = lv_button_create(row);
+        lv_obj_set_size(mDrumRowRatchetBtn[i], 46, 30);
+        int r = mDrumRowRatchets[i];
+        if (r > 1) {
+            lv_obj_set_style_bg_color(mDrumRowRatchetBtn[i], trackColor, 0);
+        } else {
+            lv_obj_set_style_bg_color(mDrumRowRatchetBtn[i], lv_color_hex(0x2D2D2D), 0);
+        }
+        lv_obj_set_style_radius(mDrumRowRatchetBtn[i], 6, 0);
+        lv_obj_t* ratchLbl = lv_label_create(mDrumRowRatchetBtn[i]);
+        lv_label_set_text_fmt(ratchLbl, "%dx", r);
+        lv_obj_set_style_text_font(ratchLbl, &lv_font_montserrat_10, 0);
+        lv_obj_center(ratchLbl);
+        lv_obj_set_user_data(mDrumRowRatchetBtn[i], (void*)(intptr_t)i);
+        lv_obj_add_event_cb(mDrumRowRatchetBtn[i], drumRowRatchetBtnEventCb, LV_EVENT_CLICKED, this);
+    }
 
     rebuildPadGrid();
 }
@@ -2347,9 +2535,9 @@ void UIManager::rebuildPadGrid() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     int cols = 4;
     int rows = (mSettingsPadCount + cols - 1) / cols;
-    int padW = 180;
-    int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : (rows <= 4) ? 105 : 70;
-    int gapX = 10;
+    int padH = (rows <= 1) ? 420 : (rows <= 2) ? 210 : (rows <= 3) ? 140 : (rows <= 4) ? 100 : 70;
+    int padW = padH; // Square pads!
+    int gapX = 8;
     int gapY = 8;
 
     for (int i = 0; i < mSettingsPadCount; ++i) {
@@ -3555,6 +3743,50 @@ void UIManager::settingsPadCountDdEventCb(lv_event_t* e) {
     ui->rebuildPadGrid();
 }
 
+void UIManager::drumRowTrackDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    ui->mDrumRowTargetTrack = lv_dropdown_get_selected(dd);
+    // Update button colors for ratchet > 1
+    for (int i = 0; i < 8; ++i) {
+        if (ui->mDrumRowRatchetBtn[i]) {
+            if (ui->mDrumRowRatchets[i] > 1) {
+                lv_obj_set_style_bg_color(ui->mDrumRowRatchetBtn[i], ui->getTrackColor(ui->mDrumRowTargetTrack), 0);
+            }
+        }
+    }
+}
+
+void UIManager::drumRowNoteDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    int keyIdx = (int)(intptr_t)lv_obj_get_user_data(dd);
+    if (keyIdx >= 0 && keyIdx < 8) {
+        int sel = lv_dropdown_get_selected(dd);
+        ui->mDrumRowNotes[keyIdx] = 20 + sel;
+    }
+}
+
+void UIManager::drumRowRatchetBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int keyIdx = (int)(intptr_t)lv_obj_get_user_data(btn);
+    if (keyIdx >= 0 && keyIdx < 8) {
+        int r = ui->mDrumRowRatchets[keyIdx];
+        r = (r % 5) + 1; // 1 -> 2 -> 3 -> 4 -> 5 -> 1
+        ui->mDrumRowRatchets[keyIdx] = r;
+        lv_obj_t* lbl = lv_obj_get_child(btn, 0);
+        if (lbl) {
+            lv_label_set_text_fmt(lbl, "%dx", r);
+        }
+        if (r > 1) {
+            lv_obj_set_style_bg_color(btn, ui->getTrackColor(ui->mDrumRowTargetTrack), 0);
+        } else {
+            lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
+        }
+    }
+}
+
 void UIManager::settingsKnobCountDdEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
@@ -4749,15 +4981,16 @@ void UIManager::populateSeqScreen() {
     lv_obj_t* seqTab   = lv_tabview_add_tab(tabview, "Sequencer");
     lv_obj_t* chainTab = lv_tabview_add_tab(tabview, "Pattern Chain");
 
-    lv_obj_set_style_pad_all(seqTab,   8, 0);
-    lv_obj_set_style_pad_all(chainTab, 12, 0);
+    lv_obj_set_style_pad_hor(seqTab, 8, 0);
+    lv_obj_set_style_pad_top(seqTab, 4, 0);
+    lv_obj_set_style_pad_bottom(seqTab, 4, 0);
     lv_obj_remove_flag(seqTab,   LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_remove_flag(chainTab, LV_OBJ_FLAG_SCROLLABLE);
 
     // ---- Sequencer Tab: grid container (rebuilt by rebuildSeqGrid) ----
     lv_obj_set_layout(seqTab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(seqTab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(seqTab, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(seqTab, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // 1. Check if drum/chop engine to build the horizontal tab row
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
@@ -5205,8 +5438,13 @@ void UIManager::rebuildSeqGrid() {
     bool is4x4 = mSeqTrackIs4x4[mActiveTrack];
     int cols = is4x4 ? 4 : 8;
     int rows = is4x4 ? 4 : 8;
+
+    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrumTrack = (engineType == 5 || engineType == 6 || isSamplerChops);
+
     int btnW = is4x4 ? 128 : 62;
-    int btnH = is4x4 ? 108 : 62;
+    int btnH = is4x4 ? (isDrumTrack ? 96 : 108) : (isDrumTrack ? 52 : 62);
     int gap  = is4x4 ? 6   : 4;
 
     int gridW = cols * btnW + (cols - 1) * gap;
@@ -5242,8 +5480,6 @@ void UIManager::rebuildSeqGrid() {
     bool isDrum = false;
     int activeDrumIdx = -1;
     int numDrumLanes = 0;
-    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
     if (engineType == 5 || engineType == 6 || isSamplerChops) {
         isDrum = true;
         activeDrumIdx = mActiveDrumIdx;
@@ -6505,18 +6741,42 @@ void UIManager::seqOctaveBtnEventCb(lv_event_t* e) {
 
 void UIManager::seqCopyBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    int total = ui->mSeqTrackIs4x4[ui->mActiveTrack] ? 16 : 64;
-    ui->mSeqClipboard.resize(total);
-    for (int i = 0; i < total; ++i) {
-        ui->mSeqClipboard[i] = ui->mSeqTrackSteps[ui->mActiveTrack][i];
+    int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
+    if (isDrum) {
+        ui->mSeqClipboard = ui->mEngine.getDrumSequencerSteps(ui->mActiveTrack, ui->mActiveDrumIdx);
+    } else {
+        ui->mSeqClipboard = ui->mEngine.getSequencerSteps(ui->mActiveTrack);
     }
 }
 
 void UIManager::seqPasteBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (ui->mSeqClipboard.empty()) return;
+
+    int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
+
     int total = ui->mSeqTrackIs4x4[ui->mActiveTrack] ? 16 : 64;
     for (int i = 0; i < (int)ui->mSeqClipboard.size() && i < total; ++i) {
-        ui->mSeqTrackSteps[ui->mActiveTrack][i] = ui->mSeqClipboard[i];
+        const Step& s = ui->mSeqClipboard[i];
+        ui->mSeqTrackSteps[ui->mActiveTrack][i] = s.active;
+
+        std::vector<int> rawNotes;
+        if (s.notes.empty()) {
+            rawNotes = {isDrum ? (60 + ui->mActiveDrumIdx) : 60};
+        } else {
+            for (const auto& n : s.notes) {
+                rawNotes.push_back(n.note);
+            }
+        }
+        float velocity = s.notes.empty() ? 0.8f : s.notes[0].velocity;
+
+        ui->mEngine.setStep(ui->mActiveTrack, i, s.active, rawNotes, velocity,
+                            s.ratchet, s.punch, s.probability, s.gate, s.isSkipped);
     }
     ui->rebuildSeqGrid();
 }
@@ -16955,6 +17215,14 @@ void UIManager::saveSettings(const std::string& path) {
     for (int i = 0; i < 24; ++i) file << mSettingsPadDrumAssign[i] << (i < 23 ? " " : "");
     file << "\n";
 
+    file << "DRUM_ROW_TRACK:" << mDrumRowTargetTrack << "\n";
+    file << "DRUM_ROW_NOTES:";
+    for (int i = 0; i < 8; ++i) file << mDrumRowNotes[i] << (i < 7 ? " " : "");
+    file << "\n";
+    file << "DRUM_ROW_RATCHETS:";
+    for (int i = 0; i < 8; ++i) file << mDrumRowRatchets[i] << (i < 7 ? " " : "");
+    file << "\n";
+
     for (int i = 0; i < 24; ++i) {
         file << "PAD_CHORD:" << i << ":" << mSettingsPadChordCount[i];
         for (int n = 0; n < mSettingsPadChordCount[i]; ++n) {
@@ -17059,6 +17327,18 @@ void UIManager::loadSettings(const std::string& path) {
                 std::stringstream ss(val);
                 for (int i = 0; i < 24; ++i) {
                     if (ss >> mSettingsPadDrumAssign[i]) {}
+                }
+            } else if (key == "DRUM_ROW_TRACK") {
+                mDrumRowTargetTrack = std::stoi(val);
+            } else if (key == "DRUM_ROW_NOTES") {
+                std::stringstream ss(val);
+                for (int i = 0; i < 8; ++i) {
+                    if (ss >> mDrumRowNotes[i]) {}
+                }
+            } else if (key == "DRUM_ROW_RATCHETS") {
+                std::stringstream ss(val);
+                for (int i = 0; i < 8; ++i) {
+                    if (ss >> mDrumRowRatchets[i]) {}
                 }
             } else if (key == "PAD_CHORD") {
                 size_t p2 = val.find(':');
