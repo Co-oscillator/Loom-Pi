@@ -61,7 +61,7 @@ bool switchAudioDevice(const std::string& deviceName) {
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
     want.channels = 2;
-    want.samples = 1024;
+    want.samples = 256;
     want.callback = audioCallback;
     
     const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
