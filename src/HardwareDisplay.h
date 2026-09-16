@@ -3,6 +3,7 @@
 #include <SDL.h>
 #include "lvgl.h"
 #include <cstdint>
+#include <string>
 
 class HardwareDisplay {
 public:
@@ -16,6 +17,14 @@ public:
     static int getPhysicalWidth();
     static int getPhysicalHeight();
     static double getRotationAngle();
+    static void setRotationAngle(double angle);
+
+    // Hardware Backlight & System Controls
+    static int getBrightness();
+    static void setBrightness(int percent);
+    static float getCpuTemperature();
+    static void rebootSystem();
+    static void shutdownSystem();
 
     // Process incoming SDL events for touch, mouse, and text input
     static bool handleEvent(const SDL_Event& event);

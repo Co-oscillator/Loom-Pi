@@ -1,4 +1,5 @@
 #include "UIManager.h"
+#include "HardwareDisplay.h"
 #include <SDL.h>
 #include <iostream>
 #include <dirent.h>
@@ -2250,6 +2251,69 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(fastGranSw, fastGranSwCb, LV_EVENT_VALUE_CHANGED, this);
 
+    // --- Screen Brightness Slider ---
+    lv_obj_t* brightRow = lv_obj_create(systemCard);
+    lv_obj_set_size(brightRow, 230, 52);
+    lv_obj_set_style_bg_opa(brightRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(brightRow, 0, 0);
+    lv_obj_set_style_pad_all(brightRow, 0, 0);
+    lv_obj_remove_flag(brightRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* brightTitle = lv_label_create(brightRow);
+    int currentB = mSettingsBacklightBrightness > 0 ? mSettingsBacklightBrightness : HardwareDisplay::getBrightness();
+    mSettingsBacklightBrightness = currentB;
+    lv_label_set_text_fmt(brightTitle, "BRIGHTNESS: %d%%", currentB);
+    lv_obj_set_style_text_font(brightTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(brightTitle, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_align(brightTitle, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    lv_obj_t* brightSlider = lv_slider_create(brightRow);
+    lv_obj_set_size(brightSlider, 230, 20);
+    lv_obj_align(brightSlider, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_slider_set_range(brightSlider, 10, 100);
+    lv_slider_set_value(brightSlider, currentB, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(brightSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(brightSlider, trackColor, LV_PART_KNOB);
+
+    struct BrightData {
+        UIManager* ui;
+        lv_obj_t* label;
+    };
+    BrightData* bData = new BrightData{this, brightTitle};
+    lv_obj_add_event_cb(brightSlider, [](lv_event_t* e) {
+        BrightData* d = (BrightData*)lv_event_get_user_data(e);
+        lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+        int val = lv_slider_get_value(slider);
+        d->ui->mSettingsBacklightBrightness = val;
+        HardwareDisplay::setBrightness(val);
+        lv_label_set_text_fmt(d->label, "BRIGHTNESS: %d%%", val);
+        d->ui->saveSettings(d->ui->mSettingsFilePath);
+    }, LV_EVENT_VALUE_CHANGED, bData);
+    lv_obj_add_event_cb(brightSlider, [](lv_event_t* e) {
+        delete (BrightData*)lv_event_get_user_data(e);
+    }, LV_EVENT_DELETE, bData);
+
+    // --- Display Flip (180°) Button ---
+    lv_obj_t* flipBtn = lv_button_create(systemCard);
+    lv_obj_set_size(flipBtn, 230, 36);
+    lv_obj_set_style_bg_color(flipBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_color(flipBtn, trackColor, 0);
+    lv_obj_set_style_border_width(flipBtn, 1, 0);
+    lv_obj_set_style_radius(flipBtn, 8, 0);
+    lv_obj_t* flipLbl = lv_label_create(flipBtn);
+    double curAngle = HardwareDisplay::getRotationAngle();
+    lv_label_set_text_fmt(flipLbl, "FLIP ORIENTATION (%.0f" "\xC2\xB0" ")", curAngle);
+    lv_obj_set_style_text_font(flipLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(flipLbl);
+    lv_obj_add_event_cb(flipBtn, [](lv_event_t* e) {
+        lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+        lv_obj_t* lbl = lv_obj_get_child(btn, 0);
+        double angle = HardwareDisplay::getRotationAngle();
+        double newAngle = (angle == 270.0) ? 90.0 : (angle == 90.0 ? 270.0 : (angle == 0.0 ? 180.0 : 0.0));
+        HardwareDisplay::setRotationAngle(newAngle);
+        lv_label_set_text_fmt(lbl, "FLIP ORIENTATION (%.0f" "\xC2\xB0" ")", newAngle);
+    }, LV_EVENT_CLICKED, this);
+
     // Credits/Privacy button
     lv_obj_t* credBtn = lv_button_create(systemCard);
     lv_obj_set_size(credBtn, 230, 36);
@@ -2273,7 +2337,12 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(perfTitle, trackColor, 0);
 
     mCpuLoadLabel = lv_label_create(perfCard);
-    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+    float initCpuTemp = HardwareDisplay::getCpuTemperature();
+    if (initCpuTemp > 0.0f) {
+        lv_label_set_text_fmt(mCpuLoadLabel, "CPU: %.1f%% | %.1f\xC2\xB0" "C", mEngine.getCpuLoad() * 100.0f, initCpuTemp);
+    } else {
+        lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+    }
     lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0x00FFCC), 0);
 
@@ -2330,7 +2399,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
 
     lv_obj_t* exitConsoleBtn = lv_button_create(perfCard);
     lv_obj_set_size(exitConsoleBtn, 230, 36);
-    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0xD32F2F), 0);
+    lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_radius(exitConsoleBtn, 8, 0);
     lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
     lv_label_set_text(exitConsoleLbl, "EXIT TO CONSOLE");
@@ -2339,6 +2408,50 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(exitConsoleBtn, [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         ui->openConsoleModal();
+    }, LV_EVENT_CLICKED, this);
+
+    // Reboot Pi Button
+    lv_obj_t* rebootBtn = lv_button_create(perfCard);
+    lv_obj_set_size(rebootBtn, 230, 36);
+    lv_obj_set_style_bg_color(rebootBtn, lv_color_hex(0xCC6600), 0);
+    lv_obj_set_style_radius(rebootBtn, 8, 0);
+    lv_obj_t* rebootLbl = lv_label_create(rebootBtn);
+    lv_label_set_text(rebootLbl, LV_SYMBOL_REFRESH " REBOOT PI");
+    lv_obj_set_style_text_font(rebootLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(rebootLbl);
+    lv_obj_add_event_cb(rebootBtn, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->showConfirmationModal(
+            "REBOOT SYSTEM",
+            "Are you sure you want to reboot the Raspberry Pi?\nAny unsaved changes will be lost.",
+            "REBOOT",
+            lv_color_hex(0xCC6600),
+            []() {
+                HardwareDisplay::rebootSystem();
+            }
+        );
+    }, LV_EVENT_CLICKED, this);
+
+    // Shutdown Pi Button
+    lv_obj_t* shutdownBtn = lv_button_create(perfCard);
+    lv_obj_set_size(shutdownBtn, 230, 36);
+    lv_obj_set_style_bg_color(shutdownBtn, lv_color_hex(0x8B0000), 0);
+    lv_obj_set_style_radius(shutdownBtn, 8, 0);
+    lv_obj_t* shutdownLbl = lv_label_create(shutdownBtn);
+    lv_label_set_text(shutdownLbl, LV_SYMBOL_POWER " SHUT DOWN PI");
+    lv_obj_set_style_text_font(shutdownLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(shutdownLbl);
+    lv_obj_add_event_cb(shutdownBtn, [](lv_event_t* e) {
+        UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+        ui->showConfirmationModal(
+            "SHUT DOWN SYSTEM",
+            "Are you sure you want to safely power off the Raspberry Pi?\nAny unsaved changes will be lost.",
+            "SHUT DOWN",
+            lv_color_hex(0x8B0000),
+            []() {
+                HardwareDisplay::shutdownSystem();
+            }
+        );
     }, LV_EVENT_CLICKED, this);
 }
 
@@ -4674,11 +4787,20 @@ void UIManager::update() {
         uint32_t now = SDL_GetTicks();
         if (now - lastCpuUpdateMs > 500 || lastCpuUpdateMs == 0) {
             lastCpuUpdateMs = now;
+            float cpuTemp = HardwareDisplay::getCpuTemperature();
             if (mCpuLoadLabel != nullptr) {
-                lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+                if (cpuTemp > 0.0f) {
+                    lv_label_set_text_fmt(mCpuLoadLabel, "CPU: %.1f%% | %.1f\xC2\xB0" "C", mEngine.getCpuLoad() * 100.0f, cpuTemp);
+                } else {
+                    lv_label_set_text_fmt(mCpuLoadLabel, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+                }
             }
             if (mCpuLoadLabelSystem != nullptr) {
-                lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+                if (cpuTemp > 0.0f) {
+                    lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU: %.1f%% | %.1f\xC2\xB0" "C", mEngine.getCpuLoad() * 100.0f, cpuTemp);
+                } else {
+                    lv_label_set_text_fmt(mCpuLoadLabelSystem, "CPU Load: %.1f%%", mEngine.getCpuLoad() * 100.0f);
+                }
             }
         }
 
@@ -17295,6 +17417,7 @@ void UIManager::saveSettings(const std::string& path) {
     file << "AUDIO_DEVICE:" << mSettingsAudioDevice << "\n";
     file << "AUDIO_MIC_DEVICE:" << mSettingsAudioMicDevice << "\n";
     file << "AUDIO_LINE_IN_DEVICE:" << mSettingsAudioLineInDevice << "\n";
+    file << "BRIGHTNESS:" << mSettingsBacklightBrightness << "\n";
 
     // Transport & custom configurations
     file << "PLAY_CC:" << mCcPlay << "\n";
@@ -17406,6 +17529,10 @@ void UIManager::loadSettings(const std::string& path) {
                     gCurrentCaptureDevice = val;
                     switchCaptureDevice(val);
                 }
+            }
+            else if (key == "BRIGHTNESS") {
+                mSettingsBacklightBrightness = std::clamp(std::stoi(val), 10, 100);
+                HardwareDisplay::setBrightness(mSettingsBacklightBrightness);
             }
             else if (key == "PLAY_CC") mCcPlay = std::stoi(val);
             else if (key == "STOP_CC") mCcStop = std::stoi(val);
@@ -18309,6 +18436,84 @@ void UIManager::consoleCloseCb(lv_event_t* e) {
         ui->mConsoleInputTa = nullptr;
         ui->mConsoleKb = nullptr;
     }
+}
+
+void UIManager::showConfirmationModal(const char* title, const char* message, const char* confirmBtnText, lv_color_t confirmBtnColor, std::function<void()> onConfirm) {
+    lv_obj_t* modalBackdrop = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(modalBackdrop, SCREEN_WIDTH, SCREEN_HEIGHT);
+    lv_obj_center(modalBackdrop);
+    lv_obj_set_style_bg_color(modalBackdrop, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(modalBackdrop, LV_OPA_70, 0);
+    lv_obj_set_style_border_width(modalBackdrop, 0, 0);
+    lv_obj_remove_flag(modalBackdrop, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* dialog = lv_obj_create(modalBackdrop);
+    lv_obj_set_size(dialog, 460, 220);
+    lv_obj_center(dialog);
+    lv_obj_set_style_bg_color(dialog, lv_color_hex(0x1F1F1F), 0);
+    lv_obj_set_style_border_color(dialog, confirmBtnColor, 0);
+    lv_obj_set_style_border_width(dialog, 2, 0);
+    lv_obj_set_style_radius(dialog, 12, 0);
+    lv_obj_set_style_pad_all(dialog, 20, 0);
+    lv_obj_remove_flag(dialog, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* titleLbl = lv_label_create(dialog);
+    lv_label_set_text(titleLbl, title);
+    lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(titleLbl, confirmBtnColor, 0);
+    lv_obj_align(titleLbl, LV_ALIGN_TOP_MID, 0, 0);
+
+    lv_obj_t* msgLbl = lv_label_create(dialog);
+    lv_label_set_text(msgLbl, message);
+    lv_obj_set_style_text_font(msgLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(msgLbl, lv_color_hex(0xDDDDDD), 0);
+    lv_obj_set_style_text_align(msgLbl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(msgLbl, 400);
+    lv_label_set_long_mode(msgLbl, LV_LABEL_LONG_WRAP);
+    lv_obj_align(msgLbl, LV_ALIGN_CENTER, 0, -10);
+
+    // Cancel Button
+    lv_obj_t* cancelBtn = lv_button_create(dialog);
+    lv_obj_set_size(cancelBtn, 160, 42);
+    lv_obj_align(cancelBtn, LV_ALIGN_BOTTOM_LEFT, 20, 0);
+    lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0x3A3A3A), 0);
+    lv_obj_set_style_radius(cancelBtn, 8, 0);
+    lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
+    lv_label_set_text(cancelLbl, "CANCEL");
+    lv_obj_set_style_text_font(cancelLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(cancelLbl);
+
+    lv_obj_add_event_cb(cancelBtn, [](lv_event_t* e) {
+        lv_obj_t* backdrop = (lv_obj_t*)lv_event_get_user_data(e);
+        lv_obj_delete(backdrop);
+    }, LV_EVENT_CLICKED, modalBackdrop);
+
+    // Confirm Button
+    struct ConfirmContext {
+        lv_obj_t* backdrop;
+        std::function<void()> cb;
+    };
+    ConfirmContext* ctx = new ConfirmContext{modalBackdrop, onConfirm};
+
+    lv_obj_t* okBtn = lv_button_create(dialog);
+    lv_obj_set_size(okBtn, 160, 42);
+    lv_obj_align(okBtn, LV_ALIGN_BOTTOM_RIGHT, -20, 0);
+    lv_obj_set_style_bg_color(okBtn, confirmBtnColor, 0);
+    lv_obj_set_style_radius(okBtn, 8, 0);
+    lv_obj_t* okLbl = lv_label_create(okBtn);
+    lv_label_set_text(okLbl, confirmBtnText);
+    lv_obj_set_style_text_font(okLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(okLbl);
+
+    lv_obj_add_event_cb(okBtn, [](lv_event_t* e) {
+        ConfirmContext* c = (ConfirmContext*)lv_event_get_user_data(e);
+        if (c->cb) c->cb();
+        lv_obj_delete(c->backdrop);
+    }, LV_EVENT_CLICKED, ctx);
+
+    lv_obj_add_event_cb(okBtn, [](lv_event_t* e) {
+        delete (ConfirmContext*)lv_event_get_user_data(e);
+    }, LV_EVENT_DELETE, ctx);
 }
 
 // =========================================================================

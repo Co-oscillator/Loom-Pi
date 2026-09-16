@@ -8,6 +8,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <functional>
 
 struct MidiCallbackData;
 static void processMidiMessage(uint8_t status, uint8_t data1, uint8_t data2, struct MidiCallbackData* data, int sourceClient = -1);
@@ -555,6 +556,7 @@ private:
     void populateSettingsMidiPadsTab(lv_obj_t* tab);
     void populateSettingsKnobsFadersTab(lv_obj_t* tab);
     void populateSettingsUsbMidiTab(lv_obj_t* tab);
+    void showConfirmationModal(const char* title, const char* message, const char* confirmBtnText, lv_color_t confirmBtnColor, std::function<void()> onConfirm);
     void rebuildPadGrid();
     std::string detectChordName(const int* notes, int count);
     
@@ -714,8 +716,9 @@ public:
     float mPlayModXIntensity = 1.0f; // 0.0 to 1.0
     float mPlayModYIntensity = 1.0f; // 0.0 to 1.0
     
-    // Settings – Keyboard mode
+    // Settings – Keyboard mode & Hardware
     bool mSettingsKeyboardMode = true;
+    int mSettingsBacklightBrightness = 80;
     std::string mSettingsAudioDevice = "Default";
     std::string mSettingsAudioMicDevice = "Default";
     std::string mSettingsAudioLineInDevice = "Default";

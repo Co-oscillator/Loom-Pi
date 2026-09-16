@@ -1,8 +1,10 @@
 #include "HardwareDisplay.h"
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <dirent.h>
 
 namespace {
     SDL_Window* s_window = nullptr;
@@ -268,6 +270,92 @@ int HardwareDisplay::getPhysicalHeight() {
 
 double HardwareDisplay::getRotationAngle() {
     return s_rotationAngle;
+}
+
+void HardwareDisplay::setRotationAngle(double angle) {
+    s_rotationAngle = angle;
+    if (s_display) {
+        lv_obj_invalidate(lv_display_get_screen_active(s_display));
+    }
+    std::cout << "[HardwareDisplay] Rotation angle changed to " << s_rotationAngle << " deg" << std::endl;
+}
+
+int HardwareDisplay::getBrightness() {
+#ifdef __linux__
+    DIR* dir = opendir("/sys/class/backlight");
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            if (entry->d_name[0] == '.') continue;
+            std::string basePath = std::string("/sys/class/backlight/") + entry->d_name;
+            std::ifstream maxFile(basePath + "/max_brightness");
+            std::ifstream curFile(basePath + "/brightness");
+            int maxB = 255, curB = 255;
+            if (maxFile >> maxB && curFile >> curB && maxB > 0) {
+                closedir(dir);
+                return std::clamp((int)((float)curB / (float)maxB * 100.0f), 10, 100);
+            }
+        }
+        closedir(dir);
+    }
+#endif
+    return 100;
+}
+
+void HardwareDisplay::setBrightness(int percent) {
+    percent = std::clamp(percent, 10, 100);
+#ifdef __linux__
+    DIR* dir = opendir("/sys/class/backlight");
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            if (entry->d_name[0] == '.') continue;
+            std::string basePath = std::string("/sys/class/backlight/") + entry->d_name;
+            std::ifstream maxFile(basePath + "/max_brightness");
+            int maxB = 255;
+            if (maxFile >> maxB && maxB > 0) {
+                int rawVal = std::clamp((int)((float)percent / 100.0f * (float)maxB), 1, maxB);
+                std::ofstream curFile(basePath + "/brightness");
+                if (curFile.is_open()) {
+                    curFile << rawVal << "\n";
+                } else {
+                    std::string cmd = "sudo sh -c 'echo " + std::to_string(rawVal) + " > " + basePath + "/brightness' 2>/dev/null";
+                    int r = std::system(cmd.c_str());
+                    (void)r;
+                }
+            }
+        }
+        closedir(dir);
+    }
+#endif
+    std::cout << "[HardwareDisplay] Hardware backlight brightness set to " << percent << "%" << std::endl;
+}
+
+float HardwareDisplay::getCpuTemperature() {
+#ifdef __linux__
+    std::ifstream tempFile("/sys/class/thermal/thermal_zone0/temp");
+    int rawTemp = 0;
+    if (tempFile >> rawTemp && rawTemp > 0) {
+        return rawTemp / 1000.0f;
+    }
+#endif
+    return 0.0f;
+}
+
+void HardwareDisplay::rebootSystem() {
+#ifdef __linux__
+    std::cout << "[HardwareDisplay] Initiating system reboot..." << std::endl;
+    int r = std::system("sudo reboot");
+    (void)r;
+#endif
+}
+
+void HardwareDisplay::shutdownSystem() {
+#ifdef __linux__
+    std::cout << "[HardwareDisplay] Initiating clean system shutdown..." << std::endl;
+    int r = std::system("sudo poweroff");
+    (void)r;
+#endif
 }
 
 void HardwareDisplay::flushCallback(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
