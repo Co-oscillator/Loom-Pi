@@ -30,11 +30,19 @@ MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
 #endif
 
 
-// Audio Callback
+// Audio Callback (16-bit PCM matching hardware)
 void audioCallback(void* userdata, Uint8* stream, int len) {
-    float* out = reinterpret_cast<float*>(stream);
-    int numFrames = len / (sizeof(float) * 2); // Assuming Stereo float
-    gEngine.renderOutput(out, numFrames, 2);
+    int16_t* out = reinterpret_cast<int16_t*>(stream);
+    int numFrames = len / (sizeof(int16_t) * 2); // Stereo 16-bit
+    static thread_local float floatBuffer[4096 * 2];
+    int framesToDo = std::min(numFrames, 4096);
+    gEngine.renderOutput(floatBuffer, framesToDo, 2);
+    for (int i = 0; i < framesToDo * 2; ++i) {
+        float s = floatBuffer[i];
+        if (s > 1.0f) s = 1.0f;
+        else if (s < -1.0f) s = -1.0f;
+        out[i] = static_cast<int16_t>(s * 32767.0f);
+    }
 }
 
 void audioCaptureCallback(void* userdata, Uint8* stream, int len) {
@@ -105,19 +113,19 @@ bool switchAudioDevice(const std::string& deviceName) {
     SDL_AudioSpec want, have;
     SDL_zero(want);
     want.freq = 48000;
-    want.format = AUDIO_F32SYS;
+    want.format = AUDIO_S16SYS; // Native S16_LE hardware format
     want.channels = 2;
     want.samples = 256;
     want.callback = audioCallback;
     
     const char* devName = (targetDev == "Default" || targetDev == "SDL Default" || targetDev.empty()) ? nullptr : targetDev.c_str();
-    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, 0);
+    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
     if (gAudioDeviceID == 0) {
         std::cerr << "switchAudioDevice failed for '" << (devName ? devName : "default") 
                   << "': " << SDL_GetError() << std::endl;
         if (devName != nullptr) {
             std::cout << "[Audio] Falling back to default audio device..." << std::endl;
-            gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+            gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
             if (gAudioDeviceID != 0) {
                 targetDev = "Default";
             }
