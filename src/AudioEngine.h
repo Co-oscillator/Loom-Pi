@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <functional>
 #include "MidiDeviceSettings.h"
 
 #include "Arpeggiator.h"
@@ -145,6 +146,7 @@ public:
   bool getIsPlaying() const { return mIsPlaying; }
   bool getIsRecording() const { return mIsRecording; }
   bool getIsRecordingSample() const { return mIsRecordingSample; }
+  void setCaptureStateCallback(std::function<void(bool)> cb) { mOnCaptureStateChanged = cb; }
   void getStepActiveStates(int trackIndex, bool *out, int maxSize);
   std::vector<Step> getSequencerSteps(int trackIndex);
   std::vector<Step> getDrumSequencerSteps(int trackIndex, int drumIndex);
@@ -558,6 +560,7 @@ public:
     float countdown = 0.0f;
   };
   DrumRowActiveKey mDrumRowActiveKeys[8];
+  std::function<void(bool)> mOnCaptureStateChanged = nullptr;
 };
 
 #endif // AUDIO_ENGINE_H
