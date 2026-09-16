@@ -200,19 +200,30 @@ int main() {
     lv_display_t * disp = HardwareDisplay::getDisplay();
     lv_indev_t * indev = HardwareDisplay::getPointerIndev();
     
-    // 4. Init UI Manager (loads settings.txt and opens the saved/configured audio device)
+    // 4. Init UI Manager (loads settings.txt)
     UIManager ui(gEngine);
     ui.init();
 
-    // Fallback: If settings.txt didn't specify an audio device, open it now
+    // 5. Init MIDI FIRST — establishes USB interrupt endpoints on the hub
+    //    before we add isochronous audio endpoints through the same TT.
+    //    On the main branch, MIDI was always connected before the user
+    //    selected the USB audio device from Settings, so this ordering is
+    //    critical for TT periodic-schedule stability.
+    static MidiCallbackData midiData = {&gEngine, &ui};
+    setupMidiInput(&midiData);
+
+    // 6. Let MIDI auto-connect do its first scan and USB hub TT schedule stabilize.
+    //    The auto-connect thread subscribes to MIDI controller ports immediately,
+    //    activating USB interrupt endpoints. We must wait for the kernel to fully
+    //    establish these periodic transfers before adding isochronous audio.
+    std::cout << "[Audio] Waiting for USB hub to stabilize after MIDI connect..." << std::endl;
+    SDL_Delay(3000);
+
+    // 7. NOW open the audio device (TT schedule is stable)
     if (gAudioDeviceID == 0) {
         switchAudioDevice(ui.mSettingsAudioDevice);
     }
 
-    // 5. Init MIDI Input (CoreMIDI / Fallback)
-    static MidiCallbackData midiData = {&gEngine, &ui};
-    setupMidiInput(&midiData);
-    
     std::cout << "Engine initialized successfully. Entering main loop." << std::endl;
     
     // QWERTY-to-MIDI note mapping (covers ~3 octaves)
@@ -289,6 +300,17 @@ int main() {
                 HardwareDisplay::cleanup();
                 SDL_Quit();
                 return 0;
+            }
+
+            // Auto-recover from USB audio device disconnection/crash
+            if (event.type == SDL_AUDIODEVICEREMOVED) {
+                if (!event.adevice.iscapture && event.adevice.which == gAudioDeviceID) {
+                    std::cout << "[Audio] Device lost (TT crash?). Recovering in 2s..." << std::endl;
+                    gAudioDeviceID = 0;
+                    SDL_Delay(2000);
+                    switchAudioDevice("Default");
+                }
+                continue;
             }
 
             // Handle scroll wheel on active slider/knob
