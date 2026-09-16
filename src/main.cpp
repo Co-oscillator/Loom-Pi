@@ -62,21 +62,51 @@ bool switchAudioDevice(const std::string& deviceName) {
     }
 
     std::string targetDev = deviceName;
-    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
-        std::string usbDev = "";
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default" ||
+        targetDev == "Usb Audio Device, USB Audio" || targetDev == "USB Audio Device, USB Audio") {
+        std::string chosen = "";
+        // Priority 1: Specifically search for AB13X
         for (int i = 0; i < numDevs; ++i) {
             const char* name = SDL_GetAudioDeviceName(i, 0);
             if (!name) continue;
             std::string s(name);
             std::string sLower = s;
             std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
-            if (sLower.find("usb") != std::string::npos || sLower.find("ab13x") != std::string::npos) {
-                usbDev = s;
+            if (sLower.find("ab13x") != std::string::npos) {
+                chosen = s;
                 break;
             }
         }
-        if (!usbDev.empty()) {
-            targetDev = usbDev;
+        // Priority 2: USB device that is NOT the dummy "usb audio device"
+        if (chosen.empty()) {
+            for (int i = 0; i < numDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 0);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos && sLower.find("usb audio device") == std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        // Priority 3: any USB device
+        if (chosen.empty()) {
+            for (int i = 0; i < numDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 0);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        if (!chosen.empty()) {
+            targetDev = chosen;
             std::cout << "[Audio] Auto-selected USB playback device: " << targetDev << std::endl;
         } else {
             targetDev = "Default";
@@ -155,21 +185,51 @@ bool switchCaptureDevice(const std::string& deviceName) {
     }
 
     std::string targetDev = deviceName;
-    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
-        std::string usbDev = "";
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default" ||
+        targetDev == "Usb Audio Device, USB Audio" || targetDev == "USB Audio Device, USB Audio") {
+        std::string chosen = "";
+        // Priority 1: Specifically search for AB13X
         for (int i = 0; i < numCapDevs; ++i) {
             const char* name = SDL_GetAudioDeviceName(i, 1);
             if (!name) continue;
             std::string s(name);
             std::string sLower = s;
             std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
-            if (sLower.find("usb") != std::string::npos || sLower.find("ab13x") != std::string::npos) {
-                usbDev = s;
+            if (sLower.find("ab13x") != std::string::npos) {
+                chosen = s;
                 break;
             }
         }
-        if (!usbDev.empty()) {
-            targetDev = usbDev;
+        // Priority 2: USB device that is NOT the dummy "usb audio device"
+        if (chosen.empty()) {
+            for (int i = 0; i < numCapDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 1);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos && sLower.find("usb audio device") == std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        // Priority 3: any USB device
+        if (chosen.empty()) {
+            for (int i = 0; i < numCapDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 1);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        if (!chosen.empty()) {
+            targetDev = chosen;
             std::cout << "[Audio] Auto-selected USB capture device: " << targetDev << std::endl;
         } else {
             const char* firstDev = SDL_GetAudioDeviceName(0, 1);
