@@ -1,5 +1,6 @@
 #include "AudioEngine.h"
 #include "Utils.h"
+#include "HardwareDisplay.h"
 #include <iostream>
 #include <SDL.h>
 #include "lvgl.h"
@@ -140,18 +141,14 @@ int main() {
         std::cerr << "Failed to open default SDL Capture Device." << std::endl;
     }
     
-    // 3. Init LVGL & Video Subsystem
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "CRITICAL ERROR: SDL Video Init Failed! " << SDL_GetError() << std::endl;
-    } else {
-        std::cout << "SDL Video Init Success. Driver: " << SDL_GetCurrentVideoDriver() << std::endl;
-    }
+    // 3. Init LVGL & Hardware Video Subsystem
     lv_init();
-    
-    // Create a 1280x800 window using LVGL's SDL driver
-    lv_display_t * disp = lv_sdl_window_create(UIManager::SCREEN_WIDTH, UIManager::SCREEN_HEIGHT);
-    lv_indev_t * indev = lv_sdl_mouse_create();
-    lv_sdl_keyboard_create();
+    if (!HardwareDisplay::init(UIManager::SCREEN_WIDTH, UIManager::SCREEN_HEIGHT)) {
+        std::cerr << "CRITICAL ERROR: HardwareDisplay Init Failed!" << std::endl;
+        return 1;
+    }
+    lv_display_t * disp = HardwareDisplay::getDisplay();
+    lv_indev_t * indev = HardwareDisplay::getPointerIndev();
     
     // 4. Init UI Manager
     UIManager ui(gEngine);
@@ -205,29 +202,50 @@ int main() {
         }
     };
     
+    // Drum Number Row 1-8 key mapper
+    auto symToDrumKey = [](SDL_Keycode key) -> int {
+        switch (key) {
+            case SDLK_1: case SDLK_KP_1: return 0;
+            case SDLK_2: case SDLK_KP_2: return 1;
+            case SDLK_3: case SDLK_KP_3: return 2;
+            case SDLK_4: case SDLK_KP_4: return 3;
+            case SDLK_5: case SDLK_KP_5: return 4;
+            case SDLK_6: case SDLK_KP_6: return 5;
+            case SDLK_7: case SDLK_KP_7: return 6;
+            case SDLK_8: case SDLK_KP_8: return 7;
+            default: return -1;
+        }
+    };
+
     // Track which keys are currently held (to prevent repeats and stuck notes)
     std::unordered_map<SDL_Keycode, int> activeKeyNotes;
 
     // Main loop
     while (true) {
-        // Selectively grab ONLY keyboard events using SDL_PeepEvents.
-        // This leaves mouse/touch events in the queue for LVGL's SDL driver.
-        SDL_PumpEvents(); // Refresh the event queue
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            // Check for quit
+            if (event.type == SDL_QUIT) {
+                if (gCaptureDeviceID != 0) {
+                    SDL_CloseAudioDevice(gCaptureDeviceID);
+                }
+                SDL_CloseAudioDevice(gAudioDeviceID);
+                HardwareDisplay::cleanup();
+                SDL_Quit();
+                return 0;
+            }
 
-        // Handle scroll wheel on active slider/knob when left mouse button is held
-        Uint32 mouseState = SDL_GetMouseState(nullptr, nullptr);
-        if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-            SDL_Event wheelEvent;
-            while (SDL_PeepEvents(&wheelEvent, 1, SDL_GETEVENT, SDL_MOUSEWHEEL, SDL_MOUSEWHEEL) > 0) {
+            // Handle scroll wheel on active slider/knob
+            if (event.type == SDL_MOUSEWHEEL) {
                 if (indev && indev->pointer.act_obj) {
                     lv_obj_t* obj = indev->pointer.act_obj;
                     if (lv_obj_check_type(obj, &lv_slider_class)) {
                         int32_t val = lv_slider_get_value(obj);
                         int32_t min = lv_slider_get_min_value(obj);
                         int32_t max = lv_slider_get_max_value(obj);
-                        int32_t step = (max - min) / 30; // ~3% step per click
+                        int32_t step = (max - min) / 30;
                         if (step < 1) step = 1;
-                        int32_t newVal = val + (wheelEvent.wheel.y * step);
+                        int32_t newVal = val + (event.wheel.y * step);
                         if (newVal < min) newVal = min;
                         if (newVal > max) newVal = max;
                         if (newVal != val) {
@@ -238,9 +256,9 @@ int main() {
                         int32_t val = lv_arc_get_value(obj);
                         int32_t min = lv_arc_get_min_value(obj);
                         int32_t max = lv_arc_get_max_value(obj);
-                        int32_t step = (max - min) / 30; // ~3% step per click
+                        int32_t step = (max - min) / 30;
                         if (step < 1) step = 1;
-                        int32_t newVal = val + (wheelEvent.wheel.y * step);
+                        int32_t newVal = val + (event.wheel.y * step);
                         if (newVal < min) newVal = min;
                         if (newVal > max) newVal = max;
                         if (newVal != val) {
@@ -249,18 +267,87 @@ int main() {
                         }
                     }
                 }
+                continue;
             }
-        }
-        
-        // Check for quit
-        SDL_Event quitEvent;
-        if (SDL_PeepEvents(&quitEvent, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
-            if (gCaptureDeviceID != 0) {
-                SDL_CloseAudioDevice(gCaptureDeviceID);
+
+            // Forward touch, mouse, and text events to HardwareDisplay
+            if (HardwareDisplay::handleEvent(event)) {
+                continue;
             }
-            SDL_CloseAudioDevice(gAudioDeviceID);
-            SDL_Quit();
-            return 0;
+
+            // Keyboard handling
+            if (event.type == SDL_KEYDOWN) {
+                SDL_Keycode sym = event.key.keysym.sym;
+                if (sym == SDLK_ESCAPE) {
+                    if (gCaptureDeviceID != 0) {
+                        SDL_CloseAudioDevice(gCaptureDeviceID);
+                    }
+                    SDL_CloseAudioDevice(gAudioDeviceID);
+                    HardwareDisplay::cleanup();
+                    SDL_Quit();
+                    return 0;
+                }
+
+                // If file browser or console is open, send navigation/control keys to LVGL
+                if (ui.isFileBrowserOpen() || ui.isConsoleModalOpen()) {
+                    if (sym == SDLK_BACKSPACE) HardwareDisplay::pushControlKey(LV_KEY_BACKSPACE);
+                    else if (sym == SDLK_DELETE) HardwareDisplay::pushControlKey(LV_KEY_DEL);
+                    else if (sym == SDLK_RETURN || sym == SDLK_KP_ENTER) HardwareDisplay::pushControlKey(LV_KEY_ENTER);
+                    else if (sym == SDLK_LEFT) HardwareDisplay::pushControlKey(LV_KEY_LEFT);
+                    else if (sym == SDLK_RIGHT) HardwareDisplay::pushControlKey(LV_KEY_RIGHT);
+                    else if (sym == SDLK_UP) HardwareDisplay::pushControlKey(LV_KEY_UP);
+                    else if (sym == SDLK_DOWN) HardwareDisplay::pushControlKey(LV_KEY_DOWN);
+                    continue;
+                }
+
+                // Transport controls
+                if (sym == SDLK_SPACE && !event.key.repeat) {
+                    gEngine.setPlaying(!gEngine.getIsPlaying());
+                } else if ((sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) && !event.key.repeat) {
+                    bool recState = !gEngine.getIsRecording();
+                    gEngine.setIsRecording(recState);
+                    if (recState) {
+                        gEngine.setPlaying(true);
+                    }
+                } else {
+                    int drumIdx = symToDrumKey(sym);
+                    if (drumIdx >= 0) {
+                        if (!event.key.repeat) {
+                            int track = ui.getDrumRowTargetTrack();
+                            int note = ui.getDrumRowNote(drumIdx);
+                            int ratchet = ui.getDrumRowRatchet(drumIdx);
+                            gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, true);
+                        }
+                    } else if (ui.isKeyboardModeEnabled()) {
+                        if (!event.key.repeat && activeKeyNotes.count(sym) == 0) {
+                            int note = qwertyToNote(sym);
+                            if (note >= 0 && note < 128) {
+                                activeKeyNotes[sym] = note;
+                                gEngine.triggerNote(ui.getActiveTrack(), note, 100);
+                            }
+                        }
+                    }
+                }
+            } else if (event.type == SDL_KEYUP) {
+                SDL_Keycode sym = event.key.keysym.sym;
+                if (sym == SDLK_SPACE || sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) {
+                    // Transport keys no-op on key up
+                } else {
+                    int drumIdx = symToDrumKey(sym);
+                    if (drumIdx >= 0) {
+                        int track = ui.getDrumRowTargetTrack();
+                        int note = ui.getDrumRowNote(drumIdx);
+                        int ratchet = ui.getDrumRowRatchet(drumIdx);
+                        gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, false);
+                    } else if (activeKeyNotes.count(sym) > 0) {
+                        int note = activeKeyNotes[sym];
+                        for (int t = 0; t < 8; ++t) {
+                            gEngine.releaseNote(t, note);
+                        }
+                        activeKeyNotes.erase(sym);
+                    }
+                }
+            }
         }
 
         // If window loses keyboard focus, thread-safely release all currently playing QWERTY notes
@@ -272,90 +359,11 @@ int main() {
             }
             activeKeyNotes.clear();
         }
-        
-        // Transport & QWERTY Keyboard: grab key events ONLY if file browser/console are NOT open
-        SDL_Event keyEvents[32];
-        int numKeys = 0;
-        if (!ui.isFileBrowserOpen() && !ui.isConsoleModalOpen()) {
-            numKeys = SDL_PeepEvents(keyEvents, 32, SDL_GETEVENT, SDL_KEYDOWN, SDL_KEYUP);
-        }
-        // Drum Number Row 1-8 key mapper
-        auto symToDrumKey = [](SDL_Keycode key) -> int {
-            switch (key) {
-                case SDLK_1: case SDLK_KP_1: return 0;
-                case SDLK_2: case SDLK_KP_2: return 1;
-                case SDLK_3: case SDLK_KP_3: return 2;
-                case SDLK_4: case SDLK_KP_4: return 3;
-                case SDLK_5: case SDLK_KP_5: return 4;
-                case SDLK_6: case SDLK_KP_6: return 5;
-                case SDLK_7: case SDLK_KP_7: return 6;
-                case SDLK_8: case SDLK_KP_8: return 7;
-                default: return -1;
-            }
-        };
 
-        for (int k = 0; k < numKeys; ++k) {
-            SDL_Keycode sym = keyEvents[k].key.keysym.sym;
-            int drumIdx = symToDrumKey(sym);
-
-            if (keyEvents[k].type == SDL_KEYDOWN) {
-                if (sym == SDLK_ESCAPE) {
-                    if (gCaptureDeviceID != 0) {
-                        SDL_CloseAudioDevice(gCaptureDeviceID);
-                    }
-                    SDL_CloseAudioDevice(gAudioDeviceID);
-                    SDL_Quit();
-                    return 0;
-                }
-                if (sym == SDLK_SPACE && !keyEvents[k].key.repeat) {
-                    gEngine.setPlaying(!gEngine.getIsPlaying());
-                } else if ((sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) && !keyEvents[k].key.repeat) {
-                    bool recState = !gEngine.getIsRecording();
-                    gEngine.setIsRecording(recState);
-                    if (recState) {
-                        gEngine.setPlaying(true);
-                    }
-                } else if (drumIdx >= 0) {
-                    if (!keyEvents[k].key.repeat) {
-                        int track = ui.getDrumRowTargetTrack();
-                        int note = ui.getDrumRowNote(drumIdx);
-                        int ratchet = ui.getDrumRowRatchet(drumIdx);
-                        gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, true);
-                    }
-                } else if (ui.isKeyboardModeEnabled()) {
-                    // Ignore repeats for note triggering
-                    if (!keyEvents[k].key.repeat && activeKeyNotes.count(sym) == 0) {
-                        int note = qwertyToNote(sym);
-                        if (note >= 0 && note < 128) {
-                            activeKeyNotes[sym] = note;
-                            gEngine.triggerNote(ui.getActiveTrack(), note, 100);
-                        }
-                    }
-                }
-            } else if (keyEvents[k].type == SDL_KEYUP) {
-                if (sym == SDLK_SPACE || sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) {
-                    // Transport keys no-op on key up
-                } else if (drumIdx >= 0) {
-                    int track = ui.getDrumRowTargetTrack();
-                    int note = ui.getDrumRowNote(drumIdx);
-                    int ratchet = ui.getDrumRowRatchet(drumIdx);
-                    gEngine.triggerDrumRowKey(drumIdx, track, note, ratchet, false);
-                } else {
-                    if (activeKeyNotes.count(sym) > 0) {
-                        int note = activeKeyNotes[sym];
-                        for (int t = 0; t < 8; ++t) {
-                            gEngine.releaseNote(t, note);
-                        }
-                        activeKeyNotes.erase(sym);
-                    }
-                }
-            }
-        }
-
-        // Let LVGL handle its timers and internal SDL event processing
+        // Let LVGL handle timers and refresh
         uint32_t time_till_next = lv_timer_handler();
         ui.update();
-        
+
         if (time_till_next > 10) time_till_next = 10;
         SDL_Delay(time_till_next);
     }

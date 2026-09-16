@@ -39,7 +39,7 @@ set_target_properties(lvgl PROPERTIES SOURCES "${LVGL_CLEAN_SOURCES}")
 target_include_directories(lvgl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(lvgl PUBLIC SDL2::SDL2)
 
-file(GLOB_RECURSE SRC_FILES "src/*.cpp")
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp")
 
 add_executable(LoomPi ${SRC_FILES})
 
