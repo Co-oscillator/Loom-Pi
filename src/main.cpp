@@ -61,10 +61,8 @@ bool switchAudioDevice(const std::string& deviceName) {
     }
 
     std::string targetDev = deviceName;
-    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default" ||
-        targetDev == "Usb Audio Device, USB Audio" || targetDev == "USB Audio Device, USB Audio") {
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
         std::string chosen = "";
-        // Priority 1: Specifically search for AB13X
         for (int i = 0; i < numDevs; ++i) {
             const char* name = SDL_GetAudioDeviceName(i, 0);
             if (!name) continue;
@@ -76,21 +74,6 @@ bool switchAudioDevice(const std::string& deviceName) {
                 break;
             }
         }
-        // Priority 2: USB device that is NOT the dummy "usb audio device"
-        if (chosen.empty()) {
-            for (int i = 0; i < numDevs; ++i) {
-                const char* name = SDL_GetAudioDeviceName(i, 0);
-                if (!name) continue;
-                std::string s(name);
-                std::string sLower = s;
-                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
-                if (sLower.find("usb") != std::string::npos && sLower.find("usb audio device") == std::string::npos) {
-                    chosen = s;
-                    break;
-                }
-            }
-        }
-        // Priority 3: any USB device
         if (chosen.empty()) {
             for (int i = 0; i < numDevs; ++i) {
                 const char* name = SDL_GetAudioDeviceName(i, 0);
@@ -110,11 +93,6 @@ bool switchAudioDevice(const std::string& deviceName) {
         } else {
             targetDev = "Default";
         }
-    }
-
-    if (gAudioDeviceID != 0 && gCurrentAudioDevice == targetDev) {
-        std::cout << "[Audio] Playback device already active: " << gCurrentAudioDevice << std::endl;
-        return true;
     }
 
     if (gAudioDeviceID != 0) {
@@ -183,10 +161,8 @@ bool switchCaptureDevice(const std::string& deviceName) {
     }
 
     std::string targetDev = deviceName;
-    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default" ||
-        targetDev == "Usb Audio Device, USB Audio" || targetDev == "USB Audio Device, USB Audio") {
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
         std::string chosen = "";
-        // Priority 1: Specifically search for AB13X
         for (int i = 0; i < numCapDevs; ++i) {
             const char* name = SDL_GetAudioDeviceName(i, 1);
             if (!name) continue;
@@ -198,21 +174,6 @@ bool switchCaptureDevice(const std::string& deviceName) {
                 break;
             }
         }
-        // Priority 2: USB device that is NOT the dummy "usb audio device"
-        if (chosen.empty()) {
-            for (int i = 0; i < numCapDevs; ++i) {
-                const char* name = SDL_GetAudioDeviceName(i, 1);
-                if (!name) continue;
-                std::string s(name);
-                std::string sLower = s;
-                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
-                if (sLower.find("usb") != std::string::npos && sLower.find("usb audio device") == std::string::npos) {
-                    chosen = s;
-                    break;
-                }
-            }
-        }
-        // Priority 3: any USB device
         if (chosen.empty()) {
             for (int i = 0; i < numCapDevs; ++i) {
                 const char* name = SDL_GetAudioDeviceName(i, 1);
@@ -233,11 +194,6 @@ bool switchCaptureDevice(const std::string& deviceName) {
             const char* firstDev = SDL_GetAudioDeviceName(0, 1);
             targetDev = firstDev ? firstDev : "Default";
         }
-    }
-
-    if (gCaptureDeviceID != 0 && gCurrentCaptureDevice == targetDev) {
-        std::cout << "[Audio] Capture device already active: " << gCurrentCaptureDevice << std::endl;
-        return true;
     }
 
     if (gCaptureDeviceID != 0) {
@@ -291,16 +247,6 @@ int main() {
         return 1;
     }
     
-    if (!switchAudioDevice(gCurrentAudioDevice)) {
-        std::cerr << "Failed to open default SDL Audio Device." << std::endl;
-        return 1;
-    }
-    
-    // Open SDL Audio Capture (recording) device
-    if (!switchCaptureDevice(gCurrentCaptureDevice)) {
-        std::cerr << "Failed to open default SDL Capture Device." << std::endl;
-    }
-    
     // 3. Init LVGL
     lv_init();
     
@@ -309,9 +255,17 @@ int main() {
     lv_indev_t * indev = lv_sdl_mouse_create();
     lv_sdl_keyboard_create();
     
-    // 4. Init UI Manager
+    // 4. Init UI Manager (loads settings.txt and opens the saved/configured audio device)
     UIManager ui(gEngine);
     ui.init();
+
+    // Fallback: If settings.txt didn't specify an audio device, open it now
+    if (gAudioDeviceID == 0) {
+        switchAudioDevice(ui.mSettingsAudioDevice);
+    }
+    if (gCaptureDeviceID == 0) {
+        switchCaptureDevice(ui.mSettingsAudioMicDevice);
+    }
 
     // 5. Init MIDI Input (CoreMIDI / Fallback)
     static MidiCallbackData midiData = {&gEngine, &ui};
