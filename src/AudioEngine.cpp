@@ -2356,7 +2356,6 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
 }
 
 void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t channels) {
-  std::lock_guard<std::recursive_mutex> lock(mLock);
   for (int i = 0; i < numFrames; ++i) {
     float combined = 0.0f;
     if (channels == 2) {
@@ -2378,7 +2377,9 @@ void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t
     return;
   }
 
-  if (mIsRecordingSample && mRecordingTrackIndex != -1) {
+  if (mIsRecordingSample.load() && mRecordingTrackIndex != -1) {
+    std::lock_guard<std::recursive_mutex> lock(mLock);
+    if (!mIsRecordingSample.load() || mRecordingTrackIndex == -1) return;
     auto &track = mTracks[mRecordingTrackIndex];
     constexpr int MAX_BATCH = 1024;
     float batchBuffer[MAX_BATCH];
@@ -3808,6 +3809,7 @@ std::vector<float> AudioEngine::getRecordedSampleData(int trackIndex,
 }
 
 void AudioEngine::startRecordingSample(int trackIndex) {
+  if (mOnCaptureStateChanged) mOnCaptureStateChanged(true);
   std::lock_guard<std::recursive_mutex> lock(mLock);
   if (trackIndex >= 0 && trackIndex < mTracks.size()) {
     mIsRecordingSample = true;
@@ -3821,6 +3823,7 @@ void AudioEngine::startRecordingSample(int trackIndex) {
 }
 
 void AudioEngine::stopRecordingSample(int trackIndex) {
+  if (mOnCaptureStateChanged) mOnCaptureStateChanged(false);
   std::lock_guard<std::recursive_mutex> lock(mLock);
   if (!mIsRecordingLocked) {
     // Commit recorded samples to active buffer (lock-free swap)

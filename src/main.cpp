@@ -61,7 +61,7 @@ bool switchAudioDevice(const std::string& deviceName) {
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
     want.channels = 2;
-    want.samples = 256;
+    want.samples = 1024;
     want.callback = audioCallback;
     
     const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
@@ -85,6 +85,13 @@ bool switchAudioDevice(const std::string& deviceName) {
 
 SDL_AudioDeviceID gCaptureDeviceID = 0;
 std::string gCurrentCaptureDevice = "Default";
+
+void setCaptureActive(bool active) {
+    if (gCaptureDeviceID != 0) {
+        SDL_PauseAudioDevice(gCaptureDeviceID, active ? 0 : 1);
+        std::cout << "[Audio] Audio Capture " << (active ? "STARTED" : "PAUSED") << std::endl;
+    }
+}
 
 bool switchCaptureDevice(const std::string& deviceName) {
     if (gCaptureDeviceID != 0) {
@@ -111,8 +118,10 @@ bool switchCaptureDevice(const std::string& deviceName) {
     }
     
     if (gCaptureDeviceID != 0) {
-        SDL_PauseAudioDevice(gCaptureDeviceID, 0);
-        std::cout << "SDL Capture Device switched to: " << gCurrentCaptureDevice << std::endl;
+        // Keep capture PAUSED until actively needed by Sampler/Granular recording
+        SDL_PauseAudioDevice(gCaptureDeviceID, 1);
+        std::cout << "SDL Capture Device ready (paused): " << gCurrentCaptureDevice 
+                  << " (have " << haveCapture.samples << " samples @" << haveCapture.freq << "Hz)" << std::endl;
         return true;
     }
     return false;
@@ -123,6 +132,7 @@ int main() {
     
     // 1. Init Audio Engine
     gEngine.init(48000.0f);
+    gEngine.setCaptureStateCallback(setCaptureActive);
     
     // 2. Init SDL Audio Subsystem
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
@@ -205,6 +215,7 @@ int main() {
 
     // Main loop
     while (true) {
+        uint32_t frameStart = SDL_GetTicks();
         // Selectively grab ONLY keyboard events using SDL_PeepEvents.
         // This leaves mouse/touch events in the queue for LVGL's SDL driver.
         SDL_PumpEvents(); // Refresh the event queue
@@ -348,11 +359,16 @@ int main() {
         }
 
         // Let LVGL handle its timers and internal SDL event processing
-        uint32_t time_till_next = lv_timer_handler();
+        lv_timer_handler();
         ui.update();
-        
-        if (time_till_next > 10) time_till_next = 10;
-        SDL_Delay(time_till_next);
+
+        // Target 60 FPS (16.6ms frame period) to eliminate idle CPU spin
+        uint32_t elapsed = SDL_GetTicks() - frameStart;
+        if (elapsed < 16) {
+            SDL_Delay(16 - elapsed);
+        } else {
+            SDL_Delay(1);
+        }
     }
 
     if (gCaptureDeviceID != 0) {
