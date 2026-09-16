@@ -2934,37 +2934,6 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
   }
   if (currentPeak > maxPeak)
     maxPeak = currentPeak;
-
-  if (++logCounter > 187) { // ~Once per second at 48k/256
-    logCounter = 0;
-    int activeTracks = 0;
-    for (const auto &tr : mTracks)
-      if (tr.isActive)
-        activeTracks++;
-
-    LOGD("AudioEngine Stats: ActiveTracks=%d, MasterVol=%.2f, "
-         "SampleRate=%.1f, "
-         "BlockPeak=%.4f, MaxPeak=%.4f",
-         activeTracks, mMasterVolume, (float)mSampleRate, currentPeak, maxPeak);
-
-    // Extra debug: track states
-    for (int t = 0; t < 8; ++t) {
-      if (mTracks[t].isActive || mTracks[t].smoothedVolume > 0.01f || mTracks[t].engineType == 10) {
-        if (mTracks[t].engineType == 10) {
-            LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f, MidiDebug=[%s]", t,
-                 mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
-                 mTracks[t].engineType, mTracks[t].gainReduction, mTracks[t].lastMidiDebug.c_str());
-            mTracks[t].lastMidiDebug = "Idle"; // clear after printing
-        } else {
-            LOGD("  T%d: Active=%s, SmVol=%.2f, Engine=%d, GainRed=%.2f", t,
-                 mTracks[t].isActive ? "YES" : "NO", mTracks[t].smoothedVolume,
-                 mTracks[t].engineType, mTracks[t].gainReduction);
-        }
-      }
-    }
-    maxPeak = 0.0f; // Reset max peak every second
-  }
-
 }
 
 void AudioEngine::triggerNote(int trackIndex, int note, int velocity) {
