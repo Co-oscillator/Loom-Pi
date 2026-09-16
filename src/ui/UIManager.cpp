@@ -191,9 +191,9 @@ UIManager::UIManager(AudioEngine& engine) : mEngine(engine) {
     mSettingsOctaveOffset = 0;
     mSettingsFxPadMomentary = false;
     mSettingsKeyboardMode = false;
-    mSettingsAudioDevice = "Default";
-    mSettingsAudioMicDevice = "Default";
-    mSettingsAudioLineInDevice = "Default";
+    mSettingsAudioDevice = gCurrentAudioDevice;
+    mSettingsAudioMicDevice = gCurrentCaptureDevice;
+    mSettingsAudioLineInDevice = gCurrentCaptureDevice;
     
     mSettingsKnobCount = 12;
     mSettingsSliderCount = 4;
