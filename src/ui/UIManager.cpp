@@ -4478,17 +4478,20 @@ void UIManager::update() {
                 if (lvVal < 0) lvVal = 0;
                 if (lvVal > 1000) lvVal = 1000;
 
+                bool valChanged = false;
                 if (lv_obj_check_type(w.widget, &lv_arc_class)) {
                     if (lv_arc_get_value(w.widget) != lvVal) {
                         lv_arc_set_value(w.widget, lvVal);
+                        valChanged = true;
                     }
                 } else {
                     if (lv_slider_get_value(w.widget) != lvVal) {
                         lv_slider_set_value(w.widget, lvVal, LV_ANIM_OFF);
+                        valChanged = true;
                     }
                 }
 
-                if (w.valLbl) {
+                if (valChanged && w.valLbl) {
                     if (w.isPercent) {
                         int percentVal = (int)(normalized * 100.0f);
                         lv_label_set_text_fmt(w.valLbl, "%d%%", percentVal);
@@ -4591,17 +4594,20 @@ void UIManager::update() {
                 if (lvVal < 0) lvVal = 0;
                 if (lvVal > 1000) lvVal = 1000;
 
+                bool valChanged = false;
                 if (lv_obj_check_type(w.widget, &lv_arc_class)) {
                     if (lv_arc_get_value(w.widget) != lvVal) {
                         lv_arc_set_value(w.widget, lvVal);
+                        valChanged = true;
                     }
                 } else {
                     if (lv_slider_get_value(w.widget) != lvVal) {
                         lv_slider_set_value(w.widget, lvVal, LV_ANIM_OFF);
+                        valChanged = true;
                     }
                 }
 
-                if (w.valLbl) {
+                if (valChanged && w.valLbl) {
                     if (w.isPercent) {
                         int percentVal = (int)(normalized * 100.0f);
                         lv_label_set_text_fmt(w.valLbl, "%d%%", percentVal);

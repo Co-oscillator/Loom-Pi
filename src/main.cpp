@@ -366,7 +366,9 @@ int main() {
         uint32_t time_till_next = lv_timer_handler();
         ui.update();
 
-        if (time_till_next > 10) time_till_next = 10;
+        // Pace main loop to 60Hz (16ms) matching display refresh
+        if (time_till_next > 16) time_till_next = 16;
+        if (time_till_next < 1) time_till_next = 1;
         SDL_Delay(time_till_next);
     }
 
