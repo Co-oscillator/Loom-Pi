@@ -20,15 +20,46 @@ namespace {
     uint8_t* s_drawBuf2 = nullptr;
 
     lv_display_t* s_display = nullptr;
-    lv_indev_t* s_pointerIndev = nullptr;
     lv_indev_t* s_keyboardIndev = nullptr;
 
-    // Pointer state
-    bool s_pointerDown = false;
-    int s_rawPointerX = 0;
-    int s_rawPointerY = 0;
-    int s_uiPointerX = 0;
-    int s_uiPointerY = 0;
+    // Multitouch state (supports up to 10 simultaneous touches)
+    constexpr int MAX_TOUCH_SLOTS = 10;
+
+    struct TouchSlot {
+        bool active = false;
+        SDL_FingerID fingerId = -1;
+        bool pressed = false;
+        int rawX = 0;
+        int rawY = 0;
+        int uiX = 0;
+        int uiY = 0;
+        lv_indev_t* indev = nullptr;
+    };
+
+    TouchSlot s_touchSlots[MAX_TOUCH_SLOTS];
+
+    int findSlotForFinger(SDL_FingerID fingerId) {
+        for (int i = 0; i < MAX_TOUCH_SLOTS; ++i) {
+            if (s_touchSlots[i].active && s_touchSlots[i].fingerId == fingerId) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    int allocateSlotForFinger(SDL_FingerID fingerId) {
+        int existing = findSlotForFinger(fingerId);
+        if (existing >= 0) return existing;
+
+        for (int i = 0; i < MAX_TOUCH_SLOTS; ++i) {
+            if (!s_touchSlots[i].active) {
+                s_touchSlots[i].active = true;
+                s_touchSlots[i].fingerId = fingerId;
+                return i;
+            }
+        }
+        return 0; // Fallback to slot 0 if all 10 are occupied
+    }
 
     // Keyboard buffer
     char s_keyBuf[64] = {0};
@@ -47,6 +78,10 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
             return false;
         }
     }
+
+    // Disable synthetic mouse events from touchscreen to prevent event conflicts
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 
     // Query physical display resolution from KMS / windowing system
     SDL_DisplayMode dm;
@@ -151,11 +186,22 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
     // Provide high-resolution tick callback to LVGL
     lv_tick_set_cb(SDL_GetTicks);
 
-    // Create pointer indev (touchscreen and mouse)
-    s_pointerIndev = lv_indev_create();
-    lv_indev_set_type(s_pointerIndev, LV_INDEV_TYPE_POINTER);
-    lv_indev_set_read_cb(s_pointerIndev, pointerReadCallback);
-    lv_indev_set_mode(s_pointerIndev, LV_INDEV_MODE_EVENT);
+    // Create 10 pointer indevs for multi-touch (one for each simultaneous contact point)
+    for (int i = 0; i < MAX_TOUCH_SLOTS; ++i) {
+        s_touchSlots[i].active = false;
+        s_touchSlots[i].fingerId = -1;
+        s_touchSlots[i].pressed = false;
+        s_touchSlots[i].rawX = 0;
+        s_touchSlots[i].rawY = 0;
+        s_touchSlots[i].uiX = 0;
+        s_touchSlots[i].uiY = 0;
+
+        s_touchSlots[i].indev = lv_indev_create();
+        lv_indev_set_type(s_touchSlots[i].indev, LV_INDEV_TYPE_POINTER);
+        lv_indev_set_read_cb(s_touchSlots[i].indev, pointerReadCallback);
+        lv_indev_set_driver_data(s_touchSlots[i].indev, &s_touchSlots[i]);
+        lv_indev_set_mode(s_touchSlots[i].indev, LV_INDEV_MODE_EVENT);
+    }
 
     // Create keypad indev (keyboard / text input)
     s_keyboardIndev = lv_indev_create();
@@ -166,7 +212,7 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
     // Start text input for modal entries
     SDL_StartTextInput();
 
-    std::cout << "[HardwareDisplay] Display initialized successfully. ("
+    std::cout << "[HardwareDisplay] Display initialized successfully with 10x multitouch. ("
               << s_uiWidth << "x" << s_uiHeight << " UI on "
               << s_physWidth << "x" << s_physHeight << " physical screen, rotation: "
               << s_rotationAngle << " deg)" << std::endl;
@@ -204,7 +250,8 @@ lv_display_t* HardwareDisplay::getDisplay() {
 }
 
 lv_indev_t* HardwareDisplay::getPointerIndev() {
-    return s_pointerIndev;
+    // Return primary pointer indev (Slot 0)
+    return s_touchSlots[0].indev;
 }
 
 lv_indev_t* HardwareDisplay::getKeyboardIndev() {
@@ -262,10 +309,12 @@ void HardwareDisplay::flushCallback(lv_display_t* disp, const lv_area_t* area, u
 }
 
 void HardwareDisplay::pointerReadCallback(lv_indev_t* indev, lv_indev_data_t* data) {
-    (void)indev;
-    data->point.x = s_uiPointerX;
-    data->point.y = s_uiPointerY;
-    data->state = s_pointerDown ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    TouchSlot* slot = static_cast<TouchSlot*>(lv_indev_get_driver_data(indev));
+    if (slot) {
+        data->point.x = slot->uiX;
+        data->point.y = slot->uiY;
+        data->state = slot->pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    }
 }
 
 void HardwareDisplay::keyboardReadCallback(lv_indev_t* indev, lv_indev_data_t* data) {
@@ -320,62 +369,83 @@ bool HardwareDisplay::handleEvent(const SDL_Event& event) {
     switch (event.type) {
         case SDL_MOUSEBUTTONDOWN:
             if (event.button.button == SDL_BUTTON_LEFT) {
-                s_pointerDown = true;
-                s_rawPointerX = event.button.x;
-                s_rawPointerY = event.button.y;
-                transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-                if (s_pointerIndev) lv_indev_read(s_pointerIndev);
+                TouchSlot& slot = s_touchSlots[0];
+                slot.active = true;
+                slot.fingerId = -999;
+                slot.pressed = true;
+                slot.rawX = event.button.x;
+                slot.rawY = event.button.y;
+                transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+                if (slot.indev) lv_indev_read(slot.indev);
             }
             return true;
 
         case SDL_MOUSEBUTTONUP:
             if (event.button.button == SDL_BUTTON_LEFT) {
-                s_pointerDown = false;
-                s_rawPointerX = event.button.x;
-                s_rawPointerY = event.button.y;
-                transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-                if (s_pointerIndev) lv_indev_read(s_pointerIndev);
+                TouchSlot& slot = s_touchSlots[0];
+                slot.pressed = false;
+                slot.rawX = event.button.x;
+                slot.rawY = event.button.y;
+                transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+                if (slot.indev) lv_indev_read(slot.indev);
+                slot.active = false;
+                slot.fingerId = -1;
             }
             return true;
 
         case SDL_MOUSEMOTION:
-            s_rawPointerX = event.motion.x;
-            s_rawPointerY = event.motion.y;
-            transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-            if (s_pointerDown && s_pointerIndev) {
-                lv_indev_read(s_pointerIndev);
+            if (s_touchSlots[0].pressed) {
+                TouchSlot& slot = s_touchSlots[0];
+                slot.rawX = event.motion.x;
+                slot.rawY = event.motion.y;
+                transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+                if (slot.indev) lv_indev_read(slot.indev);
             }
             return true;
 
         case SDL_FINGERDOWN: {
-            s_pointerDown = true;
-            s_rawPointerX = static_cast<int>(event.tfinger.x * s_physWidth);
-            s_rawPointerY = static_cast<int>(event.tfinger.y * s_physHeight);
-            transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-            std::cout << "[HardwareDisplay Touch] Finger DOWN raw: (" << s_rawPointerX
-                      << ", " << s_rawPointerY << ") -> UI: (" << s_uiPointerX
-                      << ", " << s_uiPointerY << ")" << std::endl;
-            if (s_pointerIndev) lv_indev_read(s_pointerIndev);
+            int slotIdx = allocateSlotForFinger(event.tfinger.fingerId);
+            TouchSlot& slot = s_touchSlots[slotIdx];
+            slot.pressed = true;
+            slot.rawX = static_cast<int>(event.tfinger.x * s_physWidth);
+            slot.rawY = static_cast<int>(event.tfinger.y * s_physHeight);
+            transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+
+            std::cout << "[Touch] Finger DOWN [Finger " << event.tfinger.fingerId << " -> Slot " << slotIdx
+                      << "] raw: (" << slot.rawX << ", " << slot.rawY
+                      << ") -> UI: (" << slot.uiX << ", " << slot.uiY << ")" << std::endl;
+
+            if (slot.indev) lv_indev_read(slot.indev);
             return true;
         }
 
         case SDL_FINGERUP: {
-            s_pointerDown = false;
-            s_rawPointerX = static_cast<int>(event.tfinger.x * s_physWidth);
-            s_rawPointerY = static_cast<int>(event.tfinger.y * s_physHeight);
-            transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-            std::cout << "[HardwareDisplay Touch] Finger UP raw: (" << s_rawPointerX
-                      << ", " << s_rawPointerY << ")" << std::endl;
-            if (s_pointerIndev) lv_indev_read(s_pointerIndev);
+            int slotIdx = findSlotForFinger(event.tfinger.fingerId);
+            if (slotIdx >= 0) {
+                TouchSlot& slot = s_touchSlots[slotIdx];
+                slot.pressed = false;
+                slot.rawX = static_cast<int>(event.tfinger.x * s_physWidth);
+                slot.rawY = static_cast<int>(event.tfinger.y * s_physHeight);
+                transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+
+                std::cout << "[Touch] Finger UP [Finger " << event.tfinger.fingerId << " -> Slot " << slotIdx
+                          << "] UI: (" << slot.uiX << ", " << slot.uiY << ")" << std::endl;
+
+                if (slot.indev) lv_indev_read(slot.indev);
+                slot.active = false;
+                slot.fingerId = -1;
+            }
             return true;
         }
 
         case SDL_FINGERMOTION: {
-            s_rawPointerX = static_cast<int>(event.tfinger.x * s_physWidth);
-            s_rawPointerY = static_cast<int>(event.tfinger.y * s_physHeight);
-            transformCoordinates(s_rawPointerX, s_rawPointerY, s_uiPointerX, s_uiPointerY);
-            if (s_pointerDown && s_pointerIndev) {
-                lv_indev_read(s_pointerIndev);
+            int slotIdx = findSlotForFinger(event.tfinger.fingerId);
+            if (slotIdx >= 0) {
+                TouchSlot& slot = s_touchSlots[slotIdx];
+                slot.rawX = static_cast<int>(event.tfinger.x * s_physWidth);
+                slot.rawY = static_cast<int>(event.tfinger.y * s_physHeight);
+                transformCoordinates(slot.rawX, slot.rawY, slot.uiX, slot.uiY);
+                if (slot.indev) lv_indev_read(slot.indev);
             }
             return true;
         }
