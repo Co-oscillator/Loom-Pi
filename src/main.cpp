@@ -62,15 +62,15 @@ bool switchAudioDevice(const std::string& deviceName) {
     want.freq = 48000;
     want.format = AUDIO_F32SYS;
     want.channels = 2;
-    want.samples = 256;
+    want.samples = 512;
     want.callback = audioCallback;
     
     const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
-    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, 0);
+    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
     if (gAudioDeviceID == 0) {
         std::cerr << "switchAudioDevice failed: " << SDL_GetError() << std::endl;
         // Fallback to default
-        gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+        gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
         gCurrentAudioDevice = "Default";
     } else {
         gCurrentAudioDevice = deviceName;
@@ -78,7 +78,8 @@ bool switchAudioDevice(const std::string& deviceName) {
     
     if (gAudioDeviceID != 0) {
         SDL_PauseAudioDevice(gAudioDeviceID, 0);
-        std::cout << "SDL Audio Device switched to: " << gCurrentAudioDevice << std::endl;
+        std::cout << "SDL Audio Device switched to: " << gCurrentAudioDevice 
+                  << " (have " << have.samples << " samples @" << have.freq << "Hz)" << std::endl;
         return true;
     }
     return false;
@@ -98,14 +99,14 @@ bool switchCaptureDevice(const std::string& deviceName) {
     wantCapture.freq = 48000;
     wantCapture.format = AUDIO_S16SYS;
     wantCapture.channels = 2;
-    wantCapture.samples = 256;
+    wantCapture.samples = 1024;
     wantCapture.callback = audioCaptureCallback;
     
     const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
-    gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, 0);
+    gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
     if (gCaptureDeviceID == 0) {
         std::cerr << "switchCaptureDevice failed: " << SDL_GetError() << std::endl;
-        gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, 0);
+        gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
         gCurrentCaptureDevice = "Default";
     } else {
         gCurrentCaptureDevice = deviceName;
@@ -113,7 +114,8 @@ bool switchCaptureDevice(const std::string& deviceName) {
     
     if (gCaptureDeviceID != 0) {
         SDL_PauseAudioDevice(gCaptureDeviceID, 0);
-        std::cout << "SDL Capture Device switched to: " << gCurrentCaptureDevice << std::endl;
+        std::cout << "SDL Capture Device switched to: " << gCurrentCaptureDevice 
+                  << " (have " << haveCapture.samples << " samples @" << haveCapture.freq << "Hz)" << std::endl;
         return true;
     }
     return false;
