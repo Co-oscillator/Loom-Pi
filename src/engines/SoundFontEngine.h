@@ -156,6 +156,11 @@ public:
   }
 
   void renderBlock(float *left, float *right, int numFrames) {
+    if (!hasActiveVoices()) {
+      std::fill(left, left + numFrames, 0.0f);
+      std::fill(right, right + numFrames, 0.0f);
+      return;
+    }
     render(left, right, numFrames);
   }
 

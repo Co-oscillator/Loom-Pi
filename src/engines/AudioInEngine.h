@@ -218,6 +218,8 @@ public:
     return mVoices[0].ampEnv.getValue();
   }
 
+  bool isGated() const { return mGated; }
+
 private:
   std::vector<Voice> mVoices;
   float mSampleRate = 48000.0f;

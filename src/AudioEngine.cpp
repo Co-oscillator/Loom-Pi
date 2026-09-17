@@ -3131,6 +3131,7 @@ void AudioEngine::setPlaying(bool playing) {
           track.drumSequencers[d].jumpToStep(0);
       }
       track.isActive = false;
+      track.mSilenceFrames = 2500;
       track.mPendingNotes.clear();
 
       // Panic: Force silence
@@ -4538,6 +4539,10 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
 
     for (int t = 0; t < (int)mTracks.size(); ++t) {
       Track &track = mTracks[t];
+      bool isAudioInOpen = (track.engineType == 8 && !track.audioInEngine.isGated());
+      if ((!track.isTrackEnabled || !track.isActive) && !isAudioInOpen) {
+        continue;
+      }
 
       float currentVol = track.smoothedVolume;
       float targetVol = track.volume;
@@ -4664,9 +4669,8 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
       Track &track = mTracks[t];
       track.gainReduction = 1.0f; // Reset per frame
 
-      // Option B: Gate check BEFORE any smoothing work — inactive tracks skip
-      // 144+ float ops per sample (volume, 18 fxSends, pan smoothing).
-      if ((!track.isTrackEnabled || !track.isActive) && track.mSilenceFrames > 2400) {
+      bool isAudioInOpen = (track.engineType == 8 && !track.audioInEngine.isGated());
+      if ((!track.isTrackEnabled || !track.isActive) && !isAudioInOpen) {
         track.follower.process(0.0f);
         continue;
       }
@@ -4713,7 +4717,7 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
           }
           if (track.mPhysicallyHeldNoteCount == 0 && !activeVoices) {
             track.isActive = false;
-            track.mSilenceFrames = 0;
+            track.mSilenceFrames = 2500;
           }
         }
       } else {

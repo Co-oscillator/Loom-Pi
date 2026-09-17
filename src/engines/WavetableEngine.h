@@ -235,7 +235,7 @@ public:
 
   void renderBlock(float* outL, float* outR, int numFrames) {
     std::unique_lock<std::mutex> lock(*mMutex, std::try_to_lock);
-    if (!lock.owns_lock() || mTable.empty()) {
+    if (!lock.owns_lock() || mTable.empty() || !isActive()) {
       std::fill(outL, outL + numFrames, 0.0f);
       std::fill(outR, outR + numFrames, 0.0f);
       return;

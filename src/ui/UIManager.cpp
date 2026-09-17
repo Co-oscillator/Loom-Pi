@@ -1948,16 +1948,16 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         lv_obj_set_style_border_color(card, trackColor, 0);
         lv_obj_set_style_border_width(card, 2, 0);
         lv_obj_set_style_radius(card, 12, 0);
-        lv_obj_set_style_pad_all(card, 12, 0);
+        lv_obj_set_style_pad_all(card, 14, 0);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_layout(card, LV_LAYOUT_FLEX);
         lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_row(card, 8, 0);
+        lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     };
 
     auto makeSectionDivider = [](lv_obj_t* parent, const char* title) {
         lv_obj_t* cont = lv_obj_create(parent);
-        lv_obj_set_size(cont, 236, 20);
+        lv_obj_set_size(cont, 232, 18);
         lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(cont, 0, 0);
         lv_obj_set_style_pad_all(cont, 0, 0);
@@ -1980,24 +1980,51 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         return cont;
     };
 
+    auto makeLabeledDropdown = [](lv_obj_t* parent, const char* labelText) -> std::pair<lv_obj_t*, lv_obj_t*> {
+        lv_obj_t* cont = lv_obj_create(parent);
+        lv_obj_set_size(cont, 232, LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(cont, 0, 0);
+        lv_obj_set_style_pad_all(cont, 0, 0);
+        lv_obj_remove_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_layout(cont, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+        lv_obj_set_style_pad_row(cont, 4, 0);
+
+        lv_obj_t* lbl = lv_label_create(cont);
+        lv_label_set_text(lbl, labelText);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(0xBBBBBB), 0);
+
+        lv_obj_t* dd = lv_dropdown_create(cont);
+        lv_obj_set_size(dd, 232, 36);
+        lv_obj_set_style_bg_color(dd, lv_color_hex(0x2D2D2D), 0);
+        lv_obj_set_style_border_width(dd, 1, 0);
+        lv_obj_set_style_text_font(dd, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_radius(dd, 6, 0);
+
+        return {lbl, dd};
+    };
+
     // =========================================================================
-    // Column 1: AUDIO ENGINE
+    // Column 1: AUDIO ENGINE (10 items spaced evenly)
     // =========================================================================
     lv_obj_t* audioCard = lv_obj_create(tab);
     applyCardStyle(audioCard);
 
+    // Item 1: Card Title
     lv_obj_t* audioTitle = lv_label_create(audioCard);
     lv_label_set_text(audioTitle, "AUDIO ENGINE");
     lv_obj_set_style_text_font(audioTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(audioTitle, trackColor, 0);
 
+    // Item 2: Section 1 Divider
     makeSectionDivider(audioCard, "DEVICE & FORMAT");
 
-    // SDL Audio Device
-    lv_obj_t* deviceLabel = lv_label_create(audioCard);
-    lv_label_set_text(deviceLabel, "Active Audio Device:");
-    lv_obj_set_style_text_font(deviceLabel, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(deviceLabel, lv_color_hex(0xBBBBBB), 0);
+    // Item 3: SDL Audio Device (Labeled Dropdown)
+    auto [deviceLabel, deviceDd] = makeLabeledDropdown(audioCard, "Active Audio Device:");
+    (void)deviceLabel;
 
     std::string deviceOptions = "Default\n";
     int numDevs = SDL_GetNumAudioDevices(0);
@@ -2014,11 +2041,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     }
     if (!deviceOptions.empty() && deviceOptions.back() == '\n') deviceOptions.pop_back();
 
-    lv_obj_t* deviceDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(deviceDd, 236, 36);
     lv_dropdown_set_options(deviceDd, deviceOptions.c_str());
-    lv_obj_set_style_bg_color(deviceDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_text_font(deviceDd, &lv_font_montserrat_12, 0);
     lv_dropdown_set_selected(deviceDd, activeDevIdx);
 
     struct DeviceChangeData {
@@ -2042,38 +2065,19 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     auto devFreeCb = [](lv_event_t* e) { delete (DeviceChangeData*)lv_event_get_user_data(e); };
     lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
 
-    // Sample Rate
-    lv_obj_t* srLbl = lv_label_create(audioCard);
-    lv_label_set_text(srLbl, "Sample Rate:");
-    lv_obj_set_style_text_font(srLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(srLbl, lv_color_hex(0xBBBBBB), 0);
-
-    lv_obj_t* srDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(srDd, 236, 36);
+    // Item 4: Sample Rate (Labeled Dropdown)
+    auto [srLbl, srDd] = makeLabeledDropdown(audioCard, "Sample Rate:");
+    (void)srLbl;
     lv_dropdown_set_options(srDd, "44100 Hz\n48000 Hz");
-    lv_obj_set_style_bg_color(srDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(srDd, 1, 0);
-    lv_obj_set_style_text_font(srDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(srDd, 6, 0);
     float currentSr = mEngine.getSampleRate();
     lv_dropdown_set_selected(srDd, (std::abs(currentSr - 48000.0f) < 100.0f) ? 1 : 0);
     lv_obj_add_event_cb(srDd, settingsSampleRateDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Audio Output Mode Dropdown
-    lv_obj_t* outModeLbl = lv_label_create(audioCard);
-    lv_label_set_text(outModeLbl, "Output Channel Mode:");
-    lv_obj_set_style_text_font(outModeLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(outModeLbl, lv_color_hex(0xBBBBBB), 0);
-
-    lv_obj_t* outModeDd = lv_dropdown_create(audioCard);
-    lv_obj_set_size(outModeDd, 236, 36);
+    // Item 5: Audio Output Mode (Labeled Dropdown)
+    auto [outModeLbl, outModeDd] = makeLabeledDropdown(audioCard, "Output Channel Mode:");
+    (void)outModeLbl;
     lv_dropdown_set_options(outModeDd, "Stereo\nMono (L-Only)\nPseudo-Stereo\nPhase-Invert");
-    lv_obj_set_style_bg_color(outModeDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(outModeDd, 1, 0);
-    lv_obj_set_style_text_font(outModeDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(outModeDd, 6, 0);
     lv_dropdown_set_selected(outModeDd, mEngine.getAudioOutputMode());
-
     auto outModeDdCb = [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
@@ -2082,17 +2086,18 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(outModeDd, outModeDdCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Buffer & Latency info badge
+    // Item 6: Buffer & Latency info badge
     lv_obj_t* bufferLabel = lv_label_create(audioCard);
     lv_label_set_text(bufferLabel, "Buffer: 256 samples | Latency: ~5.3 ms");
     lv_obj_set_style_text_font(bufferLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(bufferLabel, lv_color_hex(0x888888), 0);
 
+    // Item 7: Section 2 Divider
     makeSectionDivider(audioCard, "DSP & UTILITY");
 
-    // Fast Granular switch (moved to Audio Engine)
+    // Item 8: Fast Granular switch
     lv_obj_t* fastGranRow = lv_obj_create(audioCard);
-    lv_obj_set_size(fastGranRow, 236, 36);
+    lv_obj_set_size(fastGranRow, 232, 38);
     lv_obj_set_style_bg_opa(fastGranRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(fastGranRow, 0, 0);
     lv_obj_set_style_pad_all(fastGranRow, 0, 0);
@@ -2110,29 +2115,30 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_size(fastGranSw, 40, 20);
     if (mEngine.getFastGranularEnabled()) lv_obj_add_state(fastGranSw, LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(fastGranSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
-    auto fastGranSwCb = [](lv_event_t* e) {
+    auto fastGranCb = [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         bool isChecked = lv_obj_has_state((lv_obj_t*)lv_event_get_target(e), LV_STATE_CHECKED);
         ui->mEngine.setFastGranularEnabled(isChecked);
+        ui->saveSettings(ui->mSettingsFilePath);
     };
-    lv_obj_add_event_cb(fastGranSw, fastGranSwCb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_add_event_cb(fastGranSw, fastGranCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // PANIC button
+    // Item 9: PANIC ALL OFF button
     lv_obj_t* panicBtn = lv_button_create(audioCard);
-    lv_obj_set_size(panicBtn, 236, 38);
-    lv_obj_set_style_bg_color(panicBtn, lv_color_hex(0xCC3333), 0);
-    lv_obj_set_style_border_color(panicBtn, lv_color_hex(0xFF5555), 0);
+    lv_obj_set_size(panicBtn, 232, 38);
+    lv_obj_set_style_bg_color(panicBtn, lv_color_hex(0x661111), 0);
+    lv_obj_set_style_border_color(panicBtn, lv_color_hex(0xCC3333), 0);
     lv_obj_set_style_border_width(panicBtn, 1, 0);
     lv_obj_set_style_radius(panicBtn, 8, 0);
     lv_obj_t* panicLbl = lv_label_create(panicBtn);
-    lv_label_set_text(panicLbl, "PANIC ALL OFF");
-    lv_obj_set_style_text_font(panicLbl, &lv_font_montserrat_12, 0);
+    lv_label_set_text(panicLbl, LV_SYMBOL_WARNING " PANIC ALL OFF");
+    lv_obj_set_style_text_font(panicLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(panicLbl);
     lv_obj_add_event_cb(panicBtn, settingsPanicBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // RESET MIDI / PATCHING button
+    // Item 10: RESET MIDI / PATCHING button
     lv_obj_t* resetMidiBtn = lv_button_create(audioCard);
-    lv_obj_set_size(resetMidiBtn, 236, 38);
+    lv_obj_set_size(resetMidiBtn, 232, 38);
     lv_obj_set_style_bg_color(resetMidiBtn, lv_color_hex(0x996633), 0);
     lv_obj_set_style_border_color(resetMidiBtn, lv_color_hex(0xCC9944), 0);
     lv_obj_set_style_border_width(resetMidiBtn, 1, 0);
@@ -2144,84 +2150,63 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(resetMidiBtn, settingsResetMidiBtnEventCb, LV_EVENT_CLICKED, this);
 
     // =========================================================================
-    // Column 2: MIDI ROUTING & CONTROLLERS
+    // Column 2: MIDI ROUTING (10 items spaced evenly)
     // =========================================================================
     lv_obj_t* midiCard = lv_obj_create(tab);
     applyCardStyle(midiCard);
 
+    // Item 1: Card Title
     lv_obj_t* midiTitle = lv_label_create(midiCard);
     lv_label_set_text(midiTitle, "MIDI ROUTING");
     lv_obj_set_style_text_font(midiTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(midiTitle, trackColor, 0);
 
+    // Item 2: Section 1 Divider
     makeSectionDivider(midiCard, "TRACK CHANNEL ROUTING");
 
-    // Track selector dropdown
-    lv_obj_t* trkLbl = lv_label_create(midiCard);
-    lv_label_set_text(trkLbl, "Configure Track:");
-    lv_obj_set_style_text_font(trkLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(trkLbl, lv_color_hex(0xBBBBBB), 0);
-
-    mSettingsMidiTrackDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiTrackDd, 236, 36);
+    // Item 3: Configure Track (Labeled Dropdown)
+    auto [trkLbl, trkDd] = makeLabeledDropdown(midiCard, "Configure Track:");
+    (void)trkLbl;
+    mSettingsMidiTrackDd = trkDd;
     lv_dropdown_set_options(mSettingsMidiTrackDd, "Track 1\nTrack 2\nTrack 3\nTrack 4\nTrack 5\nTrack 6\nTrack 7\nTrack 8");
-    lv_obj_set_style_bg_color(mSettingsMidiTrackDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(mSettingsMidiTrackDd, 1, 0);
-    lv_obj_set_style_text_font(mSettingsMidiTrackDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(mSettingsMidiTrackDd, 6, 0);
     mSettingsMidiTrackSelect = mActiveTrack;
     lv_dropdown_set_selected(mSettingsMidiTrackDd, mSettingsMidiTrackSelect);
     lv_obj_add_event_cb(mSettingsMidiTrackDd, settingsMidiTrackSelectDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // MIDI IN Dropdown
-    lv_obj_t* midiInLbl = lv_label_create(midiCard);
-    lv_label_set_text(midiInLbl, "MIDI Input Channel:");
-    lv_obj_set_style_text_font(midiInLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(midiInLbl, lv_color_hex(0xBBBBBB), 0);
-
-    mSettingsMidiInDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiInDd, 236, 36);
+    // Item 4: MIDI Input Channel (Labeled Dropdown)
+    auto [midiInLbl, midiInDd] = makeLabeledDropdown(midiCard, "MIDI Input Channel:");
+    (void)midiInLbl;
+    mSettingsMidiInDd = midiInDd;
     lv_dropdown_set_options(mSettingsMidiInDd, "NONE\nChannel 1\nChannel 2\nChannel 3\nChannel 4\nChannel 5\nChannel 6\nChannel 7\nChannel 8\nChannel 9\nChannel 10\nChannel 11\nChannel 12\nChannel 13\nChannel 14\nChannel 15\nChannel 16\nALL");
-    lv_obj_set_style_bg_color(mSettingsMidiInDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(mSettingsMidiInDd, 1, 0);
-    lv_obj_set_style_text_font(mSettingsMidiInDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(mSettingsMidiInDd, 6, 0);
     int currentInChan = mEngine.getTracks()[mSettingsMidiTrackSelect].midiInChannel;
     if (currentInChan >= 0 && currentInChan <= 17) {
         lv_dropdown_set_selected(mSettingsMidiInDd, currentInChan);
     }
     lv_obj_add_event_cb(mSettingsMidiInDd, settingsMidiInChannelDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Routing description
+    // Item 5: Routing description note
     lv_obj_t* routeDesc = lv_label_create(midiCard);
     lv_label_set_text(routeDesc, "ALL = respond when selected.\nSpecific ch = always respond.");
     lv_obj_set_style_text_font(routeDesc, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(routeDesc, lv_color_hex(0x888888), 0);
 
-    // MIDI OUT Dropdown
-    lv_obj_t* midiOutLbl = lv_label_create(midiCard);
-    lv_label_set_text(midiOutLbl, "MIDI Output Channel:");
-    lv_obj_set_style_text_font(midiOutLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(midiOutLbl, lv_color_hex(0xBBBBBB), 0);
-
-    mSettingsMidiOutDd = lv_dropdown_create(midiCard);
-    lv_obj_set_size(mSettingsMidiOutDd, 236, 36);
+    // Item 6: MIDI Output Channel (Labeled Dropdown)
+    auto [midiOutLbl, midiOutDd] = makeLabeledDropdown(midiCard, "MIDI Output Channel:");
+    (void)midiOutLbl;
+    mSettingsMidiOutDd = midiOutDd;
     lv_dropdown_set_options(mSettingsMidiOutDd, "NONE\nChannel 1\nChannel 2\nChannel 3\nChannel 4\nChannel 5\nChannel 6\nChannel 7\nChannel 8\nChannel 9\nChannel 10\nChannel 11\nChannel 12\nChannel 13\nChannel 14\nChannel 15\nChannel 16");
-    lv_obj_set_style_bg_color(mSettingsMidiOutDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(mSettingsMidiOutDd, 1, 0);
-    lv_obj_set_style_text_font(mSettingsMidiOutDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(mSettingsMidiOutDd, 6, 0);
     int currentOutChan = mEngine.getTracks()[mSettingsMidiTrackSelect].midiOutChannel;
     if (currentOutChan >= 0 && currentOutChan <= 16) {
         lv_dropdown_set_selected(mSettingsMidiOutDd, currentOutChan);
     }
     lv_obj_add_event_cb(mSettingsMidiOutDd, settingsMidiOutChannelDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
+    // Item 7: Section 2 Divider
     makeSectionDivider(midiCard, "CONTROLLER MODES");
 
-    // Velocity Sensitivity switch
+    // Item 8: Velocity Sensitivity switch row
     lv_obj_t* velSensRow = lv_obj_create(midiCard);
-    lv_obj_set_size(velSensRow, 236, 36);
+    lv_obj_set_size(velSensRow, 232, 38);
     lv_obj_set_style_bg_opa(velSensRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(velSensRow, 0, 0);
     lv_obj_set_style_pad_all(velSensRow, 0, 0);
@@ -2246,9 +2231,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(velSensSw, velSensCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // QWERTY keyboard mode switch (moved here from Card 3)
+    // Item 9: QWERTY keyboard mode switch row
     lv_obj_t* kbRow = lv_obj_create(midiCard);
-    lv_obj_set_size(kbRow, 236, 36);
+    lv_obj_set_size(kbRow, 232, 38);
     lv_obj_set_style_bg_opa(kbRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(kbRow, 0, 0);
     lv_obj_set_style_pad_all(kbRow, 0, 0);
@@ -2268,27 +2253,30 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_bg_color(kbSw, trackColor, LV_PART_INDICATOR | LV_STATE_CHECKED);
     lv_obj_add_event_cb(kbSw, settingsKeyboardModeSwitchEventCb, LV_EVENT_VALUE_CHANGED, this);
 
+    // Item 10: QWERTY layout hint label
     lv_obj_t* kbHint = lv_label_create(midiCard);
     lv_label_set_text(kbHint, "QWERTY keys play active track.");
     lv_obj_set_style_text_font(kbHint, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(kbHint, lv_color_hex(0x666666), 0);
 
     // =========================================================================
-    // Column 3: PROJECT & DISPLAY
+    // Column 3: PROJECT & DISPLAY (10 items spaced evenly)
     // =========================================================================
     lv_obj_t* systemCard = lv_obj_create(tab);
     applyCardStyle(systemCard);
 
+    // Item 1: Card Title
     lv_obj_t* systemTitle = lv_label_create(systemCard);
     lv_label_set_text(systemTitle, "PROJECT & DISPLAY");
     lv_obj_set_style_text_font(systemTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(systemTitle, trackColor, 0);
 
-    makeSectionDivider(systemCard, "PROJECT MANAGEMENT");
+    // Item 2: Section 1 Divider
+    makeSectionDivider(systemCard, "PROJECT ACTIONS");
 
     auto makeFileBtn = [trackColor](lv_obj_t* parent, const char* text, lv_event_cb_t cb, void* userData) {
         lv_obj_t* btn = lv_button_create(parent);
-        lv_obj_set_size(btn, 236, 38);
+        lv_obj_set_size(btn, 232, 38);
         lv_obj_set_style_bg_color(btn, lv_color_hex(0x2D2D2D), 0);
         lv_obj_set_style_border_color(btn, trackColor, 0);
         lv_obj_set_style_border_width(btn, 1, 0);
@@ -2301,15 +2289,19 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         return btn;
     };
 
+    // Item 3: New Project Button
     makeFileBtn(systemCard, LV_SYMBOL_FILE " NEW PROJECT", settingsNewBtnEventCb, this);
+    // Item 4: Save Project Button
     makeFileBtn(systemCard, LV_SYMBOL_SAVE " SAVE PROJECT", settingsSaveBtnEventCb, this);
+    // Item 5: Load Project Button
     makeFileBtn(systemCard, LV_SYMBOL_DIRECTORY " LOAD PROJECT", settingsLoadBtnEventCb, this);
 
+    // Item 6: Section 2 Divider
     makeSectionDivider(systemCard, "DISPLAY & POWER");
 
-    // Screen Brightness Slider
+    // Item 7: Screen Brightness Slider
     lv_obj_t* brightRow = lv_obj_create(systemCard);
-    lv_obj_set_size(brightRow, 236, 48);
+    lv_obj_set_size(brightRow, 232, 48);
     lv_obj_set_style_bg_opa(brightRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(brightRow, 0, 0);
     lv_obj_set_style_pad_all(brightRow, 0, 0);
@@ -2324,7 +2316,7 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_align(brightTitle, LV_ALIGN_TOP_LEFT, 0, 0);
 
     lv_obj_t* brightSlider = lv_slider_create(brightRow);
-    lv_obj_set_size(brightSlider, 236, 20);
+    lv_obj_set_size(brightSlider, 232, 20);
     lv_obj_align(brightSlider, LV_ALIGN_BOTTOM_LEFT, 0, 0);
     lv_slider_set_range(brightSlider, 10, 100);
     lv_slider_set_value(brightSlider, currentB, LV_ANIM_OFF);
@@ -2349,19 +2341,10 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         delete (BrightData*)lv_event_get_user_data(e);
     }, LV_EVENT_DELETE, bData);
 
-    // Screen Timeout Dropdown
-    lv_obj_t* timeoutLbl = lv_label_create(systemCard);
-    lv_label_set_text(timeoutLbl, "Screen Timeout:");
-    lv_obj_set_style_text_font(timeoutLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(timeoutLbl, lv_color_hex(0xBBBBBB), 0);
-
-    lv_obj_t* timeoutDd = lv_dropdown_create(systemCard);
-    lv_obj_set_size(timeoutDd, 236, 36);
+    // Item 8: Screen Timeout (Labeled Dropdown)
+    auto [timeoutLbl, timeoutDd] = makeLabeledDropdown(systemCard, "Screen Timeout:");
+    (void)timeoutLbl;
     lv_dropdown_set_options(timeoutDd, "Never\n1 min\n2 min\n5 min\n10 min\n15 min\n30 min");
-    lv_obj_set_style_bg_color(timeoutDd, lv_color_hex(0x2D2D2D), 0);
-    lv_obj_set_style_border_width(timeoutDd, 1, 0);
-    lv_obj_set_style_text_font(timeoutDd, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_radius(timeoutDd, 6, 0);
 
     static const int kTimeoutSecs[] = {0, 60, 120, 300, 600, 900, 1800};
     int selectedTimeoutIdx = 0;
@@ -2386,9 +2369,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     };
     lv_obj_add_event_cb(timeoutDd, timeoutDdCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Display Flip Button
+    // Item 9: Display Flip Button
     lv_obj_t* flipBtn = lv_button_create(systemCard);
-    lv_obj_set_size(flipBtn, 236, 36);
+    lv_obj_set_size(flipBtn, 232, 38);
     lv_obj_set_style_bg_color(flipBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(flipBtn, trackColor, 0);
     lv_obj_set_style_border_width(flipBtn, 1, 0);
@@ -2407,9 +2390,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         lv_label_set_text_fmt(lbl, "FLIP ORIENTATION (%.0f" "\xC2\xB0" ")", newAngle);
     }, LV_EVENT_CLICKED, this);
 
-    // Credits/Privacy button
+    // Item 10: Credits/Privacy button
     lv_obj_t* credBtn = lv_button_create(systemCard);
-    lv_obj_set_size(credBtn, 236, 36);
+    lv_obj_set_size(credBtn, 232, 38);
     lv_obj_set_style_bg_color(credBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(credBtn, trackColor, 0);
     lv_obj_set_style_border_width(credBtn, 1, 0);
@@ -2421,19 +2404,33 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(credBtn, settingsCreditsBtnEventCb, LV_EVENT_CLICKED, this);
 
     // =========================================================================
-    // Column 4: PERFORMANCE & UPDATES
+    // Column 4: PERFORMANCE & UPDATES (10 items spaced evenly)
     // =========================================================================
     lv_obj_t* perfCard = lv_obj_create(tab);
     applyCardStyle(perfCard);
 
+    // Item 1: Card Title
     lv_obj_t* perfTitle = lv_label_create(perfCard);
     lv_label_set_text(perfTitle, "PERFORMANCE & UPDATES");
     lv_obj_set_style_text_font(perfTitle, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(perfTitle, trackColor, 0);
 
+    // Item 2: Section 1 Divider
     makeSectionDivider(perfCard, "SYSTEM STATUS");
 
-    mCpuLoadLabel = lv_label_create(perfCard);
+    // Item 3: System Status Info Box (container with status labels)
+    lv_obj_t* statusCont = lv_obj_create(perfCard);
+    lv_obj_set_size(statusCont, 232, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(statusCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(statusCont, 0, 0);
+    lv_obj_set_style_pad_all(statusCont, 0, 0);
+    lv_obj_remove_flag(statusCont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(statusCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(statusCont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(statusCont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+    lv_obj_set_style_pad_row(statusCont, 5, 0);
+
+    mCpuLoadLabel = lv_label_create(statusCont);
     float initCpuTemp = HardwareDisplay::getCpuTemperature();
     if (initCpuTemp > 0.0f) {
         lv_label_set_text_fmt(mCpuLoadLabel, "CPU: %.1f%% | %.1f\xC2\xB0" "C", mEngine.getCpuLoad() * 100.0f, initCpuTemp);
@@ -2443,26 +2440,28 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(mCpuLoadLabel, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(mCpuLoadLabel, lv_color_hex(0x00FFCC), 0);
 
-    mIpAddressLbl = lv_label_create(perfCard);
+    mIpAddressLbl = lv_label_create(statusCont);
     std::string ip = getLocalIPAddress();
     lv_label_set_text_fmt(mIpAddressLbl, "IP: %s", ip.c_str());
     lv_obj_set_style_text_font(mIpAddressLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mIpAddressLbl, lv_color_hex(0x00FFCC), 0);
 
-    lv_obj_t* versionLbl = lv_label_create(perfCard);
+    lv_obj_t* versionLbl = lv_label_create(statusCont);
     lv_label_set_text(versionLbl, "Version: v3.1.25 (10\" Edition)");
     lv_obj_set_style_text_font(versionLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(versionLbl, lv_color_hex(0xAAAAAA), 0);
 
-    mSettingsUpdateStatus = lv_label_create(perfCard);
+    mSettingsUpdateStatus = lv_label_create(statusCont);
     lv_label_set_text(mSettingsUpdateStatus, "Status: Idle");
     lv_obj_set_style_text_font(mSettingsUpdateStatus, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mSettingsUpdateStatus, lv_color_hex(0xAAAAAA), 0);
 
+    // Item 4: Section 2 Divider
     makeSectionDivider(perfCard, "ACTIONS & POWER");
 
+    // Item 5: Check & Update Button
     lv_obj_t* updateBtn = lv_button_create(perfCard);
-    lv_obj_set_size(updateBtn, 236, 36);
+    lv_obj_set_size(updateBtn, 232, 38);
     lv_obj_set_style_bg_color(updateBtn, trackColor, 0);
     lv_obj_set_style_radius(updateBtn, 8, 0);
     lv_obj_t* updateBtnLbl = lv_label_create(updateBtn);
@@ -2471,8 +2470,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_center(updateBtnLbl);
     lv_obj_add_event_cb(updateBtn, settingsUpdateBtnEventCb, LV_EVENT_CLICKED, this);
 
+    // Item 6: Restart Loom Button
     lv_obj_t* restartBtn = lv_button_create(perfCard);
-    lv_obj_set_size(restartBtn, 236, 36);
+    lv_obj_set_size(restartBtn, 232, 38);
     lv_obj_set_style_bg_color(restartBtn, lv_color_hex(0xE06C75), 0);
     lv_obj_set_style_radius(restartBtn, 8, 0);
     lv_obj_t* restartBtnLbl = lv_label_create(restartBtn);
@@ -2481,8 +2481,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_obj_center(restartBtnLbl);
     lv_obj_add_event_cb(restartBtn, settingsRestartBtnEventCb, LV_EVENT_CLICKED, this);
 
+    // Item 7: Renew IP Address Button
     lv_obj_t* renewNetBtn = lv_button_create(perfCard);
-    lv_obj_set_size(renewNetBtn, 236, 36);
+    lv_obj_set_size(renewNetBtn, 232, 38);
     lv_obj_set_style_bg_color(renewNetBtn, lv_color_hex(0x28A745), 0);
     lv_obj_set_style_radius(renewNetBtn, 8, 0);
     lv_obj_t* renewNetLbl = lv_label_create(renewNetBtn);
@@ -2496,8 +2497,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         (void)r;
     }, LV_EVENT_CLICKED, this);
 
+    // Item 8: Exit to Console Button
     lv_obj_t* exitConsoleBtn = lv_button_create(perfCard);
-    lv_obj_set_size(exitConsoleBtn, 236, 36);
+    lv_obj_set_size(exitConsoleBtn, 232, 38);
     lv_obj_set_style_bg_color(exitConsoleBtn, lv_color_hex(0x555555), 0);
     lv_obj_set_style_radius(exitConsoleBtn, 8, 0);
     lv_obj_t* exitConsoleLbl = lv_label_create(exitConsoleBtn);
@@ -2509,9 +2511,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         ui->openConsoleModal();
     }, LV_EVENT_CLICKED, this);
 
-    // Reboot Pi Button
+    // Item 9: Reboot Pi Button
     lv_obj_t* rebootBtn = lv_button_create(perfCard);
-    lv_obj_set_size(rebootBtn, 236, 36);
+    lv_obj_set_size(rebootBtn, 232, 38);
     lv_obj_set_style_bg_color(rebootBtn, lv_color_hex(0xCC6600), 0);
     lv_obj_set_style_radius(rebootBtn, 8, 0);
     lv_obj_t* rebootLbl = lv_label_create(rebootBtn);
@@ -2531,9 +2533,9 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
         );
     }, LV_EVENT_CLICKED, this);
 
-    // Shutdown Pi Button
+    // Item 10: Shutdown Pi Button
     lv_obj_t* shutdownBtn = lv_button_create(perfCard);
-    lv_obj_set_size(shutdownBtn, 236, 36);
+    lv_obj_set_size(shutdownBtn, 232, 38);
     lv_obj_set_style_bg_color(shutdownBtn, lv_color_hex(0x8B0000), 0);
     lv_obj_set_style_radius(shutdownBtn, 8, 0);
     lv_obj_t* shutdownLbl = lv_label_create(shutdownBtn);

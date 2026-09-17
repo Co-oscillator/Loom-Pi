@@ -459,6 +459,11 @@ public:
   }
 
   void renderBlock(float* outL, float* outR, int numFrames) {
+    if (!isActive()) {
+      std::fill(outL, outL + numFrames, 0.0f);
+      std::fill(outR, outR + numFrames, 0.0f);
+      return;
+    }
     for (int i = 0; i < numFrames; ++i) {
       render(&outL[i], &outR[i]);
     }
