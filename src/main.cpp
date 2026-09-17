@@ -310,6 +310,24 @@ int main() {
                 return 0;
             }
 
+            // Screen timeout / sleep wake handling:
+            // When screen is sleeping, any touch, mouse click, or key press wakes the screen
+            // and consumes the event so underlying controls aren't accidentally triggered.
+            if (ui.isScreenSleeping()) {
+                if (event.type == SDL_FINGERDOWN || event.type == SDL_MOUSEBUTTONDOWN ||
+                    event.type == SDL_KEYDOWN) {
+                    ui.setScreenSleep(false);
+                    continue;
+                }
+                if (event.type == SDL_FINGERUP || event.type == SDL_MOUSEBUTTONUP ||
+                    event.type == SDL_FINGERMOTION || event.type == SDL_MOUSEMOTION) {
+                    continue;
+                }
+            }
+
+            // Register user activity on any input event to reset sleep timeout
+            ui.registerActivity();
+
             // Auto-recover from USB audio device disconnection/crash
             if (event.type == SDL_AUDIODEVICEREMOVED) {
                 if (!event.adevice.iscapture && event.adevice.which == gAudioDeviceID) {

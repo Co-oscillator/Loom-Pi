@@ -722,6 +722,12 @@ public:
     // Settings – Keyboard mode & Hardware
     bool mSettingsKeyboardMode = true;
     int mSettingsBacklightBrightness = 80;
+    int mSettingsScreenTimeoutSec = 0; // 0 = Never, 60 = 1m, 120 = 2m, etc.
+    uint32_t mLastActivityTicks = 0;
+    bool mScreenIsSleeping = false;
+    void setScreenSleep(bool sleep);
+    void registerActivity();
+    bool isScreenSleeping() const { return mScreenIsSleeping; }
     std::string mSettingsAudioDevice = "Default";
     std::string mSettingsAudioMicDevice = "Default";
     std::string mSettingsAudioLineInDevice = "Default";

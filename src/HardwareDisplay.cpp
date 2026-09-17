@@ -303,7 +303,7 @@ int HardwareDisplay::getBrightness() {
 }
 
 void HardwareDisplay::setBrightness(int percent) {
-    percent = std::clamp(percent, 10, 100);
+    percent = std::clamp(percent, 0, 100);
 #ifdef __linux__
     DIR* dir = opendir("/sys/class/backlight");
     if (dir) {
@@ -314,7 +314,7 @@ void HardwareDisplay::setBrightness(int percent) {
             std::ifstream maxFile(basePath + "/max_brightness");
             int maxB = 255;
             if (maxFile >> maxB && maxB > 0) {
-                int rawVal = std::clamp((int)((float)percent / 100.0f * (float)maxB), 1, maxB);
+                int rawVal = std::clamp((int)((float)percent / 100.0f * (float)maxB), 0, maxB);
                 std::ofstream curFile(basePath + "/brightness");
                 if (curFile.is_open()) {
                     curFile << rawVal << "\n";
