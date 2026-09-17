@@ -30,12 +30,22 @@ public:
     float ampEnvStart = 0.0f, ampEnvDelta = 0.0f;
     float filterEnvStart = 0.0f, filterEnvDelta = 0.0f;
 
+    // Per-voice modulation state
+    int originNote = -1;
+    float modX = 0.0f;
+    float modY = 0.0f;
+    bool hasVoiceMod = false;
+
     Voice() { oscillators.resize(4); }
 
     void reset() {
       active = false;
       isNoteHeld = false;
       note = -1;
+      originNote = -1;
+      modX = 0.0f;
+      modY = 0.0f;
+      hasVoiceMod = false;
       frequency = 440.0f;
       targetFrequency = 440.0f;
       ampEnv.reset();
@@ -124,7 +134,7 @@ public:
     }
   }
 
-  void triggerNote(int note, int velocity) {
+  void triggerNote(int note, int velocity, int originNote = -1) {
     int idx = -1;
     for (int i = 0; i < 16; ++i)
       if (!mVoices[i].active) {
@@ -153,6 +163,10 @@ public:
     v.active = true;
     v.isNoteHeld = true;
     v.note = note;
+    v.originNote = (originNote >= 0 ? originNote : note);
+    v.modX = 0.0f;
+    v.modY = 0.0f;
+    v.hasVoiceMod = false;
     v.amplitude = velocity / 127.0f;
     v.controlCounter = 0;
     float baseFreq = mIgnoreNoteFrequency
@@ -185,6 +199,23 @@ public:
         v.ampEnv.release();
         v.filterEnv.release();
       }
+  }
+
+  void setVoiceMod(int originNote, float x, float y) {
+    for (auto &v : mVoices) {
+      if (v.active && v.originNote == originNote) {
+        v.modX = x;
+        v.modY = y;
+        v.hasVoiceMod = true;
+      }
+    }
+  }
+
+  void setModRouting(int xDest, float xInt, int yDest, float yInt) {
+    mModXDest = xDest;
+    mModXIntensity = xInt;
+    mModYDest = yDest;
+    mModYIntensity = yInt;
   }
 
   void setAttack(float v) {
@@ -514,8 +545,26 @@ public:
           v.oscillators[i].setFrequency(v.frequency * pitchBendFactor, mSampleRate);
         }
 
+        // Voice modulation evaluation
+        float vCutoff = mCutoff;
+        float vReson = mResonance;
+        float vMorph = mOscWaveValues[0];
+        if (v.hasVoiceMod) {
+          auto evalMod = [&](int dest, float val, float intensity) {
+            if (dest == 1 || dest == 104) {
+              vCutoff = val * intensity;
+            } else if (dest == 2 || dest == 105) {
+              vReson = val * intensity;
+            } else if (dest == 4 || dest == 290) {
+              vMorph = val * intensity;
+            }
+          };
+          if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
+          if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
+        }
+
         // Apply morph shape modulation
-        float morph1 = mOscWaveValues[0];
+        float morph1 = vMorph;
         if (mLfoDest == 2) {
           morph1 = std::max(0.0f, std::min(1.0f, morph1 + lfoOut));
         }
@@ -530,9 +579,9 @@ public:
         float cutoffLfoVal = (mLfoDest == 0 ? lfoOut : 0.0f);
         float modCutoff = std::max(
             0.0f,
-            std::min(0.999f, mCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
+            std::min(0.999f, vCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
         v.svf.setParams(20.0f + modCutoff * modCutoff * 14000.0f,
-                        std::max(0.1f, mResonance * 5.0f), mSampleRate);
+                        std::max(0.1f, vReson * 5.0f), mSampleRate);
                         
         v.ampEnv.processBlock(16, v.ampEnvStart, v.ampEnvDelta);
         v.filterEnv.processBlock(16, v.filterEnvStart, v.filterEnvDelta);
@@ -664,6 +713,10 @@ private:
         mOscDrive[4] = {1.0f, 1.0f, 1.0f, 1.0f},
         mOscFold[4] = {0.0f, 0.0f, 0.0f, 0.0f},
         mOscPW[4] = {0.5f, 0.5f, 0.5f, 0.5f};
+  int mModXDest = 1;
+  float mModXIntensity = 1.0f;
+  int mModYDest = 2;
+  float mModYIntensity = 1.0f;
 };
 
 #endif

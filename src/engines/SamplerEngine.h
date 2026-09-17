@@ -72,9 +72,19 @@ public:
 
     uint32_t controlCounter = 0;
 
+    // Per-voice modulation state
+    int originNote = -1;
+    float modX = 0.0f;
+    float modY = 0.0f;
+    bool hasVoiceMod = false;
+
     void reset() {
       active = false;
       note = -1;
+      originNote = -1;
+      modX = 0.0f;
+      modY = 0.0f;
+      hasVoiceMod = false;
       sliceIdx = -1;
       position = 0.0;
       grainPosition = 0.0;
@@ -384,9 +394,9 @@ public:
     return maxEnv;
   }
 
-  void triggerNote(int note, int velocity) { noteOn(note, velocity); }
+  void triggerNote(int note, int velocity, int originNote = -1) { noteOn(note, velocity, originNote); }
 
-  void noteOn(int note, int velocity) {
+  void noteOn(int note, int velocity, int originNote = -1) {
     if (mVoices.empty())
       return;
 
@@ -460,6 +470,10 @@ public:
     v.reset();
     v.active = true;
     v.note = note;
+    v.originNote = (originNote >= 0 ? originNote : note);
+    v.modX = 0.0f;
+    v.modY = 0.0f;
+    v.hasVoiceMod = false;
     v.baseVelocity = velocity / 127.0f;
     v.noteOnTime = mCurrentTime;
     v.envelope.setSampleRate(48000.0f);
@@ -559,6 +573,23 @@ public:
         }
       }
     }
+  }
+
+  void setVoiceMod(int originNote, float x, float y) {
+    for (auto &v : mVoices) {
+      if (v.active && v.originNote == originNote) {
+        v.modX = x;
+        v.modY = y;
+        v.hasVoiceMod = true;
+      }
+    }
+  }
+
+  void setModRouting(int xDest, float xInt, int yDest, float yInt) {
+    mModXDest = xDest;
+    mModXIntensity = xInt;
+    mModYDest = yDest;
+    mModYIntensity = yInt;
   }
 
   void setParameter(int id, float value) {
@@ -1046,6 +1077,17 @@ public:
         float baseCutoff = mSliceLockEnabled ? v.sliceCutoff : mFilterCutoff;
         float baseReson =
             mSliceLockEnabled ? v.sliceResonance : mFilterResonance;
+        if (v.hasVoiceMod) {
+          auto evalMod = [&](int dest, float val, float intensity) {
+            if (dest == 1 || dest == 104) {
+              baseCutoff = val * intensity;
+            } else if (dest == 2 || dest == 105) {
+              baseReson = val * intensity;
+            }
+          };
+          if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
+          if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
+        }
 
         float cutoff = 20.0f + (baseCutoff * baseCutoff * baseCutoff * 19980.0f);
         // Integrate envelope to filter cutoff
@@ -1357,6 +1399,10 @@ private:
   int mSampleRate = 48000;
   SliceParams mSliceParams[16];
   bool mSliceLockEnabled = false;
+  int mModXDest = 1;
+  float mModXIntensity = 1.0f;
+  int mModYDest = 2;
+  float mModYIntensity = 1.0f;
 };
 
 #endif // SAMPLER_ENGINE_H

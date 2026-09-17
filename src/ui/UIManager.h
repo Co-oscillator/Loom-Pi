@@ -694,6 +694,7 @@ public:
     static void playModDestBtnEventCb(lv_event_t* e);
     static void playModXIntensityArcEventCb(lv_event_t* e);
     static void playModYIntensityArcEventCb(lv_event_t* e);
+    static void playVoiceLinkBtnEventCb(lv_event_t* e);
 
     lv_obj_t* mPlayPadGrid = nullptr;
     lv_obj_t* mPlayRootDd = nullptr;
@@ -707,6 +708,9 @@ public:
     lv_obj_t* mPlayModXIntensityArc = nullptr;
     lv_obj_t* mPlayModYIntensityArc = nullptr;
     lv_obj_t* mPlayPadCountBtn = nullptr;
+    lv_obj_t* mPlayVoiceLinkBtn = nullptr;
+    lv_obj_t* mPlayVoiceLinkLbl = nullptr;
+    bool mPlayVoiceLinkPoly = true; // true = Polyphonic per-voice modulation, false = Glitch
     int mPlayPadCount = 16; // 16 (4x4), 24 (6x4), or 40 (8x5)
     int mPlaySelectedScaleIdx = 1; // Default Major
     int mPlaySelectedRoot = 0; // C

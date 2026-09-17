@@ -31,9 +31,19 @@ public:
     float envStart = 0.0f, envDelta = 0.0f;
     float filterEnvStart = 0.0f, filterEnvDelta = 0.0f;
 
+    // Per-voice modulation state
+    int originNote = -1;
+    float modX = 0.0f;
+    float modY = 0.0f;
+    bool hasVoiceMod = false;
+
     void reset() {
       active = false;
       note = -1;
+      originNote = -1;
+      modX = 0.0f;
+      modY = 0.0f;
+      hasVoiceMod = false;
       phase = 0;
       envelope.reset();
       filterEnv.reset();
@@ -125,7 +135,7 @@ public:
     mNumFrames = 1;
   }
 
-  void triggerNote(int note, int velocity) {
+  void triggerNote(int note, int velocity, int originNote = -1) {
     int idx = -1;
     for (int i = 0; i < 16; ++i)
       if (!mVoices[i].active) {
@@ -153,6 +163,10 @@ public:
     v.reset();
     v.active = true;
     v.note = note;
+    v.originNote = (originNote >= 0 ? originNote : note);
+    v.modX = 0.0f;
+    v.modY = 0.0f;
+    v.hasVoiceMod = false;
     v.amplitude = velocity / 127.0f;
     float baseFreq = 440.0f * powf(2.0f, (note - 69) / 12.0f);
     v.targetFrequency = baseFreq;
@@ -174,6 +188,23 @@ public:
         v.envelope.release();
         v.filterEnv.release();
       }
+  }
+
+  void setVoiceMod(int originNote, float x, float y) {
+    for (auto &v : mVoices) {
+      if (v.active && v.originNote == originNote) {
+        v.modX = x;
+        v.modY = y;
+        v.hasVoiceMod = true;
+      }
+    }
+  }
+
+  void setModRouting(int xDest, float xInt, int yDest, float yInt) {
+    mModXDest = xDest;
+    mModXIntensity = xInt;
+    mModYDest = yDest;
+    mModYIntensity = yInt;
   }
 
   void setAttack(float v) { mAttack = v; }
@@ -255,6 +286,23 @@ public:
       if (!v.active)
         continue;
 
+      float vCutoff = mCutoff;
+      float vReson = mResonance;
+      float vPos = mPosition;
+      if (v.hasVoiceMod) {
+        auto evalMod = [&](int dest, float val, float intensity) {
+          if (dest == 1 || dest == 104) {
+            vCutoff = val * intensity;
+          } else if (dest == 2 || dest == 105) {
+            vReson = val * intensity;
+          } else if (dest == 310 || dest == 300) {
+            vPos = val * intensity;
+          }
+        };
+        if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
+        if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
+      }
+
       if (v.controlCounter % 16 == 0) {
         if (mGlide > 0.001f) {
           float glideTimeSamples = mGlide * mSampleRate * 0.5f;
@@ -267,11 +315,11 @@ public:
         v.filterEnv.processBlock(16, v.filterEnvStart, v.filterEnvDelta);
         
         float fEnv = v.filterEnvStart;
-        float cutoff = 20.0f + mCutoff * mCutoff * 18000.0f;
+        float cutoff = 20.0f + vCutoff * vCutoff * 18000.0f;
         cutoff += fEnv * mF_Amt * 12000.0f;
         cutoff = std::max(20.0f, std::min(20000.0f, cutoff));
 
-        v.svf.setParams(cutoff, 0.7f + mResonance * 5.0f, mSampleRate);
+        v.svf.setParams(cutoff, 0.7f + vReson * 5.0f, mSampleRate);
       }
 
       int blockPhase = v.controlCounter % 16;
@@ -311,7 +359,7 @@ public:
           wPhase = 1.0 - pow(1.0 - wPhase, p);
         }
 
-        float pos = mPosition * (float)(mNumFrames - 1);
+        float pos = vPos * (float)(mNumFrames - 1);
         int frame1 = (int)pos;
         int frame2 = std::min(mNumFrames - 1, frame1 + 1);
         float posFrac = pos - (float)frame1;
@@ -393,6 +441,10 @@ private:
   int mFilterMode = 0;
   std::shared_ptr<std::mutex> mMutex;
   uint32_t mControlCounter = 0;
+  int mModXDest = 1;
+  float mModXIntensity = 1.0f;
+  int mModYDest = 2;
+  float mModYIntensity = 1.0f;
 };
 
 #endif

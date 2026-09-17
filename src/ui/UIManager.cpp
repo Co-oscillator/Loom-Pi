@@ -10197,9 +10197,13 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
     } else if (ui->mModDestModalCallerType == 4) {
         ui->mPlayModXTrack = data->trackIdx;
         ui->mPlayModXDest = data->paramId;
+        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     } else if (ui->mModDestModalCallerType == 5) {
         ui->mPlayModYTrack = data->trackIdx;
         ui->mPlayModYDest = data->paramId;
+        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     }
 
     ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
@@ -10264,11 +10268,15 @@ void UIManager::clearModDestModalEventCb(lv_event_t* e) {
         if (ui->mModDestBtnLabel) {
             lv_label_set_text(ui->mModDestBtnLabel, "X: None");
         }
+        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     } else if (ui->mModDestModalCallerType == 5) { // Play Mod Y
         ui->mPlayModYDest = -1;
         if (ui->mModDestBtnLabel) {
             lv_label_set_text(ui->mModDestBtnLabel, "Y: None");
         }
+        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     }
 
     ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
@@ -17673,6 +17681,7 @@ void UIManager::saveSettings(const std::string& path) {
     file << "AUDIO_LINE_IN_DEVICE:" << mSettingsAudioLineInDevice << "\n";
     file << "BRIGHTNESS:" << mSettingsBacklightBrightness << "\n";
     file << "SCREEN_TIMEOUT:" << mSettingsScreenTimeoutSec << "\n";
+    file << "PLAY_VOICE_LINK:" << (mPlayVoiceLinkPoly ? 1 : 0) << "\n";
 
     // Transport & custom configurations
     file << "PLAY_CC:" << mCcPlay << "\n";
@@ -17791,6 +17800,9 @@ void UIManager::loadSettings(const std::string& path) {
             }
             else if (key == "SCREEN_TIMEOUT") {
                 mSettingsScreenTimeoutSec = std::stoi(val);
+            }
+            else if (key == "PLAY_VOICE_LINK") {
+                mPlayVoiceLinkPoly = std::stoi(val) != 0;
             }
             else if (key == "PLAY_CC") mCcPlay = std::stoi(val);
             else if (key == "STOP_CC") mCcStop = std::stoi(val);
@@ -19051,6 +19063,20 @@ void UIManager::populatePlayScreen() {
     };
     lv_obj_add_event_cb(mPlayModYDestBtn, yFreeCb, LV_EVENT_DELETE, yClickData);
 
+    // Voice Link Mode Toggle (POLY per-voice modulation vs GLITCH parameter-fighting)
+    mPlayVoiceLinkBtn = lv_button_create(modGrp);
+    lv_obj_set_size(mPlayVoiceLinkBtn, 84, 34);
+    lv_obj_set_style_bg_color(mPlayVoiceLinkBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(mPlayVoiceLinkBtn, mPlayVoiceLinkPoly ? lv_color_hex(0x00FFFF) : lv_color_hex(0xFF9800), 0);
+    lv_obj_set_style_border_width(mPlayVoiceLinkBtn, 1, 0);
+    lv_obj_set_style_radius(mPlayVoiceLinkBtn, 6, 0);
+    mPlayVoiceLinkLbl = lv_label_create(mPlayVoiceLinkBtn);
+    lv_label_set_text(mPlayVoiceLinkLbl, mPlayVoiceLinkPoly ? "LINK: POLY" : "LINK: GLITCH");
+    lv_obj_set_style_text_font(mPlayVoiceLinkLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mPlayVoiceLinkLbl, mPlayVoiceLinkPoly ? lv_color_hex(0x00FFFF) : lv_color_hex(0xFF9800), 0);
+    lv_obj_center(mPlayVoiceLinkLbl);
+    lv_obj_add_event_cb(mPlayVoiceLinkBtn, playVoiceLinkBtnEventCb, LV_EVENT_CLICKED, this);
+
     // Toggle Pad Density (16 Large vs 24 Squares vs 40 Dense)
     mPlayPadCountBtn = lv_button_create(modGrp);
     lv_obj_set_size(mPlayPadCountBtn, 44, 34);
@@ -19397,26 +19423,26 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
 
         // Trigger note or chord
         if (isDrum || ui->mPlayChordType == 0) {
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 110);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 110, note);
         } else if (ui->mPlayChordType == 1) { // Triad
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
         } else if (ui->mPlayChordType == 2) { // 7th
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95, note);
         } else if (ui->mPlayChordType == 3) { // 9th
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 14, 90);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 14, 90, note);
         } else if (ui->mPlayChordType == 4) { // Sus4
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 5, 100);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 5, 100, note);
+            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
         }
     }
 
@@ -19434,14 +19460,27 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             normX = std::max(0.0f, std::min(1.0f, normX));
             normY = std::max(0.0f, std::min(1.0f, normY));
 
-            // Modulate assigned parameters (if assigned) with intensity attenuation
-            if (ui->mPlayModXDest >= 0) {
-                float effectiveX = normX * ui->mPlayModXIntensity;
-                ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, effectiveX);
-            }
-            if (ui->mPlayModYDest >= 0) {
-                float effectiveY = normY * ui->mPlayModYIntensity;
-                ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, effectiveY);
+            if (ui->mPlayVoiceLinkPoly && !isDrum) {
+                // Per-voice polyphonic modulation!
+                ui->mEngine.setVoicePadMod(ui->mActiveTrack, note, normX, normY);
+                ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                             ui->mPlayModYDest, ui->mPlayModYIntensity, true);
+                if (ui->mPlayModXTrack != ui->mActiveTrack && ui->mPlayModXDest >= 0) {
+                    ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, normX * ui->mPlayModXIntensity);
+                }
+                if (ui->mPlayModYTrack != ui->mActiveTrack && ui->mPlayModYDest >= 0) {
+                    ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, normY * ui->mPlayModYIntensity);
+                }
+            } else {
+                // Parameter-fighting Glitch mode: Modulate assigned parameters directly on the track
+                if (ui->mPlayModXDest >= 0) {
+                    float effectiveX = normX * ui->mPlayModXIntensity;
+                    ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, effectiveX);
+                }
+                if (ui->mPlayModYDest >= 0) {
+                    float effectiveY = normY * ui->mPlayModYIntensity;
+                    ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, effectiveY);
+                }
             }
         }
     }
@@ -19550,6 +19589,8 @@ void UIManager::playModXIntensityArcEventCb(lv_event_t* e) {
     if (valLbl) {
         lv_label_set_text_fmt(valLbl, "%" PRId32, val);
     }
+    ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                 ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
 }
 
 void UIManager::playModYIntensityArcEventCb(lv_event_t* e) {
@@ -19561,5 +19602,19 @@ void UIManager::playModYIntensityArcEventCb(lv_event_t* e) {
     if (valLbl) {
         lv_label_set_text_fmt(valLbl, "%" PRId32, val);
     }
+    ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                 ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
 }
+
+void UIManager::playVoiceLinkBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->mPlayVoiceLinkPoly = !ui->mPlayVoiceLinkPoly;
+    lv_color_t color = ui->mPlayVoiceLinkPoly ? lv_color_hex(0x00FFFF) : lv_color_hex(0xFF9800);
+    lv_obj_set_style_border_color(ui->mPlayVoiceLinkBtn, color, 0);
+    lv_obj_set_style_text_color(ui->mPlayVoiceLinkLbl, color, 0);
+    lv_label_set_text(ui->mPlayVoiceLinkLbl, ui->mPlayVoiceLinkPoly ? "LINK: POLY" : "LINK: GLITCH");
+    ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                 ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+}
+
 

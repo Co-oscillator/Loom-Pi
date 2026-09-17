@@ -676,7 +676,8 @@ void AudioEngine::stop() {
 // Internal Note Logic
 void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
                                     bool isSequencerTrigger, float gate,
-                                    bool punch, bool isArpTrigger) {
+                                    bool punch, bool isArpTrigger,
+                                    int originNote) {
   if (trackIndex >= 0 && trackIndex < (int)mTracks.size()) {
     Track &track = mTracks[trackIndex];
     if (!track.isTrackEnabled) {
@@ -821,21 +822,22 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
     }
 
     // 4. Trigger Actual Synthesis Engines
+    int orig = (originNote >= 0 ? originNote : note);
     switch (track.engineType) {
     case 0:
-      track.subtractiveEngine.triggerNote(note, velocity);
+      track.subtractiveEngine.triggerNote(note, velocity, orig);
       break;
     case 1:
-      track.fmEngine.triggerNote(note, velocity);
+      track.fmEngine.triggerNote(note, velocity, orig);
       break;
     case 2:
-      track.samplerEngine.triggerNote(note, velocity);
+      track.samplerEngine.triggerNote(note, velocity, orig);
       break;
     case 3:
       track.granularEngine.triggerNote(note, velocity);
       break;
     case 4:
-      track.wavetableEngine.triggerNote(note, velocity);
+      track.wavetableEngine.triggerNote(note, velocity, orig);
       break;
     case 5:
       track.fmDrumEngine.triggerNote(note, velocity);
@@ -1484,7 +1486,7 @@ void AudioEngine::processCommands() {
   for (const auto &cmd : todo) {
     switch (cmd.type) {
     case AudioCommand::NOTE_ON:
-      triggerNoteLocked(cmd.trackIndex, cmd.data1, (int)cmd.value, false);
+      triggerNoteLocked(cmd.trackIndex, cmd.data1, (int)cmd.value, false, 0.95f, false, false, cmd.extraData);
       break;
     case AudioCommand::NOTE_OFF:
       releaseNoteLocked(cmd.trackIndex, cmd.data1, false);
@@ -1580,6 +1582,23 @@ void AudioEngine::processCommands() {
     case AudioCommand::SET_PAD_MOD:
       if (cmd.trackIndex >= 0 && cmd.trackIndex < (int)mTracks.size()) {
         mTracks[cmd.trackIndex].padModValue = cmd.value;
+      }
+      break;
+    case AudioCommand::SET_VOICE_PAD_MOD:
+      if (cmd.trackIndex >= 0 && cmd.trackIndex < (int)mTracks.size()) {
+        auto &track = mTracks[cmd.trackIndex];
+        int originNote = cmd.data1;
+        float normX = cmd.value;
+        float normY = cmd.velocity;
+        if (track.engineType == 0) {
+          track.subtractiveEngine.setVoiceMod(originNote, normX, normY);
+        } else if (track.engineType == 1) {
+          track.fmEngine.setVoiceMod(originNote, normX, normY);
+        } else if (track.engineType == 2) {
+          track.samplerEngine.setVoiceMod(originNote, normX, normY);
+        } else if (track.engineType == 4) {
+          track.wavetableEngine.setVoiceMod(originNote, normX, normY);
+        }
       }
       break;
     case AudioCommand::SET_PATTERN_LENGTH:
@@ -2936,7 +2955,7 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
     maxPeak = currentPeak;
 }
 
-void AudioEngine::triggerNote(int trackIndex, int note, int velocity) {
+void AudioEngine::triggerNote(int trackIndex, int note, int velocity, int originNote) {
   int finalVelocity = velocity;
   if (!mVelocitySensitivityEnabled) {
     finalVelocity = 100;
@@ -2946,6 +2965,7 @@ void AudioEngine::triggerNote(int trackIndex, int note, int velocity) {
   cmd.trackIndex = trackIndex;
   cmd.data1 = note;
   cmd.value = static_cast<float>(finalVelocity);
+  cmd.extraData = (originNote >= 0 ? originNote : note);
   std::lock_guard<std::mutex> lock(mCommandLock);
   mCommandQueue.push_back(cmd);
 }
@@ -5171,6 +5191,33 @@ void AudioEngine::setPadMod(int trackIndex, float value) {
   cmd.value = value;
   std::lock_guard<std::mutex> lock(mCommandLock);
   mCommandQueue.push_back(cmd);
+}
+
+void AudioEngine::setVoicePadMod(int trackIndex, int originNote, float normX, float normY) {
+  AudioCommand cmd;
+  cmd.type = AudioCommand::SET_VOICE_PAD_MOD;
+  cmd.trackIndex = trackIndex;
+  cmd.data1 = originNote;
+  cmd.value = normX;
+  cmd.velocity = normY;
+  std::lock_guard<std::mutex> lock(mCommandLock);
+  mCommandQueue.push_back(cmd);
+}
+
+void AudioEngine::setPadModRouting(int trackIndex, int xDest, float xInt, int yDest, float yInt, bool polyMode) {
+  if (trackIndex >= 0 && trackIndex < (int)mTracks.size()) {
+    std::lock_guard<std::recursive_mutex> lock(mLock);
+    auto &t = mTracks[trackIndex];
+    t.playModXDest = xDest;
+    t.playModXIntensity = xInt;
+    t.playModYDest = yDest;
+    t.playModYIntensity = yInt;
+    t.voiceLinkPoly = polyMode;
+    t.subtractiveEngine.setModRouting(xDest, xInt, yDest, yInt);
+    t.fmEngine.setModRouting(xDest, xInt, yDest, yInt);
+    t.wavetableEngine.setModRouting(xDest, xInt, yDest, yInt);
+    t.samplerEngine.setModRouting(xDest, xInt, yDest, yInt);
+  }
 }
 
 void AudioEngine::setTrackMute(int trackIndex, bool muted) {

@@ -61,7 +61,7 @@ public:
   // Control methods
   void setTrackVolume(int trackIndex, float volume);
   void setEngineType(int trackIndex, int type);
-  void triggerNote(int trackIndex, int note, int velocity);
+  void triggerNote(int trackIndex, int note, int velocity, int originNote = -1);
   void releaseNote(int trackIndex, int note);
   void setTempo(float bpm);
   float getBpm() const { return mBpm; }
@@ -160,6 +160,8 @@ public:
   uint64_t getActiveNoteMask(int trackIndex);
   void setPitchBend(int trackIndex, float semitones);
   void setPadMod(int trackIndex, float value);
+  void setVoicePadMod(int trackIndex, int originNote, float normX, float normY);
+  void setPadModRouting(int trackIndex, int xDest, float xInt, int yDest, float yInt, bool polyMode);
   void panic();
   void loadFmPreset(int trackIndex, int presetId);
   void setClockMultiplier(int trackIndex, float multiplier);
@@ -266,7 +268,8 @@ private:
       SET_CHAIN_ENABLED,
       SET_CHAIN_LENGTH,
       SET_CHAIN_SLOT,
-      SET_PAD_MOD
+      SET_PAD_MOD,
+      SET_VOICE_PAD_MOD
     };
     Type type;
     int trackIndex;
@@ -322,6 +325,11 @@ public:
     float sequencerProbability = 1.0f;
     float mPitchBend = 0.0f;  // -1.0 to 1.0 (semitones)
     float padModValue = 0.0f; // 0.0 to 1.0 (Y-axis)
+    int playModXDest = 1;
+    float playModXIntensity = 1.0f;
+    int playModYDest = 2;
+    float playModYIntensity = 1.0f;
+    bool voiceLinkPoly = true;
 
     float smoothedPan = 0.5f;
     float humanize = 0.0f;
@@ -465,7 +473,8 @@ public:
   uint32_t mActiveFxSlotMask = 0;
   void triggerNoteLocked(int trackIndex, int note, int velocity,
                          bool isSequencerTrigger = false, float gate = 0.95f,
-                         bool punch = false, bool isArpTrigger = false);
+                         bool punch = false, bool isArpTrigger = false,
+                         int originNote = -1);
   void releaseNoteLocked(int trackIndex, int note,
                          bool isSequencerTrigger = false);
   void setupTracks();
