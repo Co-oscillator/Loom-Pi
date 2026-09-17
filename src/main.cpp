@@ -158,9 +158,13 @@ void setCaptureActive(bool active) {
 
             const char* devName = (gCurrentCaptureDevice.empty() || gCurrentCaptureDevice == "Default" || gCurrentCaptureDevice == "SDL Default") ? nullptr : gCurrentCaptureDevice.c_str();
             gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, 0);
+            if (gCaptureDeviceID == 0 && devName != nullptr) {
+                std::cout << "[Audio] Opening '" << devName << "' failed (" << SDL_GetError() << "), falling back to default capture device..." << std::endl;
+                gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, 0);
+            }
             if (gCaptureDeviceID != 0) {
                 SDL_PauseAudioDevice(gCaptureDeviceID, 0);
-                std::cout << "[Audio] On-demand Audio Capture STARTED on: " << gCurrentCaptureDevice << std::endl;
+                std::cout << "[Audio] On-demand Audio Capture STARTED on: " << (devName ? devName : "Default") << std::endl;
             } else {
                 std::cerr << "[Audio] Failed to open capture device: " << SDL_GetError() << std::endl;
             }
@@ -177,7 +181,42 @@ void setCaptureActive(bool active) {
 }
 
 bool switchCaptureDevice(const std::string& deviceName) {
-    gCurrentCaptureDevice = deviceName;
+    std::string targetDev = deviceName;
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
+        int numDevs = SDL_GetNumAudioDevices(1);
+        std::string chosen = "";
+        for (int i = 0; i < numDevs; ++i) {
+            const char* name = SDL_GetAudioDeviceName(i, 1);
+            if (!name) continue;
+            std::string s(name);
+            std::string sLower = s;
+            std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+            if (sLower.find("ab13x") != std::string::npos) {
+                chosen = s;
+                break;
+            }
+        }
+        if (chosen.empty()) {
+            for (int i = 0; i < numDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 1);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        if (!chosen.empty()) {
+            targetDev = chosen;
+            std::cout << "[Audio] Auto-selected USB capture device: " << targetDev << std::endl;
+        } else {
+            targetDev = "Default";
+        }
+    }
+    gCurrentCaptureDevice = targetDev;
     std::cout << "[Audio] Capture device configured to: " << gCurrentCaptureDevice << std::endl;
     if (gCaptureDeviceID != 0) {
         setCaptureActive(false);

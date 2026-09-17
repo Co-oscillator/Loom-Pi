@@ -2065,7 +2065,49 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     auto devFreeCb = [](lv_event_t* e) { delete (DeviceChangeData*)lv_event_get_user_data(e); };
     lv_obj_add_event_cb(deviceDd, devFreeCb, LV_EVENT_DELETE, devData);
 
-    // Item 4: Sample Rate (Labeled Dropdown)
+    // Item 4: SDL Audio Input Device (Labeled Dropdown)
+    auto [inDevLabel, inDevDd] = makeLabeledDropdown(audioCard, "Active Input Device:");
+    (void)inDevLabel;
+
+    std::string inDevOptions = "Default\n";
+    int numInDevs = SDL_GetNumAudioDevices(1);
+    std::vector<std::string> inDevNames;
+    inDevNames.push_back("Default");
+    int activeInDevIdx = 0;
+    for (int i = 0; i < numInDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 1);
+        if (name) {
+            inDevOptions += std::string(name) + "\n";
+            inDevNames.push_back(name);
+            if (gCurrentCaptureDevice == name || mSettingsAudioMicDevice == name) {
+                activeInDevIdx = inDevNames.size() - 1;
+            }
+        }
+    }
+    if (!inDevOptions.empty() && inDevOptions.back() == '\n') inDevOptions.pop_back();
+
+    lv_dropdown_set_options(inDevDd, inDevOptions.c_str());
+    lv_dropdown_set_selected(inDevDd, activeInDevIdx);
+
+    DeviceChangeData* inDevData = new DeviceChangeData{this, inDevNames};
+    auto inDevCb = [](lv_event_t* e) {
+        DeviceChangeData* d = (DeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            if (switchCaptureDevice(selectedName)) {
+                d->ui->mSettingsAudioMicDevice = selectedName;
+                d->ui->mSettingsAudioLineInDevice = selectedName;
+                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            }
+        }
+    };
+    lv_obj_add_event_cb(inDevDd, inDevCb, LV_EVENT_VALUE_CHANGED, inDevData);
+    auto inDevFreeCb = [](lv_event_t* e) { delete (DeviceChangeData*)lv_event_get_user_data(e); };
+    lv_obj_add_event_cb(inDevDd, inDevFreeCb, LV_EVENT_DELETE, inDevData);
+
+    // Item 5: Sample Rate (Labeled Dropdown)
     auto [srLbl, srDd] = makeLabeledDropdown(audioCard, "Sample Rate:");
     (void)srLbl;
     lv_dropdown_set_options(srDd, "44100 Hz\n48000 Hz");
