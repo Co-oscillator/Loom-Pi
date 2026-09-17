@@ -581,6 +581,7 @@ private:
     lv_obj_t* mSamplerSliceLines[16] = {};
     lv_obj_t* mSamplerSliceHandles[16] = {};
     static void samplerScrubHandleEventCb(lv_event_t* e);
+    static void samplerWaveformContainerEventCb(lv_event_t* e);
     static void samplerSliceHandleEventCb(lv_event_t* e);
     void updateSamplerWaveformPreview();
 

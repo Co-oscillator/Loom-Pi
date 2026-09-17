@@ -407,7 +407,13 @@ public:
       Voice &v = mVoices[0];
       if (!v.active) {
         v.active = true;
-        v.position = 0.0;
+        int active = mActiveBuffer.load(std::memory_order_acquire);
+        const auto &buf = mBuffers[active];
+        if (!buf.empty()) {
+          v.position = mScrubPosition * (double)buf.size();
+        } else {
+          v.position = 0.0;
+        }
         v.envelope.forceSustain();
       }
       mMotorRunning = true;
@@ -687,9 +693,33 @@ public:
     }
     case 360: // Scrub Position
       mScrubPosition = value;
+      if (mPlayMode == Scrub) {
+        Voice &v = mVoices[0];
+        if (!v.active && mScrubGate) {
+          v.active = true;
+          int active = mActiveBuffer.load(std::memory_order_acquire);
+          const auto &buf = mBuffers[active];
+          if (!buf.empty()) {
+            v.position = value * (double)buf.size();
+          }
+          v.envelope.forceSustain();
+        }
+      }
       break;
     case 361: // Scrub Gate
       mScrubGate = (value > 0.5f);
+      if (mPlayMode == Scrub && mScrubGate) {
+        Voice &v = mVoices[0];
+        if (!v.active) {
+          v.active = true;
+          int active = mActiveBuffer.load(std::memory_order_acquire);
+          const auto &buf = mBuffers[active];
+          if (!buf.empty()) {
+            v.position = mScrubPosition * (double)buf.size();
+          }
+          v.envelope.forceSustain();
+        }
+      }
       break;
     case 330:
       mTrimStart = value;
@@ -816,7 +846,7 @@ public:
 
     // Apply to Voice 0 state
     if (mPlayMode == Scrub) {
-      if (!scrubVoice.active) {
+      if (!scrubVoice.active && (mScrubGate || mMotorRunning || mInteractionTimer > 0)) {
         scrubVoice.active = true;
         scrubVoice.pitchRatio = 0.0f;
         mSmoothSpeed = 0.0;
@@ -964,6 +994,9 @@ public:
               mSmoothSpeed = std::max(0.0, mSmoothSpeed - coulombDecel);
             } else if (mSmoothSpeed < 0.0) {
               mSmoothSpeed = std::min(0.0, mSmoothSpeed + coulombDecel);
+            }
+            if (std::abs(mSmoothSpeed) < 0.0001 && !mScrubGate && mInteractionTimer == 0 && !mMotorRunning) {
+              v.envelope.release();
             }
           }
 

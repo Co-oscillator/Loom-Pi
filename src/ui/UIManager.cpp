@@ -14477,6 +14477,11 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_style_pad_hor(mSamplerWaveformContainer, 8, 0);
     lv_obj_set_style_pad_ver(mSamplerWaveformContainer, 10, 0);
     lv_obj_remove_flag(mSamplerWaveformContainer, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(mSamplerWaveformContainer, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_PRESSED, this);
+    lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_PRESSING, this);
+    lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_RELEASED, this);
+    lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_PRESS_LOST, this);
 
     // Create 150 vertical bars representing amplitude
     for (int i = 0; i < 150; ++i) {
@@ -14488,6 +14493,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
         lv_obj_set_style_pad_all(mSamplerWaveformBars[i], 0, 0);
         lv_obj_set_style_radius(mSamplerWaveformBars[i], 1, 0);
         lv_obj_remove_flag(mSamplerWaveformBars[i], LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(mSamplerWaveformBars[i], LV_OBJ_FLAG_CLICKABLE);
     }
 
     // Green Start Marker
@@ -14498,6 +14504,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_style_border_width(mSamplerStartLine, 0, 0);
     lv_obj_set_style_radius(mSamplerStartLine, 0, 0);
     lv_obj_remove_flag(mSamplerStartLine, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(mSamplerStartLine, LV_OBJ_FLAG_CLICKABLE);
 
     // Red End Marker
     mSamplerEndLine = lv_obj_create(mSamplerWaveformContainer);
@@ -14507,6 +14514,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_style_border_width(mSamplerEndLine, 0, 0);
     lv_obj_set_style_radius(mSamplerEndLine, 0, 0);
     lv_obj_remove_flag(mSamplerEndLine, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(mSamplerEndLine, LV_OBJ_FLAG_CLICKABLE);
 
     // Playhead Shades (25% opacity)
     for (int i = 0; i < 16; ++i) {
@@ -14518,6 +14526,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
         lv_obj_set_style_border_width(mSamplerPlayheadShades[i], 0, 0);
         lv_obj_set_style_radius(mSamplerPlayheadShades[i], 0, 0);
         lv_obj_remove_flag(mSamplerPlayheadShades[i], LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(mSamplerPlayheadShades[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(mSamplerPlayheadShades[i], LV_OBJ_FLAG_HIDDEN);
     }
 
@@ -14530,6 +14539,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
         lv_obj_set_style_border_width(mSamplerPlayheadLines[i], 0, 0);
         lv_obj_set_style_radius(mSamplerPlayheadLines[i], 0, 0);
         lv_obj_remove_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_HIDDEN);
     }
 
@@ -14547,6 +14557,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(mSamplerScrubHandle, samplerScrubHandleEventCb, LV_EVENT_PRESSING, this);
     lv_obj_add_event_cb(mSamplerScrubHandle, samplerScrubHandleEventCb, LV_EVENT_PRESSED, this);
     lv_obj_add_event_cb(mSamplerScrubHandle, samplerScrubHandleEventCb, LV_EVENT_RELEASED, this);
+    lv_obj_add_event_cb(mSamplerScrubHandle, samplerScrubHandleEventCb, LV_EVENT_PRESS_LOST, this);
 
     // 16 Slices Lines & Rounded Handles
     for (int i = 0; i < 16; ++i) {
@@ -14557,6 +14568,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
         lv_obj_set_style_border_width(mSamplerSliceLines[i], 0, 0);
         lv_obj_set_style_radius(mSamplerSliceLines[i], 0, 0);
         lv_obj_remove_flag(mSamplerSliceLines[i], LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(mSamplerSliceLines[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(mSamplerSliceLines[i], LV_OBJ_FLAG_HIDDEN);
 
         mSamplerSliceHandles[i] = lv_obj_create(mSamplerWaveformContainer);
@@ -14867,53 +14879,94 @@ void UIManager::samplerTrimBtnEventCb(lv_event_t* e) {
 
 void UIManager::samplerScrubHandleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    if (ui->mActiveTrack < 0 || ui->mActiveTrack >= (int)ui->mEngine.getTracks().size()) return;
+
     lv_event_code_t code = lv_event_get_code(e);
-    
-    if (code == LV_EVENT_PRESSED) {
-        ui->mEngine.setParameter(ui->mActiveTrack, 361, 1.0f); // mScrubGate
-    } else if (code == LV_EVENT_RELEASED) {
-        ui->mEngine.setParameter(ui->mActiveTrack, 361, 0.0f);
-    } else if (code == LV_EVENT_PRESSING) {
+    if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
         lv_indev_t* indev = lv_indev_active();
         if (indev) {
             lv_point_t p;
             lv_indev_get_point(indev, &p);
-            
-            lv_area_t container_area;
-            lv_obj_get_coords(ui->mSamplerWaveformContainer, &container_area);
-            
-            int container_w = lv_area_get_width(&container_area);
-            int local_x = p.x - container_area.x1;
-            
-            float scrubPos = (float)local_x / (float)(container_w > 0 ? container_w : 1);
+
+            lv_area_t container_coords;
+            lv_obj_get_coords(ui->mSamplerWaveformContainer, &container_coords);
+            int pad_left = lv_obj_get_style_pad_left(ui->mSamplerWaveformContainer, 0) + lv_obj_get_style_border_width(ui->mSamplerWaveformContainer, 0);
+            int content_w = lv_obj_get_content_width(ui->mSamplerWaveformContainer);
+            if (content_w <= 0) content_w = 1030;
+
+            int local_x = p.x - (container_coords.x1 + pad_left);
+            float scrubPos = (float)local_x / (float)content_w;
             if (scrubPos < 0.0f) scrubPos = 0.0f;
             if (scrubPos > 1.0f) scrubPos = 1.0f;
-            
+
+            ui->mEngine.setParameter(ui->mActiveTrack, 361, 1.0f); // mScrubGate
             ui->mEngine.setParameter(ui->mActiveTrack, 360, scrubPos); // mScrubPosition
+            ui->updateSamplerWaveformPreview();
         }
+    } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        ui->mEngine.setParameter(ui->mActiveTrack, 361, 0.0f);
+    }
+}
+
+void UIManager::samplerWaveformContainerEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    if (ui->mActiveTrack < 0 || ui->mActiveTrack >= (int)ui->mEngine.getTracks().size()) return;
+    if (ui->mEngine.getTracks()[ui->mActiveTrack].engineType != 2) return;
+
+    bool isScrubMode = (ui->mEngine.getTracks()[ui->mActiveTrack].parameters[320] >= 0.95f);
+    if (!isScrubMode) return;
+
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
+        lv_indev_t* indev = lv_indev_active();
+        if (indev) {
+            lv_point_t p;
+            lv_indev_get_point(indev, &p);
+
+            lv_area_t container_coords;
+            lv_obj_get_coords(ui->mSamplerWaveformContainer, &container_coords);
+            int pad_left = lv_obj_get_style_pad_left(ui->mSamplerWaveformContainer, 0) + lv_obj_get_style_border_width(ui->mSamplerWaveformContainer, 0);
+            int content_w = lv_obj_get_content_width(ui->mSamplerWaveformContainer);
+            if (content_w <= 0) content_w = 1030;
+
+            int local_x = p.x - (container_coords.x1 + pad_left);
+            float scrubPos = (float)local_x / (float)content_w;
+            if (scrubPos < 0.0f) scrubPos = 0.0f;
+            if (scrubPos > 1.0f) scrubPos = 1.0f;
+
+            ui->mEngine.setParameter(ui->mActiveTrack, 361, 1.0f); // mScrubGate
+            ui->mEngine.setParameter(ui->mActiveTrack, 360, scrubPos); // mScrubPosition
+            ui->updateSamplerWaveformPreview();
+        }
+    } else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        ui->mEngine.setParameter(ui->mActiveTrack, 361, 0.0f);
     }
 }
 
 void UIManager::samplerSliceHandleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
     lv_obj_t* handle = (lv_obj_t*)lv_event_get_target(e);
     int sliceIdx = (int)(uintptr_t)lv_obj_get_user_data(handle);
-    
+
     lv_indev_t* indev = lv_indev_active();
     if (indev) {
         lv_point_t p;
         lv_indev_get_point(indev, &p);
-        
-        lv_area_t container_area;
-        lv_obj_get_coords(ui->mSamplerWaveformContainer, &container_area);
-        
-        int container_w = lv_area_get_width(&container_area);
-        int local_x = p.x - container_area.x1;
-        
-        float pos = (float)local_x / (float)(container_w > 0 ? container_w : 1);
+
+        lv_area_t container_coords;
+        lv_obj_get_coords(ui->mSamplerWaveformContainer, &container_coords);
+        int pad_left = lv_obj_get_style_pad_left(ui->mSamplerWaveformContainer, 0) + lv_obj_get_style_border_width(ui->mSamplerWaveformContainer, 0);
+        int content_w = lv_obj_get_content_width(ui->mSamplerWaveformContainer);
+        if (content_w <= 0) content_w = 1030;
+
+        int local_x = p.x - (container_coords.x1 + pad_left);
+        float pos = (float)local_x / (float)content_w;
         if (pos < 0.0f) pos = 0.0f;
         if (pos > 1.0f) pos = 1.0f;
-        
+
         ui->mEngine.setSlicePosition(ui->mActiveTrack, sliceIdx, pos);
         ui->updateSamplerWaveformPreview();
     }
@@ -14956,22 +15009,27 @@ void UIManager::updateSamplerWaveformPreview() {
         }
     }
 
+    float containerWidth = (float)lv_obj_get_content_width(mSamplerWaveformContainer);
+    if (containerWidth <= 10.0f) {
+        containerWidth = 1030.0f;
+    }
+
     if (mSamplerStartLine) {
-        int x = (int)(startPnt * 746.0f);
+        int x = (int)(startPnt * containerWidth);
         lv_obj_align(mSamplerStartLine, LV_ALIGN_LEFT_MID, x, 0);
     }
     if (mSamplerEndLine) {
-        int x = (int)(endPnt * 746.0f);
+        int x = (int)(endPnt * containerWidth);
         lv_obj_align(mSamplerEndLine, LV_ALIGN_LEFT_MID, x, 0);
     }
 
     // 1. Scrub Mode vs Normal Playhead
     bool isScrubMode = (mEngine.getTracks()[mActiveTrack].parameters[320] >= 0.95f);
-    
+
     // Query active playheads and update playhead line & shade
     GranularEngine::PlayheadInfo playheads[16];
     mEngine.getGranularPlayheads(mActiveTrack, playheads, 16);
-    
+
     if (isScrubMode) {
         // Hide all playhead shades and other playhead lines
         for (int i = 0; i < 16; ++i) {
@@ -14982,11 +15040,11 @@ void UIManager::updateSamplerWaveformPreview() {
                 lv_obj_add_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_HIDDEN);
             }
         }
-        
+
         if (mSamplerPlayheadLines[0]) {
             lv_color_t oppositeColor = lv_color_hex(0xFFFFFF - lv_color_to_u32(trackColor));
             lv_obj_set_style_bg_color(mSamplerPlayheadLines[0], oppositeColor, 0);
-            
+
             float pos = mEngine.getTracks()[mActiveTrack].parameters[360]; // fallback to last scrub position
             for (int i = 0; i < 16; ++i) {
                 if (playheads[i].pos >= 0.0f) {
@@ -14994,10 +15052,10 @@ void UIManager::updateSamplerWaveformPreview() {
                     break;
                 }
             }
-            int x = (int)(pos * 746.0f);
+            int x = (int)(pos * containerWidth);
             lv_obj_align(mSamplerPlayheadLines[0], LV_ALIGN_LEFT_MID, x, 0);
             lv_obj_clear_flag(mSamplerPlayheadLines[0], LV_OBJ_FLAG_HIDDEN);
-            
+
             if (mSamplerScrubHandle) {
                 lv_obj_set_style_bg_color(mSamplerScrubHandle, oppositeColor, 0);
                 lv_obj_align(mSamplerScrubHandle, LV_ALIGN_BOTTOM_LEFT, x - 12, 10);
@@ -15008,12 +15066,12 @@ void UIManager::updateSamplerWaveformPreview() {
         if (mSamplerScrubHandle) {
             lv_obj_add_flag(mSamplerScrubHandle, LV_OBJ_FLAG_HIDDEN);
         }
-        
+
         for (int i = 0; i < 16; ++i) {
             if (playheads[i].pos >= 0.0f) {
                 if (mSamplerPlayheadLines[i]) {
                     lv_obj_set_style_bg_color(mSamplerPlayheadLines[i], trackColor, 0);
-                    int x = (int)(playheads[i].pos * 746.0f);
+                    int x = (int)(playheads[i].pos * containerWidth);
                     lv_obj_align(mSamplerPlayheadLines[i], LV_ALIGN_LEFT_MID, x, 0);
                     lv_obj_clear_flag(mSamplerPlayheadLines[i], LV_OBJ_FLAG_HIDDEN);
                 }
@@ -15022,8 +15080,8 @@ void UIManager::updateSamplerWaveformPreview() {
                     lv_obj_set_style_bg_opa(mSamplerPlayheadShades[i], 64, 0); // 25% opacity
                     float s = std::min(playheads[i].start, playheads[i].pos);
                     float e = std::max(playheads[i].start, playheads[i].pos);
-                    int xs = (int)(s * 746.0f);
-                    int ws = (int)((e - s) * 746.0f);
+                    int xs = (int)(s * containerWidth);
+                    int ws = (int)((e - s) * containerWidth);
                     if (ws < 0) ws = 0;
                     lv_obj_set_width(mSamplerPlayheadShades[i], ws);
                     lv_obj_align(mSamplerPlayheadShades[i], LV_ALIGN_LEFT_MID, xs, 0);
@@ -15045,7 +15103,7 @@ void UIManager::updateSamplerWaveformPreview() {
     for (int i = 0; i < 16; ++i) {
         if (i < (int)slicePoints.size()) {
             float p = slicePoints[i];
-            int x = (int)(p * 746.0f);
+            int x = (int)(p * containerWidth);
             if (mSamplerSliceLines[i]) {
                 lv_obj_align(mSamplerSliceLines[i], LV_ALIGN_LEFT_MID, x, 0);
                 lv_obj_clear_flag(mSamplerSliceLines[i], LV_OBJ_FLAG_HIDDEN);
@@ -15757,12 +15815,17 @@ void UIManager::updateGranularWaveformPreview() {
         }
     }
 
+    float containerWidth = (float)lv_obj_get_content_width(mGranularWaveformContainer);
+    if (containerWidth <= 10.0f) {
+        containerWidth = 738.0f;
+    }
+
     if (mGranularStartLine) {
-        int x = (int)(startPnt * 746.0f);
+        int x = (int)(startPnt * containerWidth);
         lv_obj_align(mGranularStartLine, LV_ALIGN_LEFT_MID, x, 0);
     }
     if (mGranularEndLine) {
-        int x = (int)(endPnt * 746.0f);
+        int x = (int)(endPnt * containerWidth);
         lv_obj_align(mGranularEndLine, LV_ALIGN_LEFT_MID, x, 0);
     }
 
@@ -15785,7 +15848,7 @@ void UIManager::updateGranularWaveformPreview() {
     if (activePos >= 0.0f) {
         if (mGranularPlayheadLine) {
             lv_obj_set_style_bg_color(mGranularPlayheadLine, trackColor, 0);
-            int x = (int)(activePos * 746.0f);
+            int x = (int)(activePos * containerWidth);
             lv_obj_align(mGranularPlayheadLine, LV_ALIGN_LEFT_MID, x, 0);
             lv_obj_clear_flag(mGranularPlayheadLine, LV_OBJ_FLAG_HIDDEN);
         }
@@ -15794,8 +15857,8 @@ void UIManager::updateGranularWaveformPreview() {
             lv_obj_set_style_bg_opa(mGranularPlayheadShade, 64, 0);
             float s = std::min(startPos, activePos);
             float e = std::max(startPos, activePos);
-            int xs = (int)(s * 746.0f);
-            int ws = (int)((e - s) * 746.0f);
+            int xs = (int)(s * containerWidth);
+            int ws = (int)((e - s) * containerWidth);
             if (ws < 0) ws = 0;
             lv_obj_set_width(mGranularPlayheadShade, ws);
             lv_obj_align(mGranularPlayheadShade, LV_ALIGN_LEFT_MID, xs, 0);
