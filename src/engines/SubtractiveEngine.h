@@ -394,7 +394,25 @@ public:
             v.oscillators[oscIdx].setFrequency(v.frequency * pitchBendFactor, mSampleRate);
           }
 
-          float morph1 = mOscWaveValues[0];
+          // Voice modulation evaluation
+          float vCutoff = mCutoff;
+          float vReson = mResonance;
+          float vMorph = mOscWaveValues[0];
+          if (v.hasVoiceMod) {
+            auto evalMod = [&](int dest, float val, float intensity) {
+              if (dest == 1 || dest == 104 || dest == 112) {
+                vCutoff = val * intensity;
+              } else if (dest == 2 || dest == 105 || dest == 113) {
+                vReson = val * intensity;
+              } else if (dest == 4 || dest == 290) {
+                vMorph = val * intensity;
+              }
+            };
+            if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
+            if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
+          }
+
+          float morph1 = vMorph;
           if (mLfoDest == 2) {
             morph1 = std::max(0.0f, std::min(1.0f, morph1 + lfoOut));
           }
@@ -409,9 +427,9 @@ public:
           float cutoffLfoVal = (mLfoDest == 0 ? lfoOut : 0.0f);
           float modCutoff = std::max(
               0.0f,
-              std::min(0.999f, mCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
+              std::min(0.999f, vCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
           v.svf.setParams(20.0f + modCutoff * modCutoff * 14000.0f,
-                          std::max(0.1f, mResonance * 5.0f), mSampleRate);
+                          std::max(0.1f, vReson * 5.0f), mSampleRate);
 
           v.ampEnv.processBlock(16, v.ampEnvStart, v.ampEnvDelta);
           v.filterEnv.processBlock(16, v.filterEnvStart, v.filterEnvDelta);
@@ -551,9 +569,9 @@ public:
         float vMorph = mOscWaveValues[0];
         if (v.hasVoiceMod) {
           auto evalMod = [&](int dest, float val, float intensity) {
-            if (dest == 1 || dest == 104) {
+            if (dest == 1 || dest == 104 || dest == 112) {
               vCutoff = val * intensity;
-            } else if (dest == 2 || dest == 105) {
+            } else if (dest == 2 || dest == 105 || dest == 113) {
               vReson = val * intensity;
             } else if (dest == 4 || dest == 290) {
               vMorph = val * intensity;

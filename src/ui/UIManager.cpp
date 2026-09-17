@@ -797,6 +797,12 @@ void UIManager::trackBtnEventCb(lv_event_t* e) {
             ui->mLongPressedTrack = false;
             return;
         }
+        if (ui->mPlayModXTrack == ui->mActiveTrack || ui->mPlayModXTrack < 0 || ui->mPlayModXTrack >= 8) {
+            ui->mPlayModXTrack = clickedTrack;
+        }
+        if (ui->mPlayModYTrack == ui->mActiveTrack || ui->mPlayModYTrack < 0 || ui->mPlayModYTrack >= 8) {
+            ui->mPlayModYTrack = clickedTrack;
+        }
         ui->mActiveTrack = clickedTrack;
         ui->updateHighlighting();
         // Refresh the active screen so step colors + themed elements match the new track
@@ -874,6 +880,7 @@ void UIManager::createCenterContentArea() {
     mSettingsTabview = nullptr;
     mAssignTabview = nullptr;
     mParamTabview = nullptr;
+    mActiveRoutingsContainer = nullptr;
 
     mSamplerWaveformContainer = nullptr;
     mSamplerStartLine = nullptr;
@@ -8617,6 +8624,8 @@ void UIManager::populateAssignScreen() {
 }
 
 void UIManager::rebuildActiveRoutings(lv_obj_t* parent) {
+    if (!parent) return;
+    if (mActiveNav != 4) return; // Only rebuild when active on the Assign/Modulation screen!
     lv_obj_clean(parent);
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
@@ -10248,7 +10257,9 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
                                      ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     }
 
-    ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
+    if (ui->mActiveNav == 4 && ui->mActiveRoutingsContainer) {
+        ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
+    }
 
     // Close Modal
     if (ui->mModDestModal) {
@@ -10321,7 +10332,9 @@ void UIManager::clearModDestModalEventCb(lv_event_t* e) {
                                      ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     }
 
-    ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
+    if (ui->mActiveNav == 4 && ui->mActiveRoutingsContainer) {
+        ui->rebuildActiveRoutings(ui->mActiveRoutingsContainer);
+    }
 
     if (ui->mModDestModal) {
         lv_obj_delete(ui->mModDestModal);
@@ -19063,6 +19076,11 @@ void UIManager::populatePlayScreen() {
     lv_obj_set_user_data(mPlayModYIntensityArc, yIntValLbl);
     lv_obj_add_event_cb(mPlayModYIntensityArc, playModYIntensityArcEventCb, LV_EVENT_VALUE_CHANGED, this);
 
+    if (mPlayModXTrack < 0 || mPlayModXTrack >= 8) mPlayModXTrack = mActiveTrack;
+    if (mPlayModYTrack < 0 || mPlayModYTrack >= 8) mPlayModYTrack = mActiveTrack;
+    mEngine.setPadModRouting(mActiveTrack, mPlayModXDest, mPlayModXIntensity,
+                             mPlayModYDest, mPlayModYIntensity, mPlayVoiceLinkPoly);
+
     // X MOD button: opens Loom's full Modulation Destination Picker Modal
     mPlayModXDestBtn = lv_button_create(modGrp);
     lv_obj_set_size(mPlayModXDestBtn, 100, 34);
@@ -19502,11 +19520,10 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             normX = std::max(0.0f, std::min(1.0f, normX));
             normY = std::max(0.0f, std::min(1.0f, normY));
 
-            if (ui->mPlayVoiceLinkPoly && !isDrum) {
+            bool isSynthTrack = (engType != 5 && engType != 6);
+            if (ui->mPlayVoiceLinkPoly && isSynthTrack) {
                 // Per-voice polyphonic modulation!
                 ui->mEngine.setVoicePadMod(ui->mActiveTrack, note, normX, normY);
-                ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
-                                             ui->mPlayModYDest, ui->mPlayModYIntensity, true);
                 if (ui->mPlayModXTrack != ui->mActiveTrack && ui->mPlayModXDest >= 0) {
                     ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, normX * ui->mPlayModXIntensity);
                 }
@@ -19515,13 +19532,15 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
                 }
             } else {
                 // Parameter-fighting Glitch mode: Modulate assigned parameters directly on the track
+                int targetXTrack = (ui->mPlayModXTrack >= 0 && ui->mPlayModXTrack < 8) ? ui->mPlayModXTrack : ui->mActiveTrack;
+                int targetYTrack = (ui->mPlayModYTrack >= 0 && ui->mPlayModYTrack < 8) ? ui->mPlayModYTrack : ui->mActiveTrack;
                 if (ui->mPlayModXDest >= 0) {
                     float effectiveX = normX * ui->mPlayModXIntensity;
-                    ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, effectiveX);
+                    ui->mEngine.setParameter(targetXTrack, ui->mPlayModXDest, effectiveX);
                 }
                 if (ui->mPlayModYDest >= 0) {
                     float effectiveY = normY * ui->mPlayModYIntensity;
-                    ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, effectiveY);
+                    ui->mEngine.setParameter(targetYTrack, ui->mPlayModYDest, effectiveY);
                 }
             }
         }

@@ -291,9 +291,9 @@ public:
       float vPos = mPosition;
       if (v.hasVoiceMod) {
         auto evalMod = [&](int dest, float val, float intensity) {
-          if (dest == 1 || dest == 104) {
+          if (dest == 1 || dest == 104 || dest == 112) {
             vCutoff = val * intensity;
-          } else if (dest == 2 || dest == 105) {
+          } else if (dest == 2 || dest == 105 || dest == 113) {
             vReson = val * intensity;
           } else if (dest == 310 || dest == 300) {
             vPos = val * intensity;
