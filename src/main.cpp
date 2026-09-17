@@ -238,6 +238,17 @@ int main() {
         return 1;
     }
     
+    int numPlay = SDL_GetNumAudioDevices(0);
+    std::cout << "[Audio] Detected Playback Devices (" << numPlay << "):" << std::endl;
+    for (int i = 0; i < numPlay; ++i) {
+        std::cout << "  [" << i << "] " << (SDL_GetAudioDeviceName(i, 0) ? SDL_GetAudioDeviceName(i, 0) : "Unknown") << std::endl;
+    }
+    int numCap = SDL_GetNumAudioDevices(1);
+    std::cout << "[Audio] Detected Capture Devices (" << numCap << "):" << std::endl;
+    for (int i = 0; i < numCap; ++i) {
+        std::cout << "  [" << i << "] " << (SDL_GetAudioDeviceName(i, 1) ? SDL_GetAudioDeviceName(i, 1) : "Unknown") << std::endl;
+    }
+    
     // 3. Init LVGL & Hardware Video Subsystem
     lv_init();
     if (!HardwareDisplay::init(UIManager::SCREEN_WIDTH, UIManager::SCREEN_HEIGHT)) {
