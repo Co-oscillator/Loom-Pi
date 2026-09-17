@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <filesystem>
 #ifndef __APPLE__
 #include <alsa/asoundlib.h>
 #endif
@@ -4584,6 +4585,8 @@ void UIManager::settingsScaleBtnEventCb(lv_event_t* e) {
 
 void UIManager::settingsSaveBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsProject = true;
     ui->mFileBrowserIsSave = true;
     ui->openFileBrowser(true);
@@ -4592,6 +4595,7 @@ void UIManager::settingsSaveBtnEventCb(lv_event_t* e) {
 
 void UIManager::settingsNewBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
     ui->mEngine.newProject();
     ui->createCenterContentArea();
     std::cout << "Settings: New project created." << std::endl;
@@ -4599,6 +4603,8 @@ void UIManager::settingsNewBtnEventCb(lv_event_t* e) {
 
 void UIManager::settingsLoadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsProject = true;
     ui->mFileBrowserIsSave = false;
     ui->openFileBrowser(false);
@@ -6319,9 +6325,26 @@ void UIManager::rebuildSeqGrid() {
     }
 }
 
+void UIManager::resetFileBrowserFlags() {
+    mFileBrowserIsSave = false;
+    mFileBrowserIsFmImport = false;
+    mFileBrowserIsWtSelect = false;
+    mFileBrowserIsWtImport = false;
+    mFileBrowserIsSampleLoad = false;
+    mFileBrowserIsSampleSave = false;
+    mFileBrowserIsSfSelect = false;
+    mFileBrowserIsSfImport = false;
+    mFileBrowserIsPresetLoad = false;
+    mFileBrowserIsPresetSave = false;
+    mFileBrowserIsProject = false;
+}
+
 // ---- File Browser Modal ----
 void UIManager::openFileBrowser(bool isSave) {
-    if (mSeqModal) closeFileBrowser();
+    if (mSeqModal) {
+        lv_obj_delete(mSeqModal);
+        mSeqModal = nullptr;
+    }
     mFileBrowserIsSave = isSave;
 
     // Full-screen dimmed overlay
@@ -6337,10 +6360,10 @@ void UIManager::openFileBrowser(bool isSave) {
     // Modal card
     lv_obj_t* card = lv_obj_create(overlay);
     if (isSave) {
-        lv_obj_set_size(card, 560, 260); // Compact height to avoid virtual keyboard overlap on 800x480 screens
-        lv_obj_align(card, LV_ALIGN_TOP_MID, 0, 5);
+        lv_obj_set_size(card, 560, (SCREEN_HEIGHT >= 800) ? 480 : 260);
+        lv_obj_align(card, LV_ALIGN_TOP_MID, 0, 15);
     } else {
-        lv_obj_set_size(card, 560, 420); // Taller height to show more files comfortably without clipping bottom buttons
+        lv_obj_set_size(card, 560, (SCREEN_HEIGHT >= 800) ? 520 : 420);
         lv_obj_center(card);
     }
     lv_obj_set_style_bg_color(card, lv_color_hex(0x1E1E1E), 0);
@@ -6490,7 +6513,7 @@ void UIManager::openFileBrowser(bool isSave) {
 
     // Scrollable file list
     lv_obj_t* fileList = lv_list_create(card);
-    lv_obj_set_size(fileList, 528, isSave ? 75 : (showShortcuts ? 220 : 280));
+    lv_obj_set_size(fileList, 528, isSave ? ((SCREEN_HEIGHT >= 800) ? 220 : 75) : (showShortcuts ? 220 : ((SCREEN_HEIGHT >= 800) ? 360 : 280)));
     lv_obj_set_style_bg_color(fileList, lv_color_hex(0x161616), 0);
     lv_obj_set_style_border_color(fileList, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_width(fileList, 1, 0);
@@ -6547,7 +6570,13 @@ void UIManager::openFileBrowser(bool isSave) {
             for (char &c : lowerPath) c = std::tolower((unsigned char)c);
             bool isSoundFontsFolder = (lowerPath.find("soundfonts") != std::string::npos);
 
-            if (mFileBrowserIsFmImport) {
+            if (mFileBrowserIsProject) {
+                bool matched = false;
+                std::string lowerName = name;
+                for (char &c : lowerName) c = std::tolower((unsigned char)c);
+                if (lowerName.length() >= 5 && lowerName.substr(lowerName.length() - 5) == ".loom") matched = true;
+                if (matched) matchingFiles.push_back(name);
+            } else if (mFileBrowserIsFmImport) {
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
@@ -6578,12 +6607,6 @@ void UIManager::openFileBrowser(bool isSave) {
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
                 if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".gbs") matched = true;
-                if (matched) matchingFiles.push_back(name);
-            } else if (mFileBrowserIsProject) {
-                bool matched = false;
-                std::string lowerName = name;
-                for (char &c : lowerName) c = std::tolower((unsigned char)c);
-                if (lowerName.length() >= 5 && lowerName.substr(lowerName.length() - 5) == ".loom") matched = true;
                 if (matched) matchingFiles.push_back(name);
             } else {
                 if (name.rfind(".seq", name.size() - 4) != std::string::npos ||
@@ -6635,9 +6658,9 @@ void UIManager::openFileBrowser(bool isSave) {
     }
     if (!anyFile) {
         std::string emptyMsg = "(no sequences found)";
-        if (mFileBrowserIsFmImport) emptyMsg = "(no presets found)";
+        if (mFileBrowserIsProject) emptyMsg = "(no projects found)";
+        else if (mFileBrowserIsFmImport) emptyMsg = "(no presets found)";
         else if (mFileBrowserIsPresetLoad || mFileBrowserIsPresetSave) emptyMsg = "(no track presets found)";
-        else if (mFileBrowserIsProject) emptyMsg = "(no projects found)";
         else {
             std::string lowerPath = dirPath;
             for (char &c : lowerPath) c = std::tolower((unsigned char)c);
@@ -6653,8 +6676,11 @@ void UIManager::openFileBrowser(bool isSave) {
     // If saving: show a text area for filename
     if (isSave) {
         lv_obj_t* ta = lv_textarea_create(card);
+        mFileBrowserTa = ta;
         lv_obj_set_size(ta, 528, 36);
-        if (mFileBrowserIsSampleSave) {
+        if (mFileBrowserIsProject) {
+            lv_textarea_set_placeholder_text(ta, "project.loom");
+        } else if (mFileBrowserIsSampleSave) {
             lv_textarea_set_placeholder_text(ta, "sample.wav");
         } else if (mFileBrowserIsPresetSave) {
             lv_textarea_set_placeholder_text(ta, "patch.gbs");
@@ -6666,12 +6692,15 @@ void UIManager::openFileBrowser(bool isSave) {
         lv_obj_set_style_bg_color(ta, lv_color_hex(0x252525), 0);
         lv_obj_set_style_border_color(ta, lv_color_hex(0x555555), 0);
         lv_obj_set_style_border_width(ta, 1, 0);
+        lv_obj_add_event_cb(ta, fileBrowserSaveBtnEventCb, LV_EVENT_READY, this);
 
         // Add a virtual keyboard to the overlay for touchscreen/mouse entry accessibility!
         lv_obj_t* kb = lv_keyboard_create(overlay);
         lv_keyboard_set_textarea(kb, ta);
-        lv_obj_set_size(kb, 1000, 200);
+        lv_obj_set_size(kb, (SCREEN_WIDTH >= 1280) ? 1050 : 780, (SCREEN_HEIGHT >= 800) ? 220 : 190);
         lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, -10);
+        lv_obj_add_event_cb(kb, fileBrowserSaveBtnEventCb, LV_EVENT_READY, this);
+        lv_obj_add_event_cb(kb, fileBrowserCancelEventCb, LV_EVENT_CANCEL, this);
     }
 
     // Button row container
@@ -6744,7 +6773,8 @@ void UIManager::closeFileBrowser() {
         mSeqModal = nullptr;
     }
     mFileBrowserCurrentPath = "";
-    mFileBrowserIsProject = false;
+    mFileBrowserTa = nullptr;
+    resetFileBrowserFlags();
 }
 
 // =========================================================================
@@ -7177,11 +7207,16 @@ void UIManager::seqClearBtnEventCb(lv_event_t* e) {
 
 void UIManager::seqSaveBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->resetFileBrowserFlags();
+    ui->mFileBrowserIsSave = true;
     ui->openFileBrowser(true);
 }
 
 void UIManager::seqLoadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->resetFileBrowserFlags();
     ui->openFileBrowser(false);
 }
 
@@ -7218,11 +7253,20 @@ void UIManager::seqChainBoxEventCb(lv_event_t* e) {
 
 void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     lv_obj_t* lbl = lv_obj_get_child(btn, -1);
     if (lbl) {
         const char* filename = lv_label_get_text(lbl);
-        std::cout << (ui->mFileBrowserIsFmImport ? "Import FM Preset: " : (ui->mFileBrowserIsSave ? "Save to: " : "Load: ")) << filename << std::endl;
+        if (ui->mFileBrowserIsSave) {
+            // In save mode, clicking an existing file populates the text area to allow overwriting or editing
+            if (ui->mFileBrowserTa) {
+                lv_textarea_set_text(ui->mFileBrowserTa, filename);
+            }
+            return;
+        }
+
+        std::cout << (ui->mFileBrowserIsFmImport ? "Import FM Preset: " : "Load: ") << filename << std::endl;
         
         std::string fullPath;
         if (!ui->mFileBrowserCurrentPath.empty()) {
@@ -7366,75 +7410,105 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
 
 void UIManager::fileBrowserSaveBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
-    lv_obj_t* btnRow = lv_obj_get_parent(btn);
-    lv_obj_t* card = lv_obj_get_parent(btnRow);
-    
-    lv_obj_t* ta = nullptr;
-    uint32_t child_cnt = lv_obj_get_child_cnt(card);
-    for (uint32_t i = 0; i < child_cnt; i++) {
-        lv_obj_t* child = lv_obj_get_child(card, i);
-        if (lv_obj_check_type(child, &lv_textarea_class)) {
-            ta = child;
-            break;
-        }
-    }
-    
-    if (ta) {
-        const char* filename = lv_textarea_get_text(ta);
-        if (filename && strlen(filename) > 0) {
-            std::string nameStr(filename);
-            const char* browseDir = getenv("HOME");
-            std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
-            if (ui->mFileBrowserIsSampleSave) {
-                std::string dirPath = homeStr + "/samples/";
-                std::string fullPath = dirPath + nameStr;
-                if (nameStr.find(".wav") == std::string::npos && nameStr.find(".WAV") == std::string::npos) {
-                    fullPath += ".wav";
-                }
-                ui->mEngine.saveSample(ui->mActiveTrack, fullPath);
-                std::cout << "Saved sample to text input: " << fullPath << std::endl;
-                ui->mFileBrowserIsSampleSave = false;
-            } else if (ui->mFileBrowserIsPresetSave) {
-                std::string dirPath = homeStr + "/presets/";
-                std::string fullPath = dirPath + nameStr;
-                if (nameStr.find(".gbs") == std::string::npos) {
-                    fullPath += ".gbs";
-                }
-                ui->mEngine.saveTrackPresetToPath(ui->mActiveTrack, fullPath);
-                std::cout << "Saved track preset to text input: " << fullPath << std::endl;
-                ui->mFileBrowserIsPresetSave = false;
-            } else if (ui->mFileBrowserIsProject) {
-                std::string dirPath = homeStr + "/projects/";
-                std::string finalName = nameStr;
-                std::string lowerName = finalName;
-                std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-                if (lowerName == "init" || lowerName == "init.loom") {
-                    finalName = "Init.loom";
-                }
-                std::string fullPath = dirPath + finalName;
-                if (finalName.find(".loom") == std::string::npos) {
-                    fullPath += ".loom";
-                }
-                if (ui->mFileBrowserIsSave) {
-                    ui->mEngine.saveProject(fullPath);
-                    ui->mSettingsFilePath = fullPath + ".settings";
-                    ui->saveSettings(ui->mSettingsFilePath);
-                    std::cout << "Project saved to text input: " << fullPath << std::endl;
-                }
-            } else {
-                std::string dirPath = browseDir ? std::string(browseDir) + "/sequences/" : "./sequences/";
-                std::string fullPath = dirPath + nameStr;
-                if (nameStr.find(".seq") == std::string::npos && nameStr.find(".json") == std::string::npos) {
-                    fullPath += ".seq";
-                }
-                if (ui->mFileBrowserIsSave) {
-                    ui->mEngine.saveProject(fullPath);
-                    std::cout << "Project saved to text input: " << fullPath << std::endl;
+    if (!ui) return;
+
+    std::string nameStr = "";
+    if (ui->mFileBrowserTa) {
+        const char* txt = lv_textarea_get_text(ui->mFileBrowserTa);
+        if (txt) nameStr = txt;
+    } else {
+        // Fallback: try to find textarea in children
+        lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
+        if (target) {
+            lv_obj_t* card = ui->mSeqModal ? lv_obj_get_child(ui->mSeqModal, 0) : nullptr;
+            if (card) {
+                uint32_t cnt = lv_obj_get_child_cnt(card);
+                for (uint32_t i = 0; i < cnt; i++) {
+                    lv_obj_t* child = lv_obj_get_child(card, i);
+                    if (lv_obj_check_type(child, &lv_textarea_class)) {
+                        const char* txt = lv_textarea_get_text(child);
+                        if (txt) nameStr = txt;
+                        break;
+                    }
                 }
             }
         }
     }
+
+    // Trim whitespace and newlines
+    while (!nameStr.empty() && (nameStr.back() == '\n' || nameStr.back() == '\r' || nameStr.back() == ' ' || nameStr.back() == '\t')) {
+        nameStr.pop_back();
+    }
+    while (!nameStr.empty() && (nameStr.front() == ' ' || nameStr.front() == '\t')) {
+        nameStr.erase(0, 1);
+    }
+
+    // If empty, use sensible default
+    if (nameStr.empty()) {
+        if (ui->mFileBrowserIsProject) nameStr = "Project.loom";
+        else if (ui->mFileBrowserIsSampleSave) nameStr = "sample.wav";
+        else if (ui->mFileBrowserIsPresetSave) nameStr = "patch.gbs";
+        else nameStr = "sequence.seq";
+    }
+
+    const char* browseDir = getenv("HOME");
+    std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
+
+    if (ui->mFileBrowserIsProject) {
+        std::string dirPath = !ui->mFileBrowserCurrentPath.empty() ? ui->mFileBrowserCurrentPath : (homeStr + "/projects");
+        try {
+            std::filesystem::create_directories(dirPath);
+        } catch (...) {}
+
+        std::string finalName = nameStr;
+        std::string lowerName = finalName;
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        if (lowerName == "init" || lowerName == "init.loom") {
+            finalName = "Init.loom";
+        }
+        if (finalName.length() < 5 || finalName.substr(finalName.length() - 5) != ".loom") {
+            finalName += ".loom";
+        }
+        std::string fullPath = dirPath + "/" + finalName;
+        ui->mEngine.saveProject(fullPath);
+        ui->mSettingsFilePath = fullPath + ".settings";
+        ui->saveSettings(ui->mSettingsFilePath);
+        std::cout << "Project saved to: " << fullPath << std::endl;
+    } else if (ui->mFileBrowserIsSampleSave) {
+        std::string dirPath = !ui->mFileBrowserCurrentPath.empty() ? ui->mFileBrowserCurrentPath : (homeStr + "/samples");
+        try {
+            std::filesystem::create_directories(dirPath);
+        } catch (...) {}
+        if (nameStr.length() < 4 || (nameStr.substr(nameStr.length() - 4) != ".wav" && nameStr.substr(nameStr.length() - 4) != ".WAV")) {
+            nameStr += ".wav";
+        }
+        std::string fullPath = dirPath + "/" + nameStr;
+        ui->mEngine.saveSample(ui->mActiveTrack, fullPath);
+        std::cout << "Saved sample: " << fullPath << std::endl;
+    } else if (ui->mFileBrowserIsPresetSave) {
+        std::string dirPath = !ui->mFileBrowserCurrentPath.empty() ? ui->mFileBrowserCurrentPath : (homeStr + "/presets");
+        try {
+            std::filesystem::create_directories(dirPath);
+        } catch (...) {}
+        if (nameStr.length() < 4 || nameStr.substr(nameStr.length() - 4) != ".gbs") {
+            nameStr += ".gbs";
+        }
+        std::string fullPath = dirPath + "/" + nameStr;
+        ui->mEngine.saveTrackPresetToPath(ui->mActiveTrack, fullPath);
+        std::cout << "Saved track preset: " << fullPath << std::endl;
+    } else {
+        std::string dirPath = !ui->mFileBrowserCurrentPath.empty() ? ui->mFileBrowserCurrentPath : (homeStr + "/sequences");
+        try {
+            std::filesystem::create_directories(dirPath);
+        } catch (...) {}
+        if (nameStr.length() < 4 || (nameStr.substr(nameStr.length() - 4) != ".seq" && nameStr.substr(nameStr.length() - 5) != ".json")) {
+            nameStr += ".seq";
+        }
+        std::string fullPath = dirPath + "/" + nameStr;
+        ui->mEngine.saveProject(fullPath);
+        std::cout << "Sequence saved: " << fullPath << std::endl;
+    }
+
     ui->closeFileBrowser();
     if (ui->mActiveNav == 0) {
         ui->createCenterContentArea();
@@ -13824,6 +13898,7 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(importBtn, [](lv_event_t* e) {
         UIManager* ui = (UIManager*)lv_event_get_user_data(e);
         if (!ui) return;
+        ui->resetFileBrowserFlags();
         ui->mFileBrowserIsFmImport = true;
         ui->openFileBrowser(false);
     }, LV_EVENT_CLICKED, this);
@@ -14061,17 +14136,15 @@ void UIManager::fmOpModeDropdownEventCb(lv_event_t* e) {
 
 void UIManager::wtSelectBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsWtSelect = true;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(false);
 }
 
 void UIManager::wtImportBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    ui->mFileBrowserIsWtSelect = false;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsWtImport = true;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(false);
 }
 
@@ -14850,21 +14923,15 @@ void UIManager::samplerRecordBtnEventCb(lv_event_t* e) {
 
 void UIManager::samplerLoadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSampleLoad = true;
-    ui->mFileBrowserIsSampleSave = false;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(false);
 }
 
 void UIManager::samplerSaveBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    ui->mFileBrowserIsSampleLoad = false;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSampleSave = true;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(true);
 }
 
@@ -15750,21 +15817,15 @@ void UIManager::granularRecordBtnEventCb(lv_event_t* e) {
 
 void UIManager::granularLoadBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSampleLoad = true;
-    ui->mFileBrowserIsSampleSave = false;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(false);
 }
 
 void UIManager::granularSaveBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    ui->mFileBrowserIsSampleLoad = false;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSampleSave = true;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
     ui->openFileBrowser(true);
 }
 
@@ -16171,13 +16232,8 @@ void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
 
 void UIManager::soundfontLoadBtnCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSfSelect = true;
-    ui->mFileBrowserIsSfImport = false;
-    ui->mFileBrowserIsSampleLoad = false;
-    ui->mFileBrowserIsSampleSave = false;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
 
     const char* browseDir = getenv("HOME");
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
@@ -16187,13 +16243,8 @@ void UIManager::soundfontLoadBtnCb(lv_event_t* e) {
 
 void UIManager::soundfontImportBtnCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    ui->mFileBrowserIsSfSelect = false;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsSfImport = true;
-    ui->mFileBrowserIsSampleLoad = false;
-    ui->mFileBrowserIsSampleSave = false;
-    ui->mFileBrowserIsWtSelect = false;
-    ui->mFileBrowserIsWtImport = false;
-    ui->mFileBrowserIsFmImport = false;
 
     const char* browseDir = getenv("HOME");
     std::string homeStr = browseDir ? std::string(browseDir) + "/Loom" : "./Loom";
@@ -17633,15 +17684,14 @@ void UIManager::defaultPatchBtnEventCb(lv_event_t* e) {
 
 void UIManager::loadPatchBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsPresetLoad = true;
-    ui->mFileBrowserIsPresetSave = false;
-    ui->mFileBrowserIsSave = false;
     ui->openFileBrowser(false);
 }
 
 void UIManager::savePatchBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
-    ui->mFileBrowserIsPresetLoad = false;
+    ui->resetFileBrowserFlags();
     ui->mFileBrowserIsPresetSave = true;
     ui->openFileBrowser(true);
 }

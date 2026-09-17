@@ -16,6 +16,7 @@ extern int gOutPort;
 #include <fstream>
 #include <sstream>
 #include <dirent.h>
+#include <filesystem>
 
 #include <algorithm>
 
@@ -4162,6 +4163,9 @@ void AudioEngine::newProject() {
 
 void AudioEngine::saveProject(const std::string& path) {
   std::lock_guard<std::recursive_mutex> lock(mLock);
+  try {
+    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+  } catch (...) {}
   std::ofstream file(path);
   if (!file.is_open()) {
     LOGD("Failed to save project to: %s", path.c_str());

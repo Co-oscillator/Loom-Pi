@@ -785,6 +785,8 @@ public:
     void saveSettings(const std::string& path);
     void loadSettings(const std::string& path);
     bool mFileBrowserIsProject = false;
+    lv_obj_t* mFileBrowserTa = nullptr;
+    void resetFileBrowserFlags();
     
     static float mapLinearToNonLinear(float norm, float minVal, float maxVal, const std::string& labelText);
     static float mapNonLinearToLinear(float rawVal, float minVal, float maxVal, const std::string& labelText);
