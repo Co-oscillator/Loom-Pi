@@ -1029,15 +1029,15 @@ void AudioEngine::updateEngineParameter(int trackIndex, int parameterId,
 
   if (track.engineType == 0) {
     if (parameterId == 290) { // Morphx3
-      track.parameters[190] = value;
-      track.parameters[191] = value;
-      track.parameters[192] = value;
-      track.appliedParameters[190] = value;
-      track.appliedParameters[191] = value;
-      track.appliedParameters[192] = value;
-      track.subtractiveEngine.setParameter(190, value);
-      track.subtractiveEngine.setParameter(191, value);
-      track.subtractiveEngine.setParameter(192, value);
+      track.parameters[104] = value;
+      track.parameters[105] = value;
+      track.parameters[155] = value;
+      track.appliedParameters[104] = value;
+      track.appliedParameters[105] = value;
+      track.appliedParameters[155] = value;
+      track.subtractiveEngine.setOscWaveform(0, value);
+      track.subtractiveEngine.setOscWaveform(1, value);
+      track.subtractiveEngine.setOscWaveform(2, value);
     } else if (parameterId == 291) { // Foldx3
       track.parameters[180] = value;
       track.parameters[181] = value;

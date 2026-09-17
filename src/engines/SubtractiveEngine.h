@@ -35,6 +35,8 @@ public:
     float modX = 0.0f;
     float modY = 0.0f;
     bool hasVoiceMod = false;
+    float voiceFold[3] = {0.0f, 0.0f, 0.0f};
+    float voiceDrive[3] = {1.0f, 1.0f, 1.0f};
 
     Voice() { oscillators.resize(4); }
 
@@ -46,6 +48,8 @@ public:
       modX = 0.0f;
       modY = 0.0f;
       hasVoiceMod = false;
+      voiceFold[0] = voiceFold[1] = voiceFold[2] = 0.0f;
+      voiceDrive[0] = voiceDrive[1] = voiceDrive[2] = 1.0f;
       frequency = 440.0f;
       targetFrequency = 440.0f;
       ampEnv.reset();
@@ -167,6 +171,12 @@ public:
     v.modX = 0.0f;
     v.modY = 0.0f;
     v.hasVoiceMod = false;
+    v.voiceFold[0] = mOscFold[0];
+    v.voiceFold[1] = mOscFold[1];
+    v.voiceFold[2] = mOscFold[2];
+    v.voiceDrive[0] = mOscDrive[0];
+    v.voiceDrive[1] = mOscDrive[1];
+    v.voiceDrive[2] = mOscDrive[2];
     v.amplitude = velocity / 127.0f;
     v.controlCounter = 0;
     float baseFreq = mIgnoreNoteFrequency
@@ -397,32 +407,79 @@ public:
           // Voice modulation evaluation
           float vCutoff = mCutoff;
           float vReson = mResonance;
-          float vMorph = mOscWaveValues[0];
+          float vMorph1 = mOscWaveValues[0];
+          float vMorph2 = mOscWaveValues[1];
+          float vMorphSub = mOscWaveValues[2];
+          float vFold1 = mOscFold[0];
+          float vFold2 = mOscFold[1];
+          float vFoldSub = mOscFold[2];
+          float vDrive1 = mOscDrive[0];
+          float vDrive2 = mOscDrive[1];
+          float vDriveSub = mOscDrive[2];
+
           if (v.hasVoiceMod) {
             auto evalMod = [&](int dest, float val, float intensity) {
-              if (dest == 1 || dest == 104 || dest == 112) {
-                vCutoff = val * intensity;
-              } else if (dest == 2 || dest == 105 || dest == 113) {
-                vReson = val * intensity;
-              } else if (dest == 4 || dest == 290) {
-                vMorph = val * intensity;
+              float modVal = val * intensity;
+              if (dest == 1 || dest == 112) {
+                vCutoff = modVal;
+              } else if (dest == 2 || dest == 113) {
+                vReson = modVal;
+              } else if (dest == 290) { // Morphx3
+                vMorph1 = modVal;
+                vMorph2 = modVal;
+                vMorphSub = modVal;
+              } else if (dest == 291) { // Foldx3
+                vFold1 = modVal;
+                vFold2 = modVal;
+                vFoldSub = modVal;
+              } else if (dest == 292) { // Drivex3
+                float drv = 1.0f + modVal * 10.0f;
+                vDrive1 = drv;
+                vDrive2 = drv;
+                vDriveSub = drv;
+              } else if (dest == 104 || dest == 4) { // Osc 1 Morph
+                vMorph1 = modVal;
+              } else if (dest == 105) { // Osc 2 Morph
+                vMorph2 = modVal;
+              } else if (dest == 155) { // Sub Morph
+                vMorphSub = modVal;
+              } else if (dest == 180) { // Osc 1 Fold
+                vFold1 = modVal;
+              } else if (dest == 181) { // Osc 2 Fold
+                vFold2 = modVal;
+              } else if (dest == 182) { // Sub Fold
+                vFoldSub = modVal;
+              } else if (dest == 170) { // Osc 1 Drive
+                vDrive1 = 1.0f + modVal * 10.0f;
+              } else if (dest == 171) { // Osc 2 Drive
+                vDrive2 = 1.0f + modVal * 10.0f;
+              } else if (dest == 172) { // Sub Drive
+                vDriveSub = 1.0f + modVal * 10.0f;
               }
             };
             if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
             if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
           }
 
-          float morph1 = vMorph;
+          v.voiceFold[0] = vFold1;
+          v.voiceFold[1] = vFold2;
+          v.voiceFold[2] = vFoldSub;
+          v.voiceDrive[0] = vDrive1;
+          v.voiceDrive[1] = vDrive2;
+          v.voiceDrive[2] = vDriveSub;
+
+          float morph1 = vMorph1;
           if (mLfoDest == 2) {
             morph1 = std::max(0.0f, std::min(1.0f, morph1 + lfoOut));
           }
           v.oscillators[0].setMorphValue(morph1);
 
-          float morph2 = mOscWaveValues[1];
+          float morph2 = vMorph2;
           if (mLfoDest == 3) {
             morph2 = std::max(0.0f, std::min(1.0f, morph2 + lfoOut));
           }
           v.oscillators[1].setMorphValue(morph2);
+          v.oscillators[2].setMorphValue(vMorphSub);
 
           float cutoffLfoVal = (mLfoDest == 0 ? lfoOut : 0.0f);
           float modCutoff = std::max(
@@ -451,18 +508,19 @@ public:
           v.oscillators[1].resetPhase();
         }
 
-        float modFold1 = mOscFold[0];
+        float modFold1 = v.voiceFold[0];
         if (mLfoDest == 4) {
           modFold1 = std::max(0.0f, std::min(1.0f, modFold1 + lfoOut));
         }
-        float modFold2 = mOscFold[1];
+        float modFold2 = v.voiceFold[1];
         if (mLfoDest == 5) {
           modFold2 = std::max(0.0f, std::min(1.0f, modFold2 + lfoOut));
         }
+        float modFold3 = v.voiceFold[2];
 
         float osc1Val = v.oscillators[0].nextSample(0, osc1Pitch, modFold1);
         float osc2Val = v.oscillators[1].nextSample(0, osc2Pitch, modFold2);
-        float osc3Val = v.oscillators[2].nextSample(0, osc3Pitch, mOscFold[2]);
+        float osc3Val = v.oscillators[2].nextSample(0, osc3Pitch, modFold3);
         float osc4Val = v.oscillators[3].nextSample(0, osc4Pitch, mOscFold[3]);
 
         float vol1 = mOscVolumes[0];
@@ -476,13 +534,13 @@ public:
 
         float subOutput = 0.0f;
         if (mRingMod) {
-          subOutput = (osc1Val * vol1 * mOscDrive[0]) *
-                      (osc2Val * vol2 * mOscDrive[1]);
+          subOutput = (osc1Val * vol1 * v.voiceDrive[0]) *
+                      (osc2Val * vol2 * v.voiceDrive[1]);
         } else {
-          subOutput = (osc1Val * vol1 * mOscDrive[0]) +
-                      (osc2Val * vol2 * mOscDrive[1]);
+          subOutput = (osc1Val * vol1 * v.voiceDrive[0]) +
+                      (osc2Val * vol2 * v.voiceDrive[1]);
         }
-        subOutput += (osc3Val * mOscVolumes[2] * mOscDrive[2]);
+        subOutput += (osc3Val * mOscVolumes[2] * v.voiceDrive[2]);
         subOutput += (osc4Val * mOscVolumes[3] * mOscDrive[3]);
 
         mNoiseSeed = mNoiseSeed * 1103515245 + 12345;
@@ -566,102 +624,150 @@ public:
         // Voice modulation evaluation
         float vCutoff = mCutoff;
         float vReson = mResonance;
-        float vMorph = mOscWaveValues[0];
+        float vMorph1 = mOscWaveValues[0];
+        float vMorph2 = mOscWaveValues[1];
+        float vMorphSub = mOscWaveValues[2];
+        float vFold1 = mOscFold[0];
+        float vFold2 = mOscFold[1];
+        float vFoldSub = mOscFold[2];
+        float vDrive1 = mOscDrive[0];
+        float vDrive2 = mOscDrive[1];
+        float vDriveSub = mOscDrive[2];
+
         if (v.hasVoiceMod) {
           auto evalMod = [&](int dest, float val, float intensity) {
-            if (dest == 1 || dest == 104 || dest == 112) {
-              vCutoff = val * intensity;
-            } else if (dest == 2 || dest == 105 || dest == 113) {
-              vReson = val * intensity;
-            } else if (dest == 4 || dest == 290) {
-              vMorph = val * intensity;
+            float modVal = val * intensity;
+            if (dest == 1 || dest == 112) {
+              vCutoff = modVal;
+            } else if (dest == 2 || dest == 113) {
+              vReson = modVal;
+            } else if (dest == 290) { // Morphx3
+              vMorph1 = modVal;
+              vMorph2 = modVal;
+              vMorphSub = modVal;
+            } else if (dest == 291) { // Foldx3
+              vFold1 = modVal;
+              vFold2 = modVal;
+              vFoldSub = modVal;
+            } else if (dest == 292) { // Drivex3
+              float drv = 1.0f + modVal * 10.0f;
+              vDrive1 = drv;
+              vDrive2 = drv;
+              vDriveSub = drv;
+            } else if (dest == 104 || dest == 4) { // Osc 1 Morph
+              vMorph1 = modVal;
+            } else if (dest == 105) { // Osc 2 Morph
+              vMorph2 = modVal;
+            } else if (dest == 155) { // Sub Morph
+              vMorphSub = modVal;
+            } else if (dest == 180) { // Osc 1 Fold
+              vFold1 = modVal;
+            } else if (dest == 181) { // Osc 2 Fold
+              vFold2 = modVal;
+            } else if (dest == 182) { // Sub Fold
+              vFoldSub = modVal;
+            } else if (dest == 170) { // Osc 1 Drive
+              vDrive1 = 1.0f + modVal * 10.0f;
+            } else if (dest == 171) { // Osc 2 Drive
+              vDrive2 = 1.0f + modVal * 10.0f;
+            } else if (dest == 172) { // Sub Drive
+              vDriveSub = 1.0f + modVal * 10.0f;
             }
           };
           if (mModXDest >= 0) evalMod(mModXDest, v.modX, mModXIntensity);
           if (mModYDest >= 0) evalMod(mModYDest, v.modY, mModYIntensity);
         }
 
-        // Apply morph shape modulation
-        float morph1 = vMorph;
-        if (mLfoDest == 2) {
-          morph1 = std::max(0.0f, std::min(1.0f, morph1 + lfoOut));
-        }
-        v.oscillators[0].setMorphValue(morph1);
+          v.voiceFold[0] = vFold1;
+          v.voiceFold[1] = vFold2;
+          v.voiceFold[2] = vFoldSub;
+          v.voiceDrive[0] = vDrive1;
+          v.voiceDrive[1] = vDrive2;
+          v.voiceDrive[2] = vDriveSub;
 
-        float morph2 = mOscWaveValues[1];
-        if (mLfoDest == 3) {
-          morph2 = std::max(0.0f, std::min(1.0f, morph2 + lfoOut));
+          // Apply morph shape modulation
+          float morph1 = vMorph1;
+          if (mLfoDest == 2) {
+            morph1 = std::max(0.0f, std::min(1.0f, morph1 + lfoOut));
+          }
+          v.oscillators[0].setMorphValue(morph1);
+
+          float morph2 = vMorph2;
+          if (mLfoDest == 3) {
+            morph2 = std::max(0.0f, std::min(1.0f, morph2 + lfoOut));
+          }
+          v.oscillators[1].setMorphValue(morph2);
+          v.oscillators[2].setMorphValue(vMorphSub);
+          
+          float cutoffLfoVal = (mLfoDest == 0 ? lfoOut : 0.0f);
+          float modCutoff = std::max(
+              0.0f,
+              std::min(0.999f, vCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
+          v.svf.setParams(20.0f + modCutoff * modCutoff * 14000.0f,
+                          std::max(0.1f, vReson * 5.0f), mSampleRate);
+                          
+          v.ampEnv.processBlock(16, v.ampEnvStart, v.ampEnvDelta);
+          v.filterEnv.processBlock(16, v.filterEnvStart, v.filterEnvDelta);
         }
-        v.oscillators[1].setMorphValue(morph2);
+
+        int blockPhase = v.controlCounter % 16;
+        float envVal = mUseEnvelope ? (v.ampEnvStart + v.ampEnvDelta * blockPhase) : 1.0f;
+        bool deactive = mUseEnvelope ? (envVal < 0.0001f && !v.ampEnv.isActive()) : !v.isNoteHeld;
         
-        float cutoffLfoVal = (mLfoDest == 0 ? lfoOut : 0.0f);
-        float modCutoff = std::max(
-            0.0f,
-            std::min(0.999f, vCutoff + v.currentFilterEnvVal * mF_Amt + cutoffLfoVal));
-        v.svf.setParams(20.0f + modCutoff * modCutoff * 14000.0f,
-                        std::max(0.1f, vReson * 5.0f), mSampleRate);
-                        
-        v.ampEnv.processBlock(16, v.ampEnvStart, v.ampEnvDelta);
-        v.filterEnv.processBlock(16, v.filterEnvStart, v.filterEnvDelta);
-      }
+        if (deactive) {
+          v.active = false;
+          continue;
+        }
+        activeCount++;
+        v.currentFilterEnvVal = v.filterEnvStart + v.filterEnvDelta * blockPhase;
 
-      int blockPhase = v.controlCounter % 16;
-      float envVal = mUseEnvelope ? (v.ampEnvStart + v.ampEnvDelta * blockPhase) : 1.0f;
-      bool deactive = mUseEnvelope ? (envVal < 0.0001f && !v.ampEnv.isActive()) : !v.isNoteHeld;
-      
-      if (deactive) {
-        v.active = false;
-        continue;
-      }
-      activeCount++;
-      v.currentFilterEnvVal = v.filterEnvStart + v.filterEnvDelta * blockPhase;
+        v.controlCounter++;
 
-      v.controlCounter++;
+        // Relative detuning relationship between all 3 oscillators
+        float osc1Pitch = mOscPitch[0] * (1.0f - mDetune * 0.03f);
+        float osc2Pitch = mOscPitch[1] * (1.0f + mDetune * 0.03f);
+        float osc3Pitch = mOscPitch[2] * (1.0f - mDetune * 0.015f);
+        float osc4Pitch = mOscPitch[3];
 
-      // Relative detuning relationship between all 3 oscillators
-      float osc1Pitch = mOscPitch[0] * (1.0f - mDetune * 0.03f);
-      float osc2Pitch = mOscPitch[1] * (1.0f + mDetune * 0.03f);
-      float osc3Pitch = mOscPitch[2] * (1.0f - mDetune * 0.015f);
-      float osc4Pitch = mOscPitch[3];
+        if (mOscSync && v.oscillators[0].hasWrapped()) {
+          v.oscillators[1].resetPhase();
+        }
 
-      if (mOscSync && v.oscillators[0].hasWrapped()) {
-        v.oscillators[1].resetPhase();
-      }
+        // Modulated Fold values (dest == 4 & 5)
+        float modFold1 = v.voiceFold[0];
+        if (mLfoDest == 4) {
+          modFold1 = std::max(0.0f, std::min(1.0f, modFold1 + lfoOut));
+        }
+        float modFold2 = v.voiceFold[1];
+        if (mLfoDest == 5) {
+          modFold2 = std::max(0.0f, std::min(1.0f, modFold2 + lfoOut));
+        }
+        float modFold3 = v.voiceFold[2];
 
-      // Modulated Fold values (dest == 4 & 5)
-      float modFold1 = mOscFold[0];
-      if (mLfoDest == 4) {
-        modFold1 = std::max(0.0f, std::min(1.0f, modFold1 + lfoOut));
-      }
-      float modFold2 = mOscFold[1];
-      if (mLfoDest == 5) {
-        modFold2 = std::max(0.0f, std::min(1.0f, modFold2 + lfoOut));
-      }
+        float osc1Val = v.oscillators[0].nextSample(0, osc1Pitch, modFold1);
+        float osc2Val = v.oscillators[1].nextSample(0, osc2Pitch, modFold2);
+        float osc3Val = v.oscillators[2].nextSample(0, osc3Pitch, modFold3);
+        float osc4Val = v.oscillators[3].nextSample(0, osc4Pitch, mOscFold[3]);
 
-      float osc1Val = v.oscillators[0].nextSample(0, osc1Pitch, modFold1);
-      float osc2Val = v.oscillators[1].nextSample(0, osc2Pitch, modFold2);
-      float osc3Val = v.oscillators[2].nextSample(0, osc3Pitch, mOscFold[2]);
-      float osc4Val = v.oscillators[3].nextSample(0, osc4Pitch, mOscFold[3]);
+        // Modulated Oscillator Volumes (dest == 6 & 7)
+        float vol1 = mOscVolumes[0];
+        if (mLfoDest == 6) {
+          vol1 = std::max(0.0f, std::min(1.0f, vol1 + lfoOut * 0.5f));
+        }
+        float vol2 = mOscVolumes[1];
+        if (mLfoDest == 7) {
+          vol2 = std::max(0.0f, std::min(1.0f, vol2 + lfoOut * 0.5f));
+        }
 
-      // Modulated Oscillator Volumes (dest == 6 & 7)
-      float vol1 = mOscVolumes[0];
-      if (mLfoDest == 6) {
-        vol1 = std::max(0.0f, std::min(1.0f, vol1 + lfoOut * 0.5f));
-      }
-      float vol2 = mOscVolumes[1];
-      if (mLfoDest == 7) {
-        vol2 = std::max(0.0f, std::min(1.0f, vol2 + lfoOut * 0.5f));
-      }
-
-      float subOutput = 0.0f;
-      if (mRingMod) {
-        subOutput = (osc1Val * vol1 * mOscDrive[0]) *
-                    (osc2Val * vol2 * mOscDrive[1]);
-      } else {
-        subOutput = (osc1Val * vol1 * mOscDrive[0]) +
-                    (osc2Val * vol2 * mOscDrive[1]);
-      }
-      subOutput += (osc3Val * mOscVolumes[2] * mOscDrive[2]);
+        float subOutput = 0.0f;
+        if (mRingMod) {
+          subOutput = (osc1Val * vol1 * v.voiceDrive[0]) *
+                      (osc2Val * vol2 * v.voiceDrive[1]);
+        } else {
+          subOutput = (osc1Val * vol1 * v.voiceDrive[0]) +
+                      (osc2Val * vol2 * v.voiceDrive[1]);
+        }
+        subOutput += (osc3Val * mOscVolumes[2] * v.voiceDrive[2]);
       subOutput += (osc4Val * mOscVolumes[3] * mOscDrive[3]);
 
       mNoiseSeed = mNoiseSeed * 1103515245 + 12345;

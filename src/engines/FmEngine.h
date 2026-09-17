@@ -2224,9 +2224,9 @@ public:
       float vReson = mResonance;
       if (v.hasVoiceMod) {
         auto evalMod = [&](int dest, float val, float intensity) {
-          if (dest == 1 || dest == 104 || dest == 112 || dest == 151) {
+          if (dest == 1 || dest == 112 || dest == 151) {
             vCutoff = val * intensity;
-          } else if (dest == 2 || dest == 105 || dest == 113 || dest == 152) {
+          } else if (dest == 2 || dest == 113 || dest == 152) {
             vReson = val * intensity;
           }
         };

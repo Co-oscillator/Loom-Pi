@@ -7644,11 +7644,73 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 501) return "Reverb Damp";
         if (paramId == 502) return "Reverb Mod";
         if (paramId == 503) return "Reverb Mix";
+        if (paramId == 504) return "Reverb PreDelay";
+        if (paramId == 506) return "Reverb Tone";
         if (paramId == 510) return "Chorus Rate";
         if (paramId == 511) return "Chorus Depth";
         if (paramId == 512) return "Chorus Mix";
+        if (paramId == 513) return "Chorus Voices";
         if (paramId == 520) return "Delay Time";
-        if (paramId == 521) return "Delay Feedback";
+        if (paramId == 521) return "Delay Feedbk";
+        if (paramId == 522) return "Delay Mix";
+        if (paramId == 523) return "Delay Cutoff";
+        if (paramId == 524) return "Delay Reson";
+        if (paramId == 530) return "Crush Bits";
+        if (paramId == 531) return "Crush Rate";
+        if (paramId == 532) return "Crush Mix";
+        if (paramId == 540) return "Drive Drive";
+        if (paramId == 541) return "Drive Dist";
+        if (paramId == 542) return "Drive Level";
+        if (paramId == 543) return "Drive Tone";
+        if (paramId == 550) return "Phaser Rate";
+        if (paramId == 551) return "Phaser Depth";
+        if (paramId == 552) return "Phaser Mix";
+        if (paramId == 553) return "Phaser Feedbk";
+        if (paramId == 570) return "Slicer Rate1";
+        if (paramId == 571) return "Slicer Rate2";
+        if (paramId == 572) return "Slicer Rate3";
+        if (paramId == 573) return "Slicer Pat";
+        if (paramId == 574) return "Slicer Mix";
+        if (paramId == 580) return "Comp Thresh";
+        if (paramId == 581) return "Comp Ratio";
+        if (paramId == 582) return "Comp Attack";
+        if (paramId == 583) return "Comp Release";
+        if (paramId == 584) return "Comp Makeup";
+        if (paramId == 586) return "Comp SC Drum";
+        if (paramId == 490) return "LP LFO Rate";
+        if (paramId == 491) return "LP LFO Depth";
+        if (paramId == 492) return "LP LFO Shape";
+        if (paramId == 493) return "LP LFO Cutoff";
+        if (paramId == 494) return "LP LFO Reson";
+        return "Global FX " + std::to_string(paramId);
+    }
+    if (paramId >= 1500 && paramId < 1600) {
+        if (paramId == 1500) return "Flanger Rate";
+        if (paramId == 1501) return "Flanger Depth";
+        if (paramId == 1502) return "Flanger Mix";
+        if (paramId == 1503) return "Flanger Feedbk";
+        if (paramId == 1504) return "Flanger Delay";
+        if (paramId == 1510) return "Echo Time";
+        if (paramId == 1511) return "Echo Feedbk";
+        if (paramId == 1512) return "Echo Mix";
+        if (paramId == 1513) return "Echo Drive";
+        if (paramId == 1514) return "Echo Wow";
+        if (paramId == 1515) return "Echo Flutter";
+        if (paramId == 1520) return "Wobble Rate";
+        if (paramId == 1521) return "Wobble Depth";
+        if (paramId == 1522) return "Wobble Mix";
+        if (paramId == 1530) return "Octaver Mix";
+        if (paramId == 1531) return "Octaver Oct1";
+        if (paramId == 1532) return "Octaver Oct2";
+        if (paramId == 1536) return "EQ Bass";
+        if (paramId == 1537) return "EQ Mid";
+        if (paramId == 1538) return "EQ Treble";
+        if (paramId == 1539) return "EQ MidFreq";
+        if (paramId == 1590) return "HP LFO Rate";
+        if (paramId == 1591) return "HP LFO Depth";
+        if (paramId == 1592) return "HP LFO Shape";
+        if (paramId == 1593) return "HP LFO Cutoff";
+        if (paramId == 1594) return "HP LFO Reson";
         return "Global FX " + std::to_string(paramId);
     }
     if (paramId >= 2200 && paramId < 2215) {
@@ -7677,130 +7739,6 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 2309) return prefix + "Inversions";
         return prefix + std::to_string(paramId);
     }
-    std::string prefix = "Track " + std::to_string(trackIdx + 1) + " ";
-    if (paramId == 0) return prefix + "Volume";
-    if (paramId == 9) return prefix + "Pan";
-    if (paramId == 2400) return prefix + "Ratchet";
-    if (paramId >= 2410 && paramId <= 2417) {
-        return "Drum Key " + std::to_string(paramId - 2409) + " Note";
-    }
-    
-    int engineType = 0; // Default: Subtractive
-    if (engine && trackIdx >= 0 && trackIdx < 8) {
-        engineType = engine->getTracks()[trackIdx].engineType;
-    }
-
-    if (paramId == 180 && engineType == 9) return prefix + "SF Preset";
-    if (paramId == 196 && engineType == 1) return prefix + "FM Preset";
-    if (paramId == 181 && engineType == 9) return prefix + "SF Bank";
-
-    // Dynamic Filter Cutoff & Resonance naming based on engine type
-    if (paramId == 1) {
-        if (engineType == 4) return prefix + "WT Cutoff";
-        return prefix + "Cutoff";
-    }
-    if (paramId == 2) {
-        if (engineType == 4) return prefix + "WT Reson";
-        return prefix + "Reson";
-    }
-
-    // Subtractive / SoundFont / Audio In / Master Envelope parameters
-    if (engineType == 0 || engineType == 8 || engineType == 9) {
-        if (paramId == 100) return prefix + "Attack";
-        if (paramId == 101) return prefix + "Decay";
-        if (paramId == 102) return prefix + "Sustain";
-        if (paramId == 103) return prefix + "Release";
-        if (paramId == 290) return prefix + "Morphx3";
-        if (paramId == 291) return prefix + "Foldx3";
-        if (paramId == 292) return prefix + "Drivex3";
-    }
-
-    // Sampler Engine envelope parameters
-    if (engineType == 2) {
-        if (paramId == 310) return prefix + "Amp A";
-        if (paramId == 311) return prefix + "Amp D";
-        if (paramId == 312) return prefix + "Amp S";
-        if (paramId == 313) return prefix + "Amp R";
-        if (paramId == 314) return prefix + "Env Amt";
-    }
-
-    // Granular Engine envelope parameters
-    if (engineType == 3) {
-        if (paramId == 425) return prefix + "Amp A";
-        if (paramId == 426) return prefix + "Amp D";
-        if (paramId == 427) return prefix + "Amp S";
-        if (paramId == 428) return prefix + "Amp R";
-    }
-
-    // Wavetable Engine envelope parameters
-    if (engineType == 4) {
-        if (paramId == 454) return prefix + "Amp A";
-        if (paramId == 455) return prefix + "Amp D";
-        if (paramId == 456) return prefix + "Amp S";
-        if (paramId == 457) return prefix + "Amp R";
-        if (paramId == 471) return prefix + "Filt A";
-        if (paramId == 472) return prefix + "Filt D";
-        if (paramId == 473) return prefix + "Filt S";
-        if (paramId == 474) return prefix + "Filt R";
-        if (paramId == 477) return prefix + "WT Select";
-    }
-
-    // Default fallback naming for standard parameter slots
-    if (paramId == 100) return prefix + "Attack";
-    if (paramId == 101) return prefix + "Decay";
-    if (paramId == 102) return prefix + "Sustain";
-    if (paramId == 103) return prefix + "Release";
-
-    // Wavetable general parameter slots (that do not conflict with envelope parameters)
-    if (paramId == 310) return prefix + "WT Pos";
-    if (paramId == 311) return prefix + "WT Morph";
-
-    if (paramId == 107) return prefix + "Osc1 Vol";
-    if (paramId == 108) return prefix + "Osc2 Vol";
-    if (paramId == 109) return prefix + "Osc3 Vol";
-    if (paramId == 110) return prefix + "Noise Lvl";
-    if (paramId == 6) return prefix + "Detune";
-    if (paramId == 7) return prefix + "LFO Rate";
-    if (paramId == 8) return prefix + "LFO Depth";
-    if (paramId == 156) return prefix + "Algorithm";
-    if (paramId == 160) return prefix + "Op1 Level";
-    if (paramId == 166) return prefix + "Op2 Level";
-    
-    // Pitch and Stretch for Sampler
-    if (paramId == 300) {
-        if (engineType == 2) return prefix + "Pitch";
-        return prefix + "WT Morph"; // Fallback for wavetable
-    }
-    if (paramId == 301) {
-        if (engineType == 2) return prefix + "Stretch";
-        return prefix + "WT Detune"; // Fallback
-    }
-
-    if (paramId == 320) return prefix + "Play Mode";
-    if (paramId == 330) return prefix + "Start Pnt";
-    if (paramId == 331) return prefix + "End Point";
-    if (paramId == 302) return prefix + "Speed";
-    if (paramId == 341) return prefix + "Slice Select";
-    if (paramId == 342) return prefix + "Slice Lock";
-    if (paramId == 360) return prefix + "Scrub Pos";
-    if (paramId == 400) return prefix + "Grain Size";
-    if (paramId == 401) return prefix + "Density";
-    if (paramId == 402) return prefix + "Jitter";
-    if (paramId == 403) return prefix + "Spread";
-
-    // FM Drum & Analog Drum parameters (200-279)
-    if (engineType == 5 || engineType == 6) {
-        if (paramId >= 200 && paramId < 280) {
-            int drumIdx = (paramId - 200) / 10;
-            int offset = (paramId - 200) % 10;
-            const char* drumNames[8] = {"Kick", "Snare", "Clap", "HatC", "HatO", "Cymbal", "Perc", "Noise"};
-            const char* paramNames[10] = {"Pitch", "Snap", "Decay", "Tone", "ParamA", "Level", "ParamB", "H", "I", "J"};
-            if (drumIdx >= 0 && drumIdx < 8 && offset >= 0 && offset < 10) {
-                return prefix + drumNames[drumIdx] + " " + paramNames[offset];
-            }
-        }
-    }
-
     if (paramId >= 2000 && paramId < 2180) {
         int fxIdx = (paramId - 2000) / 10;
         const char* FX_NAMES[17] = {
@@ -7809,9 +7747,182 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
             "Flanger", "Filter 1", "Tape Echo", "Octaver", "Filter 2", "Filter 3"
         };
         if (fxIdx >= 0 && fxIdx < 17) {
-            return prefix + FX_NAMES[fxIdx] + " Send";
+            return "Track " + std::to_string(trackIdx + 1) + " " + FX_NAMES[fxIdx] + " Send";
         }
     }
+
+    std::string prefix = "Track " + std::to_string(trackIdx + 1) + " ";
+    if (paramId == 0) return prefix + "Volume";
+    if (paramId == 9) return prefix + "Pan";
+    if (paramId == 2400) return prefix + "Ratchet";
+    if (paramId >= 2410 && paramId <= 2417) {
+        return "Drum Key " + std::to_string(paramId - 2409) + " Note";
+    }
+
+    int engineType = 0; // Default: Subtractive
+    if (engine && trackIdx >= 0 && trackIdx < 8) {
+        engineType = engine->getTracks()[trackIdx].engineType;
+    }
+
+    // Engine-specific naming:
+    if (engineType == 0) { // Subtractive
+        if (paramId == 1 || paramId == 112) return prefix + "Cutoff";
+        if (paramId == 2 || paramId == 113) return prefix + "Reson";
+        if (paramId == 118) return prefix + "Env Amount";
+        if (paramId == 290) return prefix + "Morphx3";
+        if (paramId == 291) return prefix + "Foldx3";
+        if (paramId == 292) return prefix + "Drivex3";
+        if (paramId == 104 || paramId == 4) return prefix + "Osc1 Morph";
+        if (paramId == 170) return prefix + "Osc1 Drive";
+        if (paramId == 180) return prefix + "Osc1 Fold";
+        if (paramId == 160) return prefix + "Osc1 Pitch";
+        if (paramId == 107) return prefix + "Osc1 Vol";
+        if (paramId == 105) return prefix + "Osc2 Morph";
+        if (paramId == 171) return prefix + "Osc2 Drive";
+        if (paramId == 181) return prefix + "Osc2 Fold";
+        if (paramId == 161) return prefix + "Osc2 Pitch";
+        if (paramId == 108) return prefix + "Osc2 Vol";
+        if (paramId == 155) return prefix + "Sub Morph";
+        if (paramId == 172) return prefix + "Sub Drive";
+        if (paramId == 182) return prefix + "Sub Fold";
+        if (paramId == 162) return prefix + "Sub Pitch";
+        if (paramId == 109) return prefix + "Sub Vol";
+        if (paramId == 106 || paramId == 6) return prefix + "Detune";
+        if (paramId == 110) return prefix + "Noise Vol";
+        if (paramId == 355) return prefix + "Glide";
+        if (paramId == 7) return prefix + "LFO Rate";
+        if (paramId == 8) return prefix + "LFO Depth";
+        if (paramId == 100) return prefix + "Amp A";
+        if (paramId == 101) return prefix + "Amp D";
+        if (paramId == 102) return prefix + "Amp S";
+        if (paramId == 103) return prefix + "Amp R";
+        if (paramId == 114) return prefix + "Filt A";
+        if (paramId == 115) return prefix + "Filt D";
+        if (paramId == 116) return prefix + "Filt S";
+        if (paramId == 117) return prefix + "Filt R";
+    } else if (engineType == 1) { // FM
+        if (paramId == 1 || paramId == 151) return prefix + "Cutoff";
+        if (paramId == 2 || paramId == 152) return prefix + "Reson";
+        if (paramId == 118) return prefix + "Env Amt";
+        if (paramId == 150) return prefix + "Algorithm";
+        if (paramId == 154) return prefix + "Feedback";
+        if (paramId == 157) return prefix + "Brightness";
+        if (paramId == 159) return prefix + "Drive";
+        if (paramId == 355) return prefix + "Glide";
+        if (paramId == 196) return prefix + "FM Preset";
+        if (paramId >= 160 && paramId < 196) {
+            int op = (paramId - 160) / 6;
+            int sub = (paramId - 160) % 6;
+            const char* subNames[6] = {"Level", "Attack", "Decay", "Sustain", "Release", "Ratio"};
+            return prefix + "Op" + std::to_string(op + 1) + " " + subNames[sub];
+        }
+    } else if (engineType == 2) { // Sampler
+        if (paramId == 1 || paramId == 303) return prefix + "Cutoff";
+        if (paramId == 2 || paramId == 304) return prefix + "Reson";
+        if (paramId == 314) return prefix + "Env Amt";
+        if (paramId == 320) return prefix + "Play Mode";
+        if (paramId == 330) return prefix + "Start Pnt";
+        if (paramId == 331) return prefix + "End Point";
+        if (paramId == 302) return prefix + "Speed";
+        if (paramId == 300) return prefix + "Pitch";
+        if (paramId == 301) return prefix + "Stretch";
+        if (paramId == 360) return prefix + "Scrub Pos";
+        if (paramId == 355) return prefix + "Glide";
+        if (paramId == 340) return prefix + "Slices";
+        if (paramId == 341) return prefix + "Slice Select";
+        if (paramId == 342) return prefix + "Slice Lock";
+        if (paramId == 310) return prefix + "Amp A";
+        if (paramId == 311) return prefix + "Amp D";
+        if (paramId == 312) return prefix + "Amp S";
+        if (paramId == 313) return prefix + "Amp R";
+    } else if (engineType == 3) { // Granular
+        if (paramId == 1) return prefix + "Cutoff";
+        if (paramId == 2) return prefix + "Reson";
+        if (paramId == 400) return prefix + "Grain Size";
+        if (paramId == 401) return prefix + "Density";
+        if (paramId == 402) return prefix + "Jitter";
+        if (paramId == 403) return prefix + "Spread";
+        if (paramId == 330) return prefix + "Position";
+        if (paramId == 355) return prefix + "Glide";
+        if (paramId == 425) return prefix + "Amp A";
+        if (paramId == 426) return prefix + "Amp D";
+        if (paramId == 427) return prefix + "Amp S";
+        if (paramId == 428) return prefix + "Amp R";
+    } else if (engineType == 4) { // Wavetable
+        if (paramId == 450) return prefix + "WT Morph";
+        if (paramId == 465) return prefix + "WT Warp";
+        if (paramId == 466) return prefix + "WT Crush";
+        if (paramId == 467) return prefix + "WT Drive";
+        if (paramId == 451) return prefix + "WT Detune";
+        if (paramId == 355) return prefix + "Glide";
+        if (paramId == 475) return prefix + "Bitrate";
+        if (paramId == 476) return prefix + "Samplerate";
+        if (paramId == 458 || paramId == 1) return prefix + "WT Cutoff";
+        if (paramId == 459 || paramId == 2) return prefix + "WT Reson";
+        if (paramId == 464) return prefix + "Env Amt";
+        if (paramId == 477) return prefix + "WT Select";
+        if (paramId == 454) return prefix + "Amp A";
+        if (paramId == 455) return prefix + "Amp D";
+        if (paramId == 456) return prefix + "Amp S";
+        if (paramId == 457) return prefix + "Amp R";
+        if (paramId == 471) return prefix + "Filt A";
+        if (paramId == 472) return prefix + "Filt D";
+        if (paramId == 473) return prefix + "Filt S";
+        if (paramId == 474) return prefix + "Filt R";
+    } else if (engineType == 5) { // FM Drum
+        if (paramId >= 200 && paramId < 280) {
+            int drumIdx = (paramId - 200) / 10;
+            int offset = (paramId - 200) % 10;
+            const char* drumNames[8] = {"BD", "SD", "TOM", "CH", "OH", "CYMB", "PERC", "NOISE"};
+            const char* paramNames[10] = {"Pitch", "Snap", "Decay", "Tone", "ParamA", "Level", "ParamB", "H", "I", "J"};
+            if (drumIdx >= 0 && drumIdx < 8 && offset >= 0 && offset < 10) {
+                return prefix + drumNames[drumIdx] + " " + paramNames[offset];
+            }
+        }
+    } else if (engineType == 6) { // Analog Drum
+        if (paramId == 600) return prefix + "BD Decay";
+        if (paramId == 601) return prefix + "BD Tone";
+        if (paramId == 602) return prefix + "BD Tune";
+        if (paramId == 605) return prefix + "BD Gain";
+        if (paramId == 610) return prefix + "SD Decay";
+        if (paramId == 613) return prefix + "SD Snap";
+        if (paramId == 612) return prefix + "SD Tune";
+        if (paramId == 615) return prefix + "SD Gain";
+        if (paramId == 620) return prefix + "RIM Decay";
+        if (paramId == 621) return prefix + "RIM Col";
+        if (paramId == 622) return prefix + "RIM Tune";
+        if (paramId == 625) return prefix + "RIM Gain";
+        if (paramId == 630) return prefix + "HAT C Decay";
+        if (paramId == 631) return prefix + "HAT C Col";
+        if (paramId == 635) return prefix + "HAT C Gain";
+        if (paramId == 640) return prefix + "HAT O Decay";
+        if (paramId == 641) return prefix + "HAT O Col";
+        if (paramId == 645) return prefix + "HAT O Gain";
+        if (paramId == 653) return prefix + "CYM Atk";
+        if (paramId == 650) return prefix + "CYM Decay";
+        if (paramId == 651) return prefix + "CYM Col";
+        if (paramId == 655) return prefix + "CYM Gain";
+    } else if (engineType == 9) { // SoundFont
+        if (paramId == 180) return prefix + "SF Preset";
+        if (paramId == 181) return prefix + "SF Bank";
+        if (paramId == 1) return prefix + "Cutoff";
+        if (paramId == 2) return prefix + "Reson";
+        if (paramId == 7) return prefix + "LFO Rate";
+        if (paramId == 8) return prefix + "LFO Depth";
+        if (paramId == 100) return prefix + "Amp A";
+        if (paramId == 101) return prefix + "Amp D";
+        if (paramId == 102) return prefix + "Amp S";
+        if (paramId == 103) return prefix + "Amp R";
+    }
+
+    // Generic fallbacks if not matched:
+    if (paramId == 1) return prefix + "Cutoff";
+    if (paramId == 2) return prefix + "Reson";
+    if (paramId == 100) return prefix + "Attack";
+    if (paramId == 101) return prefix + "Decay";
+    if (paramId == 102) return prefix + "Sustain";
+    if (paramId == 103) return prefix + "Release";
+
     return prefix + "Param " + std::to_string(paramId);
 }
 
@@ -10045,6 +10156,11 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
         ui->mModDestBtnLabel = nullptr;
     }
 
+    bool isFx = ((ui->mModDestParamId >= 490 && ui->mModDestParamId < 600) || 
+                 (ui->mModDestParamId >= 1500 && ui->mModDestParamId < 1600) || 
+                 (ui->mModDestParamId >= 2200 && ui->mModDestParamId < 2215));
+    ui->mModDestType = isFx ? 6 : 5;
+
     ui->mModDestModal = lv_obj_create(ui->mMainScreen);
     lv_obj_set_size(ui->mModDestModal, 860, 620);
     lv_obj_center(ui->mModDestModal);
@@ -10628,42 +10744,44 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({2400, "Ratchet"});
     }
 
-    if (engineType != 4 && engineType != 5 && engineType != 6) {
+    if (engineType == 0) { // Subtractive
+        // Filter & Macros right at the top
         params.push_back({1, "Cutoff"});
-        params.push_back({2, "Resonance"});
-    }
-
-    if (engineType == 0 || engineType == 8 || engineType == 9) {
-        params.push_back({100, "Attack"});
-        params.push_back({101, "Decay"});
-        params.push_back({102, "Sustain"});
-        params.push_back({103, "Release"});
-    }
-
-    if (engineType == 0) { // Subtractive (31 synthesis parameters)
-        params.push_back({1, "Cutoff"});
-        params.push_back({2, "Resonance"});
+        params.push_back({2, "Reson"});
         params.push_back({118, "Env Amount"});
-        params.push_back({7, "LFO Rate"});
-        params.push_back({8, "LFO Depth"});
-        params.push_back({160, "Osc1 Pitch"});
+        params.push_back({290, "Morphx3"});
+        params.push_back({291, "Foldx3"});
+        params.push_back({292, "Drivex3"});
+
+        // Oscillator 1
         params.push_back({104, "Osc1 Morph"});
         params.push_back({170, "Osc1 Drive"});
         params.push_back({180, "Osc1 Fold"});
+        params.push_back({160, "Osc1 Pitch"});
         params.push_back({107, "Osc1 Vol"});
-        params.push_back({161, "Osc2 Pitch"});
+
+        // Oscillator 2
         params.push_back({105, "Osc2 Morph"});
         params.push_back({171, "Osc2 Drive"});
         params.push_back({181, "Osc2 Fold"});
+        params.push_back({161, "Osc2 Pitch"});
         params.push_back({108, "Osc2 Vol"});
-        params.push_back({162, "Sub Pitch"});
+
+        // Sub Oscillator
         params.push_back({155, "Sub Morph"});
         params.push_back({172, "Sub Drive"});
         params.push_back({182, "Sub Fold"});
+        params.push_back({162, "Sub Pitch"});
         params.push_back({109, "Sub Vol"});
+
+        // Utilities & LFO
         params.push_back({106, "Detune"});
         params.push_back({110, "Noise Vol"});
         params.push_back({355, "Glide"});
+        params.push_back({7, "LFO Rate"});
+        params.push_back({8, "LFO Depth"});
+
+        // Envelopes
         params.push_back({100, "Amp A"});
         params.push_back({101, "Amp D"});
         params.push_back({102, "Amp S"});
@@ -10672,10 +10790,7 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({115, "Filt D"});
         params.push_back({116, "Filt S"});
         params.push_back({117, "Filt R"});
-        params.push_back({290, "Morphx3"});
-        params.push_back({291, "Foldx3"});
-        params.push_back({292, "Drivex3"});
-    } else if (engineType == 1) { // FM (52 parameters total)
+    } else if (engineType == 1) { // FM
         params.push_back({151, "Cutoff"});
         params.push_back({152, "Resonance"});
         params.push_back({118, "Env Amt"});
@@ -10698,7 +10813,10 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
             params.push_back({base + 4, opPrefix + " Release"});
             params.push_back({base + 5, opPrefix + " Ratio"});
         }
-    } else if (engineType == 2) { // Sampler (16 synthesis parameters)
+    } else if (engineType == 2) { // Sampler
+        params.push_back({1, "Cutoff"});
+        params.push_back({2, "Resonance"});
+        params.push_back({314, "Env Amt"});
         params.push_back({320, "Play Mode"});
         params.push_back({330, "Start Pnt"});
         params.push_back({331, "End Point"});
@@ -10714,8 +10832,9 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({311, "Amp D"});
         params.push_back({312, "Amp S"});
         params.push_back({313, "Amp R"});
-        params.push_back({314, "Env Amt"});
-    } else if (engineType == 3) { // Granular (12 synthesis parameters)
+    } else if (engineType == 3) { // Granular
+        params.push_back({1, "Cutoff"});
+        params.push_back({2, "Resonance"});
         params.push_back({400, "Grain Size"});
         params.push_back({401, "Density"});
         params.push_back({402, "Jitter"});
@@ -10726,7 +10845,10 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({426, "Amp D"});
         params.push_back({427, "Amp S"});
         params.push_back({428, "Amp R"});
-    } else if (engineType == 4) { // Wavetable (19 synthesis parameters)
+    } else if (engineType == 4) { // Wavetable
+        params.push_back({458, "Cutoff"});
+        params.push_back({459, "Resonance"});
+        params.push_back({464, "Env Amt"});
         params.push_back({450, "Morph"});
         params.push_back({465, "Warp"});
         params.push_back({466, "Crush"});
@@ -10735,9 +10857,7 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({355, "Glide"});
         params.push_back({475, "Bitrate"});
         params.push_back({476, "Samplerate"});
-        params.push_back({458, "Cutoff"});
-        params.push_back({459, "Resonance"});
-        params.push_back({464, "Env Amt"});
+        params.push_back({477, "WT Select"});
         params.push_back({454, "Amp A"});
         params.push_back({455, "Amp D"});
         params.push_back({456, "Amp S"});
@@ -10746,7 +10866,6 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({472, "Filt D"});
         params.push_back({473, "Filt S"});
         params.push_back({474, "Filt R"});
-        params.push_back({477, "WT Select"});
     } else if (engineType == 5) { // FM Drum (32 synthesis parameters)
         const char* DRUM_NAMES[8] = {"BD", "SD", "TOM", "CH", "OH", "CYMB", "PERC", "NOISE"};
         for (int i = 0; i < 8; ++i) {
@@ -19637,11 +19756,43 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             if (ui->mPlayVoiceLinkPoly && isSynthTrack) {
                 // Per-voice polyphonic modulation!
                 ui->mEngine.setVoicePadMod(ui->mActiveTrack, note, normX, normY);
-                if (ui->mPlayModXTrack != ui->mActiveTrack && ui->mPlayModXDest >= 0) {
-                    ui->mEngine.setParameter(ui->mPlayModXTrack, ui->mPlayModXDest, normX * ui->mPlayModXIntensity);
+
+                auto isVoiceParam = [](int eng, int pid) -> bool {
+                    if (pid == 1 || pid == 2) return true; // Common Cutoff / Resonance
+                    if (eng == 0) { // Subtractive
+                        if (pid == 112 || pid == 113) return true;
+                        if (pid == 290 || pid == 291 || pid == 292) return true; // Morphx3, Foldx3, Drivex3
+                        if (pid == 104 || pid == 105 || pid == 155 || pid == 4) return true; // Morphs
+                        if (pid >= 170 && pid <= 172) return true; // Drives
+                        if (pid >= 180 && pid <= 182) return true; // Folds
+                        return false;
+                    } else if (eng == 1) { // FM
+                        if (pid == 151 || pid == 152) return true;
+                        return false;
+                    } else if (eng == 2) { // Sampler
+                        if (pid == 303 || pid == 304) return true;
+                        return false;
+                    } else if (eng == 4) { // Wavetable
+                        if (pid == 458 || pid == 459 || pid == 450 || pid == 300 || pid == 310) return true;
+                        return false;
+                    }
+                    return false;
+                };
+
+                // If destination is on another track, or is NOT handled per-voice (e.g. Volume, Pan, Sends, Global FX), route via setParameter
+                if (ui->mPlayModXDest >= 0) {
+                    int targetXTrack = (ui->mPlayModXTrack >= 0 && ui->mPlayModXTrack < 8) ? ui->mPlayModXTrack : ui->mActiveTrack;
+                    int targetXEng = ui->mEngine.getTracks()[targetXTrack].engineType;
+                    if (targetXTrack != ui->mActiveTrack || !isVoiceParam(targetXEng, ui->mPlayModXDest)) {
+                        ui->mEngine.setParameter(targetXTrack, ui->mPlayModXDest, normX * ui->mPlayModXIntensity);
+                    }
                 }
-                if (ui->mPlayModYTrack != ui->mActiveTrack && ui->mPlayModYDest >= 0) {
-                    ui->mEngine.setParameter(ui->mPlayModYTrack, ui->mPlayModYDest, normY * ui->mPlayModYIntensity);
+                if (ui->mPlayModYDest >= 0) {
+                    int targetYTrack = (ui->mPlayModYTrack >= 0 && ui->mPlayModYTrack < 8) ? ui->mPlayModYTrack : ui->mActiveTrack;
+                    int targetYEng = ui->mEngine.getTracks()[targetYTrack].engineType;
+                    if (targetYTrack != ui->mActiveTrack || !isVoiceParam(targetYEng, ui->mPlayModYDest)) {
+                        ui->mEngine.setParameter(targetYTrack, ui->mPlayModYDest, normY * ui->mPlayModYIntensity);
+                    }
                 }
             } else {
                 // Parameter-fighting Glitch mode: Modulate assigned parameters directly on the track

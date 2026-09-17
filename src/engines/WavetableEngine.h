@@ -291,11 +291,11 @@ public:
       float vPos = mPosition;
       if (v.hasVoiceMod) {
         auto evalMod = [&](int dest, float val, float intensity) {
-          if (dest == 1 || dest == 104 || dest == 112) {
+          if (dest == 1 || dest == 112 || dest == 458) {
             vCutoff = val * intensity;
-          } else if (dest == 2 || dest == 105 || dest == 113) {
+          } else if (dest == 2 || dest == 113 || dest == 459) {
             vReson = val * intensity;
-          } else if (dest == 310 || dest == 300) {
+          } else if (dest == 450 || dest == 310 || dest == 300) {
             vPos = val * intensity;
           }
         };
