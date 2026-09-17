@@ -654,6 +654,9 @@ public:
     static void drumRowRatchetBtnEventCb(lv_event_t* e);
     static void drumRowScrubArcEventCb(lv_event_t* e);
     static void drumRowLearnBtnEventCb(lv_event_t* e);
+    std::string buildDrumRowNoteOptions(int targetTrack);
+    std::string getDrumRowNoteLabel(int targetTrack, int note);
+    void updateDrumRowScrubLabel(int keyIdx);
 
     // Hardware MIDI Mapping Wizard state
     bool mWizardActive = false;

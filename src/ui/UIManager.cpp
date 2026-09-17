@@ -2475,6 +2475,115 @@ static const char* kFmDrumNames[] = { "KICK", "SNARE", "TOM", "HIHAT", "HIHAT OP
 static const char* kAnalogDrumNames[] = { "KICK", "SNARE", "CLAP", "HIHAT CL", "HIHAT OP", "CYMBAL", "PERC", "NOISE" };
 static const char* kNoteNames[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
+std::string UIManager::getDrumRowNoteLabel(int targetTrack, int note) {
+    if (targetTrack < 0 || targetTrack >= 8) return "";
+    int engType = mEngine.getTracks()[targetTrack].engineType;
+
+    if (engType == 5) { // FM Drum (notes 60-67)
+        if (note >= 60 && note <= 67) {
+            int idx = note - 60;
+            if (idx >= 0 && idx < 8) return kFmDrumNames[idx];
+        }
+    } else if (engType == 6) { // Analogue Drum
+        if (note == 35 || note == 36) return "KICK";
+        if (note == 38 || note == 40) return "SNARE";
+        if (note == 39) return "CLAP";
+        if (note == 42) return "HIHAT CL";
+        if (note == 46) return "HIHAT OP";
+        if (note == 49 || note == 51) return "CYMBAL";
+        if (note >= 60 && note <= 67) {
+            int idx = note - 60;
+            if (idx >= 0 && idx < 8) return kAnalogDrumNames[idx];
+        }
+    } else if (engType == 2 && mEngine.getTracks()[targetTrack].samplerEngine.getPlayMode() >= 3) {
+        // Sampler Chops
+        int numSlices = (int)mEngine.getSamplerSlicePoints(targetTrack).size();
+        if (note >= 60 && (note - 60) < numSlices) {
+            return "SmpSlc " + std::to_string((note - 60) + 1);
+        }
+    } else if (engType == 9) { // SoundFont
+        int presetCount = mEngine.getSoundFontPresetCount(targetTrack);
+        if (presetCount > 0 && note >= 60 && (note - 60) < presetCount) {
+            std::string pName = mEngine.getSoundFontPresetName(targetTrack, note - 60);
+            if (!pName.empty()) return pName;
+        }
+        // General MIDI Drum mapping for standard drum notes
+        if (note == 35 || note == 36) return "Bass Drum";
+        if (note == 37) return "Side Stick";
+        if (note == 38 || note == 40) return "Snare";
+        if (note == 39) return "Hand Clap";
+        if (note == 41) return "Low Floor Tom";
+        if (note == 42) return "Closed Hi-Hat";
+        if (note == 43) return "High Floor Tom";
+        if (note == 44) return "Pedal Hi-Hat";
+        if (note == 45) return "Low Tom";
+        if (note == 46) return "Open Hi-Hat";
+        if (note == 47) return "Low-Mid Tom";
+        if (note == 48) return "Hi-Mid Tom";
+        if (note == 49) return "Crash Cymbal 1";
+        if (note == 50) return "High Tom";
+        if (note == 51) return "Ride Cymbal 1";
+        if (note == 52) return "Chinese Cymbal";
+        if (note == 53) return "Ride Bell";
+        if (note == 54) return "Tambourine";
+        if (note == 55) return "Splash Cymbal";
+        if (note == 56) return "Cowbell";
+        if (note == 57) return "Crash Cymbal 2";
+    }
+
+    return "";
+}
+
+std::string UIManager::buildDrumRowNoteOptions(int targetTrack) {
+    std::string opt;
+    for (int n = 20; n <= 120; ++n) {
+        int oct = (n / 12) - 1;
+        int idx = n % 12;
+        std::string notePitch = std::string(kNoteNames[idx]) + std::to_string(oct);
+        std::string inst = getDrumRowNoteLabel(targetTrack, n);
+        if (!inst.empty()) {
+            opt += std::to_string(n) + ": " + inst + " (" + notePitch + ")";
+        } else {
+            opt += std::to_string(n) + " (" + notePitch + ")";
+        }
+        if (n < 120) opt += "\n";
+    }
+    return opt;
+}
+
+void UIManager::updateDrumRowScrubLabel(int keyIdx) {
+    if (keyIdx < 0 || keyIdx >= 8 || !mDrumRowScrubLbl[keyIdx]) return;
+    int note = mDrumRowNotes[keyIdx];
+    std::string inst = getDrumRowNoteLabel(mDrumRowTargetTrack, note);
+    if (!inst.empty()) {
+        std::string shortLabel = inst;
+        if (shortLabel.rfind("SmpSlc ", 0) == 0) {
+            shortLabel = "Slc" + shortLabel.substr(7);
+        } else if (shortLabel == "HIHAT CL") {
+            shortLabel = "HH CL";
+        } else if (shortLabel == "HIHAT OP") {
+            shortLabel = "HH OP";
+        } else if (shortLabel == "Crash Cymbal 1" || shortLabel == "Crash Cymbal 2") {
+            shortLabel = "Crash";
+        } else if (shortLabel == "Ride Cymbal 1") {
+            shortLabel = "Ride";
+        } else if (shortLabel == "Closed Hi-Hat") {
+            shortLabel = "HH Cl";
+        } else if (shortLabel == "Open Hi-Hat") {
+            shortLabel = "HH Op";
+        } else if (shortLabel == "Bass Drum") {
+            shortLabel = "Kick";
+        } else if (shortLabel.length() > 5) {
+            shortLabel = shortLabel.substr(0, 5);
+        }
+        lv_label_set_text(mDrumRowScrubLbl[keyIdx], shortLabel.c_str());
+    } else {
+        int oct = (note / 12) - 1;
+        std::string notePitch = std::string(kNoteNames[note % 12]) + std::to_string(oct);
+        lv_label_set_text(mDrumRowScrubLbl[keyIdx], notePitch.c_str());
+    }
+}
+
 void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
@@ -2596,19 +2705,6 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
         lv_obj_set_user_data(fxBehSw, fxBehLbl);
         lv_obj_add_event_cb(fxBehSw, settingsFxPadBehaviorSwitchEventCb, LV_EVENT_VALUE_CHANGED, this);
     }
-
-    // Helper to generate notes list from 20 to 120
-    auto buildNoteOptions = []() -> std::string {
-        static const char* kNotes[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-        std::string opt;
-        for (int n = 20; n <= 120; ++n) {
-            int oct = (n / 12) - 1;
-            int idx = n % 12;
-            opt += std::to_string(n) + " (" + kNotes[idx] + std::to_string(oct) + ")";
-            if (n < 120) opt += "\n";
-        }
-        return opt;
-    };
 
     // --- Content Row: Left (Square Pads Grid) + Right (Drum Number Row 1-8) ---
     lv_obj_t* contentRow = lv_obj_create(tab);
@@ -2802,7 +2898,7 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
     lv_obj_set_style_text_font(hdrRatch, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(hdrRatch, lv_color_hex(0x888888), 0);
 
-    std::string noteOptions = buildNoteOptions();
+    std::string noteOptions = buildDrumRowNoteOptions(mDrumRowTargetTrack);
 
     for (int i = 0; i < 8; ++i) {
         lv_obj_t* row = lv_obj_create(drumRowPanel);
@@ -2861,10 +2957,10 @@ void UIManager::populateSettingsMidiPadsTab(lv_obj_t* tab) {
         lv_obj_set_style_arc_color(scrubArc, isThisLearning ? lv_color_hex(0xFF3333) : trackColor, LV_PART_INDICATOR);
 
         mDrumRowScrubLbl[i] = lv_label_create(scrubArc);
-        lv_label_set_text_fmt(mDrumRowScrubLbl[i], "%d", mDrumRowNotes[i]);
         lv_obj_set_style_text_font(mDrumRowScrubLbl[i], &lv_font_montserrat_10, 0);
         lv_obj_set_style_text_color(mDrumRowScrubLbl[i], lv_color_hex(0xCCCCCC), 0);
         lv_obj_center(mDrumRowScrubLbl[i]);
+        updateDrumRowScrubLabel(i);
 
         lv_obj_set_user_data(scrubArc, (void*)(intptr_t)i);
         lv_obj_add_event_cb(scrubArc, drumRowScrubArcEventCb, LV_EVENT_VALUE_CHANGED, this);
@@ -3738,6 +3834,18 @@ void UIManager::drumRowTrackDdEventCb(lv_event_t* e) {
             }
         }
     }
+    // Update note options for all 8 note dropdowns with new target track instruments
+    std::string noteOptions = ui->buildDrumRowNoteOptions(ui->mDrumRowTargetTrack);
+    for (int i = 0; i < 8; ++i) {
+        if (ui->mDrumRowNoteDd[i]) {
+            lv_dropdown_set_options(ui->mDrumRowNoteDd[i], noteOptions.c_str());
+            lv_dropdown_set_selected(ui->mDrumRowNoteDd[i], ui->mDrumRowNotes[i] - 20);
+        }
+        ui->updateDrumRowScrubLabel(i);
+        if (ui->mDrumRowScrubArc[i] && !ui->mDrumRowLearnActive) {
+            lv_obj_set_style_arc_color(ui->mDrumRowScrubArc[i], ui->getTrackColor(ui->mDrumRowTargetTrack), LV_PART_INDICATOR);
+        }
+    }
 }
 
 void UIManager::drumRowNoteDdEventCb(lv_event_t* e) {
@@ -3753,9 +3861,7 @@ void UIManager::drumRowNoteDdEventCb(lv_event_t* e) {
             if (ui->mDrumRowScrubArc[keyIdx]) {
                 lv_arc_set_value(ui->mDrumRowScrubArc[keyIdx], note);
             }
-            if (ui->mDrumRowScrubLbl[keyIdx]) {
-                lv_label_set_text_fmt(ui->mDrumRowScrubLbl[keyIdx], "%d", note);
-            }
+            ui->updateDrumRowScrubLabel(keyIdx);
             int trk = ui->mDrumRowTargetTrack;
             ui->mEngine.releaseNote(trk, oldNote);
             ui->mEngine.triggerNote(trk, note, 100);
@@ -3795,9 +3901,7 @@ void UIManager::drumRowScrubArcEventCb(lv_event_t* e) {
         if (keyIdx >= 0 && keyIdx < 8 && note != ui->mDrumRowNotes[keyIdx]) {
             int oldNote = ui->mDrumRowNotes[keyIdx];
             ui->mDrumRowNotes[keyIdx] = note;
-            if (ui->mDrumRowScrubLbl[keyIdx]) {
-                lv_label_set_text_fmt(ui->mDrumRowScrubLbl[keyIdx], "%d", note);
-            }
+            ui->updateDrumRowScrubLabel(keyIdx);
             if (ui->mDrumRowNoteDd[keyIdx]) {
                 lv_dropdown_set_selected(ui->mDrumRowNoteDd[keyIdx], note - 20);
             }
@@ -3998,14 +4102,14 @@ void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
             ui->mEngine.triggerNote(ui->mActiveTrack, note, 100);
             break;
         }
-        case 3: { // FM Drum - cycle voice or trigger
-            ui->mSettingsPadDrumAssign[padIdx] = (ui->mSettingsPadDrumAssign[padIdx] + 1) % 8;
-            ui->rebuildPadGrid();
+        case 3: { // FM Drum - trigger voice
+            int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
+            ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
             break;
         }
-        case 4: { // Analogue Drum - cycle voice or trigger
-            ui->mSettingsPadDrumAssign[padIdx] = (ui->mSettingsPadDrumAssign[padIdx] + 1) % 8;
-            ui->rebuildPadGrid();
+        case 4: { // Analogue Drum - trigger voice
+            int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
+            ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
             break;
         }
         case 5: { // Slices - trigger slice note on active track
@@ -18799,8 +18903,19 @@ void UIManager::populatePlayScreen() {
     lv_obj_set_style_bg_color(mPlayPadCountBtn, trackColor, 0);
     lv_obj_set_style_radius(mPlayPadCountBtn, 6, 0);
     lv_obj_t* padCountLbl = lv_label_create(mPlayPadCountBtn);
-    const char* countText = (mPlayPadCount == 16) ? "16" : ((mPlayPadCount == 24) ? "24" : "40");
-    lv_label_set_text(padCountLbl, countText);
+    int activeEngType = mEngine.getTracks()[mActiveTrack].engineType;
+    bool isChopTrack = (activeEngType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    std::string countText;
+    if (activeEngType == 5 || activeEngType == 6) {
+        countText = "8";
+    } else if (isChopTrack) {
+        int numSlices = (int)mEngine.getSamplerSlicePoints(mActiveTrack).size();
+        numSlices = std::max(1, std::min(16, numSlices));
+        countText = std::to_string(numSlices);
+    } else {
+        countText = (mPlayPadCount == 16) ? "16" : ((mPlayPadCount == 24) ? "24" : "40");
+    }
+    lv_label_set_text(padCountLbl, countText.c_str());
     lv_obj_set_style_text_font(padCountLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(padCountLbl);
     lv_obj_add_event_cb(mPlayPadCountBtn, playPadCountToggleEventCb, LV_EVENT_CLICKED, this);
@@ -18823,6 +18938,150 @@ void UIManager::rebuildPlayPadGrid() {
     lv_obj_clean(mPlayPadGrid);
 
     lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    int engineType = mEngine.getTracks()[mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isFmDrum = (engineType == 5);
+    bool isAnalogDrum = (engineType == 6);
+
+    // Available center area inside mPlayPadGrid: ~1070px width x ~710px height
+    const int availW = 1060;
+    const int availH = 700;
+
+    if (isFmDrum || isAnalogDrum) {
+        // 8 drum pads in the middle two rows (rows 1 & 2 of the 16-pad layout)
+        int cols = 4;
+        int rows = 4;
+        int padW = 160;
+        int padH = 160;
+        int gapX = 24;
+        int gapY = 16;
+        int totalGridW = cols * padW + (cols - 1) * gapX;
+        int totalGridH = rows * padH + (rows - 1) * gapY;
+        int startOffsetX = std::max(0, (availW - totalGridW) / 2);
+        int startOffsetY = std::max(0, (availH - totalGridH) / 2);
+
+        // Lower row (Row 2): voices 0..3 (Kick, Snare, Clap/Tom, HiHat)
+        // Upper row (Row 1): voices 4..7 (HiHat Open, Cymbal, Perc, Noise)
+        for (int i = 0; i < 8; ++i) {
+            int r = (i < 4) ? 2 : 1;
+            int c = (i < 4) ? i : (i - 4);
+            int x = startOffsetX + c * (padW + gapX);
+            int y = startOffsetY + r * (padH + gapY);
+            int note = 60 + i;
+
+            lv_obj_t* pad = lv_obj_create(mPlayPadGrid);
+            lv_obj_set_size(pad, padW, padH);
+            lv_obj_set_pos(pad, x, y);
+            lv_obj_set_style_bg_color(pad, lv_color_hex(0x1F1F1F), 0);
+            lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_color(pad, trackColor, 0);
+            lv_obj_set_style_border_width(pad, 2, 0);
+            lv_obj_set_style_radius(pad, 12, 0);
+            lv_obj_remove_flag(pad, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_add_flag(pad, LV_OBJ_FLAG_CLICKABLE);
+
+            lv_obj_set_user_data(pad, (void*)(intptr_t)note);
+
+            // Subdued crosshair line representing X/Y center
+            lv_obj_t* xLine = lv_obj_create(pad);
+            lv_obj_set_size(xLine, 1, padH - 24);
+            lv_obj_center(xLine);
+            lv_obj_set_style_bg_color(xLine, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(xLine, 0, 0);
+            lv_obj_remove_flag(xLine, LV_OBJ_FLAG_CLICKABLE);
+
+            lv_obj_t* yLine = lv_obj_create(pad);
+            lv_obj_set_size(yLine, padW - 24, 1);
+            lv_obj_center(yLine);
+            lv_obj_set_style_bg_color(yLine, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(yLine, 0, 0);
+            lv_obj_remove_flag(yLine, LV_OBJ_FLAG_CLICKABLE);
+
+            // Drum instrument name in center
+            const char* drumName = isFmDrum ? kFmDrumNames[i] : kAnalogDrumNames[i];
+            lv_obj_t* noteLbl = lv_label_create(pad);
+            lv_label_set_text(noteLbl, drumName);
+            lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_16, 0);
+            lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xFFFFFF), 0);
+            lv_obj_center(noteLbl);
+
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSED, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSING, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_RELEASED, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESS_LOST, this);
+        }
+        return;
+    }
+
+    if (isSamplerChops) {
+        int numSlices = (int)mEngine.getSamplerSlicePoints(mActiveTrack).size();
+        numSlices = std::max(1, std::min(16, numSlices));
+
+        int cols = 4;
+        int rows = 4;
+        int padW = 160;
+        int padH = 160;
+        int gapX = 24;
+        int gapY = 16;
+        int totalGridW = cols * padW + (cols - 1) * gapX;
+        int totalGridH = rows * padH + (rows - 1) * gapY;
+        int startOffsetX = std::max(0, (availW - totalGridW) / 2);
+        int startOffsetY = std::max(0, (availH - totalGridH) / 2);
+
+        // Fill middle two rows first (Row 2, then Row 1), then bottom (Row 3), then top (Row 0)
+        static const int kSliceRows[16] = { 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 3, 0, 0, 0, 0 };
+        static const int kSliceCols[16] = { 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 };
+
+        for (int i = 0; i < numSlices; ++i) {
+            int r = kSliceRows[i];
+            int c = kSliceCols[i];
+            int x = startOffsetX + c * (padW + gapX);
+            int y = startOffsetY + r * (padH + gapY);
+            int note = 60 + i;
+
+            lv_obj_t* pad = lv_obj_create(mPlayPadGrid);
+            lv_obj_set_size(pad, padW, padH);
+            lv_obj_set_pos(pad, x, y);
+            lv_obj_set_style_bg_color(pad, lv_color_hex(0x1F1F1F), 0);
+            lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_color(pad, trackColor, 0);
+            lv_obj_set_style_border_width(pad, 2, 0);
+            lv_obj_set_style_radius(pad, 12, 0);
+            lv_obj_remove_flag(pad, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_add_flag(pad, LV_OBJ_FLAG_CLICKABLE);
+
+            lv_obj_set_user_data(pad, (void*)(intptr_t)note);
+
+            // Subdued crosshair line representing X/Y center
+            lv_obj_t* xLine = lv_obj_create(pad);
+            lv_obj_set_size(xLine, 1, padH - 24);
+            lv_obj_center(xLine);
+            lv_obj_set_style_bg_color(xLine, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(xLine, 0, 0);
+            lv_obj_remove_flag(xLine, LV_OBJ_FLAG_CLICKABLE);
+
+            lv_obj_t* yLine = lv_obj_create(pad);
+            lv_obj_set_size(yLine, padW - 24, 1);
+            lv_obj_center(yLine);
+            lv_obj_set_style_bg_color(yLine, lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(yLine, 0, 0);
+            lv_obj_remove_flag(yLine, LV_OBJ_FLAG_CLICKABLE);
+
+            // Slice name in center
+            lv_obj_t* noteLbl = lv_label_create(pad);
+            lv_label_set_text_fmt(noteLbl, "SmpSlc %d", i + 1);
+            lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_16, 0);
+            lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xFFFFFF), 0);
+            lv_obj_center(noteLbl);
+
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSED, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSING, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_RELEASED, this);
+            lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESS_LOST, this);
+        }
+        return;
+    }
     
     // Determine grid columns and rows based on density mode
     int cols = 4;
@@ -18835,10 +19094,6 @@ void UIManager::rebuildPlayPadGrid() {
         rows = 5;
     }
     int totalPads = cols * rows;
-
-    // Available center area inside mPlayPadGrid: ~1070px width x ~710px height
-    const int availW = 1060;
-    const int availH = 700;
 
     int gapX = 10;
     int gapY = 10;
@@ -18976,6 +19231,10 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
     lv_event_code_t code = lv_event_get_code(e);
     int note = (int)(intptr_t)lv_obj_get_user_data(pad);
 
+    int engType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isDrum = (engType == 5 || engType == 6 || isSamplerChops);
+
     if (code == LV_EVENT_PRESSED) {
         lv_obj_set_style_bg_color(pad, ui->getTrackColor(ui->mActiveTrack), 0);
         lv_obj_set_style_bg_opa(pad, LV_OPA_80, 0);
@@ -18983,7 +19242,7 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
         lv_obj_set_style_border_width(pad, 3, 0);
 
         // Trigger note or chord
-        if (ui->mPlayChordType == 0) {
+        if (isDrum || ui->mPlayChordType == 0) {
             ui->mEngine.triggerNote(ui->mActiveTrack, note, 110);
         } else if (ui->mPlayChordType == 1) { // Triad
             ui->mEngine.triggerNote(ui->mActiveTrack, note, 105);
@@ -19034,21 +19293,30 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
     }
 
     if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
-        bool isRoot = ((note % 12) == ui->mPlaySelectedRoot);
-        lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
-        lv_obj_set_style_bg_color(pad, isRoot ? trackColor : lv_color_hex(0x1F1F1F), 0);
-        lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
-        lv_obj_set_style_border_color(pad, isRoot ? trackColor : lv_color_hex(0x333333), 0);
-        lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
+        if (isDrum) {
+            lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
+            lv_obj_set_style_bg_color(pad, lv_color_hex(0x1F1F1F), 0);
+            lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_color(pad, trackColor, 0);
+            lv_obj_set_style_border_width(pad, 2, 0);
+            ui->mEngine.releaseNote(ui->mActiveTrack, note);
+        } else {
+            bool isRoot = ((note % 12) == ui->mPlaySelectedRoot);
+            lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
+            lv_obj_set_style_bg_color(pad, isRoot ? trackColor : lv_color_hex(0x1F1F1F), 0);
+            lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
+            lv_obj_set_style_border_color(pad, isRoot ? trackColor : lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
 
-        // Note off
-        ui->mEngine.releaseNote(ui->mActiveTrack, note);
-        if (ui->mPlayChordType > 0) {
-            ui->mEngine.releaseNote(ui->mActiveTrack, note + 4);
-            ui->mEngine.releaseNote(ui->mActiveTrack, note + 5);
-            ui->mEngine.releaseNote(ui->mActiveTrack, note + 7);
-            ui->mEngine.releaseNote(ui->mActiveTrack, note + 10);
-            ui->mEngine.releaseNote(ui->mActiveTrack, note + 14);
+            // Note off
+            ui->mEngine.releaseNote(ui->mActiveTrack, note);
+            if (ui->mPlayChordType > 0) {
+                ui->mEngine.releaseNote(ui->mActiveTrack, note + 4);
+                ui->mEngine.releaseNote(ui->mActiveTrack, note + 5);
+                ui->mEngine.releaseNote(ui->mActiveTrack, note + 7);
+                ui->mEngine.releaseNote(ui->mActiveTrack, note + 10);
+                ui->mEngine.releaseNote(ui->mActiveTrack, note + 14);
+            }
         }
     }
 }
@@ -19083,6 +19351,11 @@ void UIManager::playOctaveBtnEventCb(lv_event_t* e) {
 
 void UIManager::playPadCountToggleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    if (engineType == 5 || engineType == 6 || isSamplerChops) {
+        return; // Fixed pad count for drum / chop tracks
+    }
     // Cycle 16 -> 24 -> 40 -> 16
     if (ui->mPlayPadCount == 16) {
         ui->mPlayPadCount = 24;
