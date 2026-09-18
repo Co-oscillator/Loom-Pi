@@ -372,6 +372,8 @@ public:
       v.envelope.reset();
       v.active = false; // "isPlaying" equivalent
     }
+    mMotorRunning = false;
+    mSmoothSpeed = 0.0;
   }
 
   void setSampleRate(float sr) {
@@ -695,7 +697,7 @@ public:
       mScrubPosition = value;
       if (mPlayMode == Scrub) {
         Voice &v = mVoices[0];
-        if (!v.active && mScrubGate) {
+        if (!v.active) {
           v.active = true;
           int active = mActiveBuffer.load(std::memory_order_acquire);
           const auto &buf = mBuffers[active];
@@ -848,7 +850,7 @@ public:
     if (mPlayMode == Scrub) {
       if (!scrubVoice.active && (mScrubGate || mMotorRunning || mInteractionTimer > 0)) {
         scrubVoice.active = true;
-        scrubVoice.pitchRatio = 0.0f;
+        scrubVoice.pitchRatio = 1.0f;
         mSmoothSpeed = 0.0;
         scrubVoice.envelope.forceSustain();
       }
@@ -866,7 +868,13 @@ public:
       // If Envelope is disabled, behave like a Gate (1.0 while held, 0.0 on
       // release)
       float env = 1.0f;
-      if (mUseEnvelope) {
+      if (mPlayMode == Scrub && i == 0) {
+        if (mScrubGate || mMotorRunning || mInteractionTimer > 0) {
+          env = 1.0f;
+        } else {
+          env = v.envelope.nextValue();
+        }
+      } else if (mUseEnvelope) {
         env = v.envelope.nextValue();
       } else {
         // Gate behavior: If released, cut immediately (or fast fade?)
@@ -880,7 +888,7 @@ public:
         v.envelope.nextValue();
       }
 
-      if (env < 0.0001f && (!mUseEnvelope || !v.envelope.isActive())) {
+      if (env < 0.0001f && (mPlayMode != Scrub || i != 0 || (!mScrubGate && !mMotorRunning && mInteractionTimer == 0))) {
         v.active = false;
         continue;
       }

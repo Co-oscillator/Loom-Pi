@@ -55,6 +55,12 @@ private:
     uint32_t phase = 0;
     float currentFreq = 0.0f;
     float env = 0.0f;
+    float env2 = 0.0f;
+    float pitchEnv = 0.0f;
+
+    float decayCoeff = 0.999f;
+    float decayCoeff2 = 0.999f;
+    float pitchDecayCoeff = 0.99f;
 
     // Hat Oscillators
     uint32_t hatPhases[6] = {0};
@@ -63,6 +69,7 @@ private:
     float filterState = 0.0f;
     float filterState2 = 0.0f;
     float attackPhase = 0.0f;
+    float attackTime = 0.01f;
 
     // Clap State
     float clapTimer = 0.0f;
@@ -73,34 +80,88 @@ private:
     float baseFreq = 50.0f;
     float decay = 0.5f;
     float tone = 0.5f;   // Brightness/Filter
-    float paramA = 0.5f; // "Punch" or "Snappy"
+    float paramA = 0.5f; // "Punch" or "Snappy" / "Atk"
     float paramB = 0.0f; // "Metal"
     float gain = 0.65f;
 
     float velocity = 0.0f;
 
+    void updateCoeffs() {
+      float sr = (sampleRate > 1000.0f) ? sampleRate : 48000.0f;
+      float d = std::max(0.0f, std::min(1.0f, decay));
+
+      switch (type) {
+      case DrumType::Kick: {
+        float kickDecayTime = 0.15f + (d * d * 2.35f); // 150ms to 2.5s
+        decayCoeff = expf(-1.0f / (sr * kickDecayTime));
+        float pTime = 0.020f + (paramA * 0.040f);      // 20ms to 60ms pitch sweep
+        pitchDecayCoeff = expf(-1.0f / (sr * pTime));
+        break;
+      }
+      case DrumType::Snare: {
+        float shellTime = 0.04f + (d * 0.22f); // 40ms to 260ms shell ring
+        float wiresTime = 0.08f + (d * 0.72f); // 80ms to 800ms snare wires
+        decayCoeff = expf(-1.0f / (sr * shellTime));
+        decayCoeff2 = expf(-1.0f / (sr * wiresTime));
+        break;
+      }
+      case DrumType::Clap: {
+        float tailTime = 0.10f + (d * 1.10f); // 100ms to 1.2s tail
+        decayCoeff = expf(-1.0f / (sr * tailTime));
+        decayCoeff2 = expf(-1.0f / (sr * 0.012f)); // 12ms burst decay
+        break;
+      }
+      case DrumType::HiHatClosed: {
+        float hatTime = 0.030f + (d * 0.22f); // 30ms to 250ms
+        decayCoeff = expf(-1.0f / (sr * hatTime));
+        break;
+      }
+      case DrumType::HiHatOpen: {
+        float hatTime = 0.150f + (d * 1.45f); // 150ms to 1.6s
+        decayCoeff = expf(-1.0f / (sr * hatTime));
+        break;
+      }
+      case DrumType::Cymbal: {
+        float cymTime = 0.30f + (d * 2.70f); // 300ms to 3.0s
+        decayCoeff = expf(-1.0f / (sr * cymTime));
+        attackTime = 0.003f + (paramA * 0.080f);
+        break;
+      }
+      case DrumType::Perc: {
+        float percTime = 0.060f + (d * 0.94f); // 60ms to 1.0s
+        decayCoeff = expf(-1.0f / (sr * percTime));
+        break;
+      }
+      case DrumType::Noise: {
+        float noiseTime = 0.050f + (d * 1.45f); // 50ms to 1.5s
+        decayCoeff = expf(-1.0f / (sr * noiseTime));
+        break;
+      }
+      }
+    }
+
     void trigger(float vel) {
       active = true;
       velocity = vel;
       env = 1.0f;
+      env2 = 1.0f;
+      pitchEnv = 1.0f;
       phase = 0;
       clapTimer = 0.0f;
       clapStage = 0;
-      clapEnv = 0.0f;
+      clapEnv = 1.0f;
       filterState = 0.0f;
       filterState2 = 0.0f;
       attackPhase = 0.0f;
-      currentFreq = baseFreq;
 
-      if (type == DrumType::Cymbal && paramA > 0.01f) {
+      updateCoeffs();
+
+      if (type == DrumType::Cymbal && paramA > 0.05f) {
         env = 0.0f;
         attackPhase = 1.0f;
       }
 
-      if (type == DrumType::Kick) {
-        float punchAmt = 2.0f + (paramA * 6.0f);
-        currentFreq = baseFreq * punchAmt;
-      }
+      currentFreq = baseFreq;
     }
 
     float render() {
@@ -112,87 +173,87 @@ private:
 
       switch (type) {
       case DrumType::Kick: {
-        env -= dt / decay;
-        if (env <= 0.0f) {
+        env *= decayCoeff;
+        pitchEnv *= pitchDecayCoeff;
+        if (env < 0.0002f) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         float invSr = 1.0f / sampleRate;
-        // Fast pitch sweep characteristic of 808
-        float sweepRate = 0.007f + paramA * 0.013f;
-        currentFreq += (baseFreq - currentFreq) * sweepRate;
+        float punchAmt = 1.5f + (paramA * 5.0f);
+        currentFreq = baseFreq * (1.0f + punchAmt * pitchEnv);
         phase += (uint32_t)(currentFreq * invSr * 4294967296.0);
 
         float sine = FastSine::getInt(phase);
-        // Soft analog saturation waveshaper
-        if (tone > 0.1f) {
-          float drive = 1.0f + tone * 1.5f;
+        if (tone > 0.05f) {
+          float drive = 1.0f + tone * 2.0f;
           float x = sine * drive;
           if (x > 1.0f) x = 1.0f - expf(1.0f - x);
           else if (x < -1.0f) x = -1.0f + expf(1.0f + x);
-          sine = x * 0.7f;
+          sine = x * 0.75f;
         }
-        out = sine * env;
+        out = sine * env * 1.25f;
         break;
       }
 
       case DrumType::Snare: {
         float invSr = 1.0f / sampleRate;
-        float envTone = std::max(0.0f, env - invSr / (decay * 0.35f));
-        env -= invSr / decay;
-        if (env <= 0.0f) {
+        env *= decayCoeff;
+        env2 *= decayCoeff2;
+        if (env < 0.0002f && env2 < 0.0002f) {
           active = false;
+          env = env2 = 0.0f;
           return 0.0f;
         }
-        // Two oscillators for snare drum shell (fundamental + harmonic)
         phase += (uint32_t)(baseFreq * invSr * 4294967296.0);
-        float shell1 = FastSine::getInt(phase) * envTone;
-        float shell2 = FastSine::getInt(phase * 1.5f) * envTone * 0.4f;
+        float shell1 = FastSine::getInt(phase) * env;
+        float shell2 = FastSine::getInt((uint32_t)(phase * 1.53f)) * env * 0.4f;
         float shell = shell1 + shell2;
 
         float noise = rng.next();
-        // Snappy high-pass filtered white noise for snares
-        float hpCoeff = 0.15f + (tone * 0.55f);
+        float hpCoeff = 0.15f + (tone * 0.65f);
         filterState += (noise - filterState) * hpCoeff;
-        float wires = (noise - filterState) * env;
-        out = (shell * (1.0f - paramA * 0.4f)) + (wires * (0.15f + paramA * 0.8f));
+        float wires = (noise - filterState) * env2;
+
+        out = (shell * (1.0f - paramA * 0.45f)) + (wires * (0.25f + paramA * 0.95f));
+        out *= 1.2f;
         break;
       }
 
       case DrumType::Clap: {
         clapTimer -= dt;
-        if (clapStage < 4) {
-          if (clapTimer <= 0) {
+        if (clapStage < 3) {
+          if (clapTimer <= 0.0f) {
             clapEnv = 1.0f;
-            float spreadTime = 0.006f + (paramA * 0.02f);
-            clapTimer = spreadTime + rng.next() * 0.004f;
+            float spreadTime = 0.008f + (paramA * 0.016f);
+            clapTimer = spreadTime + rng.next() * 0.002f;
             clapStage++;
           }
         }
-        clapEnv -= dt / (0.008f + decay * 0.08f);
-        if (clapEnv < 0.0f)
-          clapEnv = 0.0f;
-        env -= dt / decay;
-        if (env <= 0.0f && clapStage >= 4) {
+        clapEnv *= decayCoeff2;
+        env *= decayCoeff;
+        if (env < 0.0002f && clapStage >= 3) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         float noise = rng.next();
-        // Bandpass filter centered around 1kHz for authentic 808 clap
-        filterState += (noise - filterState) * (0.35f + tone * 0.35f);
-        out = (noise - filterState) * (clapEnv * 0.7f + env * 0.3f) * 0.85f;
+        filterState += (noise - filterState) * (0.32f + tone * 0.38f);
+        float bp = noise - filterState;
+        out = bp * (clapEnv * 0.8f + env * 0.4f) * 1.3f;
         break;
       }
 
       case DrumType::HiHatClosed:
       case DrumType::HiHatOpen: {
-        env -= dt / decay;
-        if (env <= 0.0f) {
+        env *= decayCoeff;
+        if (env < 0.0002f) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         float spread = 1.0f + (paramB * 0.35f);
-        // Six square wave frequencies of TR-808 hi-hat
         float freqs[6] = {baseFreq,
                           baseFreq * 1.48f * spread,
                           baseFreq * 1.58f,
@@ -202,36 +263,36 @@ private:
         float cluster = 0.0f;
         for (int i = 0; i < 6; ++i) {
           hatPhases[i] += (uint32_t)(freqs[i] * dt * 4294967296.0);
-          cluster += (hatPhases[i] > 2147483648) ? 1.0f : -1.0f;
+          cluster += (hatPhases[i] > 2147483648) ? 0.35f : -0.35f;
         }
-        // Double stage 12dB/oct highpass filter for crisp 808 metal sheen
         float hpFreq = 0.45f + (tone * 0.45f);
         filterState += (cluster - filterState) * hpFreq;
         float hp1 = cluster - filterState;
         filterState2 += (hp1 - filterState2) * hpFreq;
         float hp2 = hp1 - filterState2;
-        out = hp2 * env * 0.28f;
+        out = hp2 * env * 1.25f;
         break;
       }
 
       case DrumType::Cymbal: {
         if (attackPhase > 0.0f) {
-          env += dt / (0.01f + paramA * 0.5f);
+          env += dt / attackTime;
           if (env >= 1.0f) {
             env = 1.0f;
             attackPhase = 0.0f;
           }
         } else {
-          env -= dt / decay;
+          env *= decayCoeff;
         }
 
-        if (env <= 0.0f) {
+        if (env < 0.0002f) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         float spread = 1.0f + (paramB * 0.4f);
         float freqs[6] = {baseFreq,
-                          baseFreq * 1.5f * spread,
+                          baseFreq * 1.50f * spread,
                           baseFreq * 1.63f,
                           baseFreq * 1.86f * spread,
                           baseFreq * 2.16f * spread,
@@ -239,44 +300,44 @@ private:
         float cluster = 0.0f;
         for (int i = 0; i < 6; ++i) {
           hatPhases[i] += (uint32_t)(freqs[i] * dt * 4294967296.0);
-          cluster += (hatPhases[i] > 2147483648) ? 1.0f : -1.0f;
+          cluster += (hatPhases[i] > 2147483648) ? 0.35f : -0.35f;
         }
-        // 12dB/oct Highpass filter
-        float hpFreq = 0.15f + (tone * 0.45f);
+        float hpFreq = 0.18f + (tone * 0.50f);
         filterState += (cluster - filterState) * hpFreq;
         float hp1 = cluster - filterState;
         filterState2 += (hp1 - filterState2) * hpFreq;
         float hp2 = hp1 - filterState2;
-        out = hp2 * env * 0.35f;
+        out = hp2 * env * 1.35f;
         break;
       }
 
       case DrumType::Perc: {
-        env -= dt / decay;
-        if (env <= 0.0f) {
+        env *= decayCoeff;
+        if (env < 0.0002f) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         phase += (uint32_t)(baseFreq * dt * 4294967296.0);
         float sine = FastSine::getInt(phase);
-        // Subtle cowbell-like harmonic ring if tone is high
-        if (tone > 0.4f) {
-          sine = (sine + FastSine::getInt(phase * 1.48f) * 0.3f) * 0.8f;
+        if (tone > 0.35f) {
+          sine = (sine + FastSine::getInt((uint32_t)(phase * 1.48f)) * 0.35f) * 0.8f;
         }
-        out = sine * env * 0.75f;
+        out = sine * env * 1.15f;
         break;
       }
 
       case DrumType::Noise: {
-        env -= dt / decay;
-        if (env <= 0.0f) {
+        env *= decayCoeff;
+        if (env < 0.0002f) {
           active = false;
+          env = 0.0f;
           return 0.0f;
         }
         float noise = rng.next();
         float lpFreq = 0.08f + (tone * 0.82f);
         filterState += (noise - filterState) * lpFreq;
-        out = filterState * env * 0.65f;
+        out = filterState * env * 1.15f;
         break;
       }
       } // Switch
@@ -289,14 +350,17 @@ private:
 
 public:
   void setSampleRate(float sr) {
-    for (auto &v : mVoices)
+    for (auto &v : mVoices) {
       v.sampleRate = sr;
+      v.updateCoeffs();
+    }
   }
 
   void allNotesOff() {
     for (auto &v : mVoices) {
       v.active = false;
       v.env = 0.0f;
+      v.env2 = 0.0f;
     }
   }
 
@@ -307,7 +371,8 @@ public:
 
     switch (paramId) {
     case 0:
-      v.decay = 0.05f + (value * 1.5f);
+      v.decay = value;
+      v.updateCoeffs();
       break;
     case 1:
       v.tone = value;
@@ -330,6 +395,7 @@ public:
       break;
     case 3:
       v.paramA = value;
+      v.updateCoeffs();
       break;
     case 4:
       v.paramB = value;
@@ -343,29 +409,49 @@ public:
   void triggerNote(int note, int velocity) {
     int idx = -1;
     switch (note) {
-    case 36:
-    case 35:
+    case 35: // Acoustic Bass Drum
+    case 36: // Bass Drum 1
       idx = 0;
       break; // Kick
-    case 38:
-    case 40:
+    case 38: // Acoustic Snare
+    case 40: // Electric Snare
       idx = 1;
       break; // Snare
-    case 39:
+    case 37: // Side Stick
+    case 39: // Hand Clap
       idx = 2;
       break; // Clap
-    case 42:
+    case 42: // Closed Hi-Hat
+    case 44: // Pedal Hi-Hat
       idx = 3;
       break; // CH
-    case 46:
+    case 46: // Open Hi-Hat
       idx = 4;
       break; // OH
-    case 49:
+    case 49: // Crash Cymbal 1
+    case 51: // Ride Cymbal 1
+    case 52: // Chinese Cymbal
+    case 53: // Ride Bell
+    case 55: // Splash Cymbal
+    case 57: // Crash Cymbal 2
+    case 59: // Ride Cymbal 2
       idx = 5;
-      break; // Cymbal (Crash)
-    case 51:
-      idx = 5;
-      break; // Cymbal (Ride)
+      break; // Cymbal
+    case 41: // Low Floor Tom
+    case 43: // High Floor Tom
+    case 45: // Low Tom
+    case 47: // Low-Mid Tom
+    case 48: // Hi-Mid Tom (Key 6 in drum row)
+    case 50: // High Tom
+    case 56: // Cowbell
+      idx = 6;
+      break; // Perc
+    case 54: // Tambourine
+    case 58: // Vibraslap
+    case 69: // Cabasa
+    case 70: // Maracas
+      idx = 7;
+      break; // Noise
     default:
       if (note >= 0 && note < 8)
         idx = note;
@@ -373,8 +459,14 @@ public:
         idx = note - 60;
       break;
     }
-    if (idx != -1)
+    if (idx != -1) {
+      if (idx == 3) {
+        // Closed hat chokes open hat
+        mVoices[4].active = false;
+        mVoices[4].env = 0.0f;
+      }
       mVoices[idx].trigger(velocity / 127.0f);
+    }
   }
 
   void releaseNote(int note) {}

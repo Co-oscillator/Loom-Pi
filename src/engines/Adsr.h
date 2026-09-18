@@ -14,22 +14,27 @@ public:
     mDecay = d;
     mSustain = s;
     mRelease = r;
-    // Pre-calculate coefficients could be done here for optimization,
-    // but calculating per-sample is okay for now or valid in nextValue with
-    // pow/exp approximations. For simple exp decay: val *= coeff.
-    // Cubic curve for fine control at low values
-    float aCurve = mAttack * mAttack * mAttack;
-    float dCurve = mDecay * mDecay * mDecay;
-    float rCurve = mRelease * mRelease * mRelease;
 
-    // Max times: Attack 2s, Decay 3s, Release 3s
-    mDecayCoeff = exp(-1.0f / (dCurve * mSampleRate * 3.0f + 1.0f));
-    mReleaseCoeff = exp(-1.0f / (rCurve * mSampleRate * 3.0f + 1.0f));
-    mAttackRate = 1.0f / (aCurve * mSampleRate * 2.0f + 1.0f);
+    // Time-based envelope calculation (parameters a, d, r in seconds, up to 15.0s max)
+    float safeA = std::min(15.0f, std::max(0.0005f, mAttack));
+    float safeD = std::min(15.0f, std::max(0.001f, mDecay));
+    float safeR = std::min(15.0f, std::max(0.001f, mRelease));
+
+    // Linear attack: reaches 1.0 in safeA seconds
+    mAttackTotalSamples = (uint32_t)(safeA * mSampleRate);
+    if (mAttackTotalSamples < 1) mAttackTotalSamples = 1;
+    mAttackRate = 1.0f / (float)mAttackTotalSamples;
+
+    // Exponential decay towards sustain: drops 99.9% (-60dB) of the delta in safeD seconds
+    mDecayCoeff = expf(-6.908f / (safeD * mSampleRate));
+
+    // Exponential release: drops to 0.0001 (-80dB / silence) in safeR seconds
+    mReleaseCoeff = expf(-9.210f / (safeR * mSampleRate));
   }
 
   void trigger() {
     mStage = AdsrStage::Attack;
+    mAttackSample = 0;
     mValue = 0.0f;
   }
 
@@ -41,6 +46,7 @@ public:
 
   void reset() {
     mStage = AdsrStage::Idle;
+    mAttackSample = 0;
     mValue = 0.0f;
   }
 
@@ -54,8 +60,9 @@ public:
     case AdsrStage::Idle:
       return 0.0f;
     case AdsrStage::Attack:
-      mValue += mAttackRate;
-      if (mValue >= 1.0f) {
+      mAttackSample++;
+      mValue = (float)mAttackSample * mAttackRate;
+      if (mAttackSample >= mAttackTotalSamples) {
         mValue = 1.0f;
         mStage = AdsrStage::Decay;
       }
@@ -104,6 +111,8 @@ private:
   float mDecayCoeff = 0.999f;
   float mReleaseCoeff = 0.999f;
   float mAttackRate = 0.01f;
+  uint32_t mAttackTotalSamples = 480;
+  uint32_t mAttackSample = 0;
 
   float mValue = 0.0f;
   AdsrStage mStage = AdsrStage::Idle;

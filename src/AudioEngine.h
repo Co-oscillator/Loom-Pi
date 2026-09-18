@@ -63,6 +63,7 @@ public:
   void setEngineType(int trackIndex, int type);
   void triggerNote(int trackIndex, int note, int velocity, int originNote = -1);
   void releaseNote(int trackIndex, int note);
+  void allNotesOff(int trackIndex);
   void setTempo(float bpm);
   float getBpm() const { return mBpm; }
   void setPlaying(bool playing);

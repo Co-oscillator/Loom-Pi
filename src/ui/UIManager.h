@@ -577,9 +577,12 @@ private:
     lv_obj_t* mSamplerPlayheadShades[16] = {};
     lv_obj_t* mSamplerRecordBtn = nullptr;
     lv_obj_t* mSamplerLatchBtn = nullptr;
+    lv_obj_t* mSamplerPlayBtn = nullptr;
+    lv_obj_t* mSamplerPlayBtnLabel = nullptr;
     lv_obj_t* mSamplerScrubHandle = nullptr;
     lv_obj_t* mSamplerSliceLines[16] = {};
     lv_obj_t* mSamplerSliceHandles[16] = {};
+    static void samplerPlayBtnEventCb(lv_event_t* e);
     static void samplerScrubHandleEventCb(lv_event_t* e);
     static void samplerWaveformContainerEventCb(lv_event_t* e);
     static void samplerSliceHandleEventCb(lv_event_t* e);
@@ -682,6 +685,11 @@ public:
     void advanceWizard(int incomingVal, int incomingChannel = 0);
     
     // Play Screen (Touch Pads with X/Y Modulation & Scale/Chords)
+    static constexpr int PLAY_PADS_16 = 16;
+    static constexpr int PLAY_PADS_24 = 24;
+    static constexpr int PLAY_PADS_40 = 40;
+    static constexpr int PLAY_PADS_20_20 = 20;
+
     void populatePlayScreen();
     void rebuildPlayPadGrid();
     static void playPadTouchEventCb(lv_event_t* e);
@@ -697,10 +705,22 @@ public:
     static void playModYIntensityArcEventCb(lv_event_t* e);
     static void playVoiceLinkBtnEventCb(lv_event_t* e);
 
+    // 20/20 Split Mode Callbacks
+    static void playSplitLeftTrackDdEventCb(lv_event_t* e);
+    static void playSplitRightTrackDdEventCb(lv_event_t* e);
+    static void playSplitLeftOctBtnEventCb(lv_event_t* e);
+    static void playSplitRightOctBtnEventCb(lv_event_t* e);
+    static void playSplitLeftModXArcEventCb(lv_event_t* e);
+    static void playSplitLeftModYArcEventCb(lv_event_t* e);
+    static void playSplitRightModXArcEventCb(lv_event_t* e);
+    static void playSplitRightModYArcEventCb(lv_event_t* e);
+
     lv_obj_t* mPlayPadGrid = nullptr;
     lv_obj_t* mPlayRootDd = nullptr;
     lv_obj_t* mPlayScaleDd = nullptr;
     lv_obj_t* mPlayChordDd = nullptr;
+    lv_obj_t* mPlayTopOctaveGrp = nullptr;
+    lv_obj_t* mPlayTopModGrp = nullptr;
     lv_obj_t* mPlayOctaveLbl = nullptr;
     lv_obj_t* mPlayModXDestBtn = nullptr;
     lv_obj_t* mPlayModXDestLbl = nullptr;
@@ -712,7 +732,7 @@ public:
     lv_obj_t* mPlayVoiceLinkBtn = nullptr;
     lv_obj_t* mPlayVoiceLinkLbl = nullptr;
     bool mPlayVoiceLinkPoly = true; // true = Polyphonic per-voice modulation, false = Glitch
-    int mPlayPadCount = 16; // 16 (4x4), 24 (6x4), or 40 (8x5)
+    int mPlayPadCount = 16; // 16 (4x4), 24 (6x4), 40 (8x5), or 20 (20/20 split)
     int mPlaySelectedScaleIdx = 1; // Default Major
     int mPlaySelectedRoot = 0; // C
     int mPlayOctaveOffset = 0;
@@ -723,6 +743,43 @@ public:
     int mPlayModYDest = 2; // Filter Resonance default
     float mPlayModXIntensity = 1.0f; // 0.0 to 1.0
     float mPlayModYIntensity = 1.0f; // 0.0 to 1.0
+
+    // 20/20 Split Performance Bank State
+    int mPlaySplitLeftTrack = 0;
+    int mPlaySplitRightTrack = 1;
+    int mPlaySplitLeftOctave = 0;
+    int mPlaySplitRightOctave = 1;
+    int mPlaySplitLeftModXTrack = 0;
+    int mPlaySplitLeftModXDest = 1;
+    float mPlaySplitLeftModXInt = 1.0f;
+    int mPlaySplitLeftModYTrack = 0;
+    int mPlaySplitLeftModYDest = 2;
+    float mPlaySplitLeftModYInt = 1.0f;
+    int mPlaySplitRightModXTrack = 1;
+    int mPlaySplitRightModXDest = 1;
+    float mPlaySplitRightModXInt = 1.0f;
+    int mPlaySplitRightModYTrack = 1;
+    int mPlaySplitRightModYDest = 2;
+    float mPlaySplitRightModYInt = 1.0f;
+
+    // 20/20 Split UI Widget References
+    lv_obj_t* mPlaySplitLeftTrackDd = nullptr;
+    lv_obj_t* mPlaySplitLeftOctLbl = nullptr;
+    lv_obj_t* mPlaySplitLeftModXBtn = nullptr;
+    lv_obj_t* mPlaySplitLeftModXLbl = nullptr;
+    lv_obj_t* mPlaySplitLeftModXArc = nullptr;
+    lv_obj_t* mPlaySplitLeftModYBtn = nullptr;
+    lv_obj_t* mPlaySplitLeftModYLbl = nullptr;
+    lv_obj_t* mPlaySplitLeftModYArc = nullptr;
+
+    lv_obj_t* mPlaySplitRightTrackDd = nullptr;
+    lv_obj_t* mPlaySplitRightOctLbl = nullptr;
+    lv_obj_t* mPlaySplitRightModXBtn = nullptr;
+    lv_obj_t* mPlaySplitRightModXLbl = nullptr;
+    lv_obj_t* mPlaySplitRightModXArc = nullptr;
+    lv_obj_t* mPlaySplitRightModYBtn = nullptr;
+    lv_obj_t* mPlaySplitRightModYLbl = nullptr;
+    lv_obj_t* mPlaySplitRightModYArc = nullptr;
     
     // Settings – Keyboard mode & Hardware
     bool mSettingsKeyboardMode = true;

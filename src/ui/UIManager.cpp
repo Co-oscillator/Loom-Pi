@@ -80,11 +80,11 @@ float UIManager::mapLinearToNonLinear(float norm, float minVal, float maxVal, co
         return minVal + norm * (maxVal - minVal);
     }
     
-    float midVal = 0.75f;
+    float midVal = 1.00f;
     if (type == "D") {
-        midVal = 0.65f;
+        midVal = 0.80f;
     } else if (type == "R") {
-        midVal = 0.65f;
+        midVal = 0.80f;
     }
     
     if (midVal <= minVal || midVal >= maxVal) {
@@ -114,11 +114,11 @@ float UIManager::mapNonLinearToLinear(float val, float minVal, float maxVal, con
         return (val - minVal) / (maxVal - minVal);
     }
     
-    float midVal = 0.75f;
+    float midVal = 1.00f;
     if (type == "D") {
-        midVal = 0.65f;
+        midVal = 0.80f;
     } else if (type == "R") {
-        midVal = 0.65f;
+        midVal = 0.80f;
     }
     
     if (midVal <= minVal || midVal >= maxVal) {
@@ -136,20 +136,20 @@ float UIManager::mapNonLinearToLinear(float val, float minVal, float maxVal, con
 }
 
 float UIManager::scaleParamFromNormalized(int paramId, float normValue) {
-    // Attack parameters across all engines (0.001f to 4.0f)
+    // Attack parameters across all engines (0.001f to 15.0f)
     if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471 ||
         paramId == 161 || paramId == 167 || paramId == 173 || paramId == 179 || paramId == 185 || paramId == 191) {
-        return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "A");
+        return mapLinearToNonLinear(normValue, 0.001f, 15.0f, "A");
     }
-    // Decay parameters across all engines (0.0f to 4.0f)
+    // Decay parameters across all engines (0.0f to 15.0f)
     if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472 ||
         paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
-        return mapLinearToNonLinear(normValue, 0.0f, 4.0f, "D");
+        return mapLinearToNonLinear(normValue, 0.0f, 15.0f, "D");
     }
-    // Release parameters across all engines (0.001f to 4.0f)
+    // Release parameters across all engines (0.001f to 15.0f)
     if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
         paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
-        return mapLinearToNonLinear(normValue, 0.001f, 4.0f, "R");
+        return mapLinearToNonLinear(normValue, 0.001f, 15.0f, "R");
     }
     if (paramId >= 2410 && paramId <= 2417) {
         return 20.0f + normValue * 100.0f;
@@ -161,20 +161,20 @@ float UIManager::normalizeParamValue(int paramId, float scaledValue) {
     if (paramId >= 2410 && paramId <= 2417) {
         return std::max(0.0f, std::min(1.0f, (scaledValue - 20.0f) / 100.0f));
     }
-    // Attack parameters across all engines (0.001f to 4.0f)
+    // Attack parameters across all engines (0.001f to 15.0f)
     if (paramId == 100 || paramId == 114 || paramId == 310 || paramId == 425 || paramId == 454 || paramId == 471 ||
         paramId == 161 || paramId == 167 || paramId == 173 || paramId == 179 || paramId == 185 || paramId == 191) {
-        return mapNonLinearToLinear(scaledValue, 0.001f, 4.0f, "A");
+        return mapNonLinearToLinear(scaledValue, 0.001f, 15.0f, "A");
     }
-    // Decay parameters across all engines (0.0f to 4.0f)
+    // Decay parameters across all engines (0.0f to 15.0f)
     if (paramId == 101 || paramId == 115 || paramId == 311 || paramId == 426 || paramId == 455 || paramId == 472 ||
         paramId == 162 || paramId == 168 || paramId == 174 || paramId == 180 || paramId == 186 || paramId == 192) {
-        return mapNonLinearToLinear(scaledValue, 0.0f, 4.0f, "D");
+        return mapNonLinearToLinear(scaledValue, 0.0f, 15.0f, "D");
     }
-    // Release parameters across all engines (0.001f to 4.0f)
+    // Release parameters across all engines (0.001f to 15.0f)
     if (paramId == 103 || paramId == 117 || paramId == 313 || paramId == 428 || paramId == 457 || paramId == 474 ||
         paramId == 164 || paramId == 170 || paramId == 176 || paramId == 182 || paramId == 188 || paramId == 194) {
-        return mapNonLinearToLinear(scaledValue, 0.001f, 4.0f, "R");
+        return mapNonLinearToLinear(scaledValue, 0.001f, 15.0f, "R");
     }
     return scaledValue;
 }
@@ -889,6 +889,8 @@ void UIManager::createCenterContentArea() {
     mSamplerRecordBtn = nullptr;
     mSamplerLatchBtn = nullptr;
     mSamplerScrubHandle = nullptr;
+    mSamplerPlayBtn = nullptr;
+    mSamplerPlayBtnLabel = nullptr;
     std::fill(std::begin(mSamplerWaveformBars), std::end(mSamplerWaveformBars), nullptr);
     std::fill(std::begin(mSamplerPlayheadLines), std::end(mSamplerPlayheadLines), nullptr);
     std::fill(std::begin(mSamplerPlayheadShades), std::end(mSamplerPlayheadShades), nullptr);
@@ -7902,6 +7904,13 @@ std::string UIManager::getParameterNameString(int trackIdx, int paramId, AudioEn
         if (paramId == 650) return prefix + "CYM Decay";
         if (paramId == 651) return prefix + "CYM Col";
         if (paramId == 655) return prefix + "CYM Gain";
+        if (paramId == 660) return prefix + "PERC Decay";
+        if (paramId == 661) return prefix + "PERC Tone";
+        if (paramId == 662) return prefix + "PERC Tune";
+        if (paramId == 665) return prefix + "PERC Gain";
+        if (paramId == 670) return prefix + "NOISE Decay";
+        if (paramId == 671) return prefix + "NOISE Tone";
+        if (paramId == 675) return prefix + "NOISE Gain";
     } else if (engineType == 9) { // SoundFont
         if (paramId == 180) return prefix + "SF Preset";
         if (paramId == 181) return prefix + "SF Bank";
@@ -10144,14 +10153,34 @@ void UIManager::openModDestModalEventCb(lv_event_t* e) {
         ui->mModDestBtnLabel = ui->mAftertouchDestBtnLabel[ui->mActiveTrack];
         ui->mModDestTrack = ui->mActiveTrack;
         ui->mModDestParamId = ui->mAftertouchDestParamId[ui->mActiveTrack];
-    } else if (data->callerType == 4) { // Play Mod X
-        ui->mModDestBtnLabel = ui->mPlayModXDestLbl;
-        ui->mModDestTrack = ui->mPlayModXTrack;
-        ui->mModDestParamId = ui->mPlayModXDest;
-    } else if (data->callerType == 5) { // Play Mod Y
-        ui->mModDestBtnLabel = ui->mPlayModYDestLbl;
-        ui->mModDestTrack = ui->mPlayModYTrack;
-        ui->mModDestParamId = ui->mPlayModYDest;
+    } else if (data->callerType == 4) { // Play Mod X (standard or Split Left)
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mModDestBtnLabel = ui->mPlaySplitLeftModXLbl;
+            ui->mModDestTrack = ui->mPlaySplitLeftModXTrack;
+            ui->mModDestParamId = ui->mPlaySplitLeftModXDest;
+        } else {
+            ui->mModDestBtnLabel = ui->mPlayModXDestLbl;
+            ui->mModDestTrack = ui->mPlayModXTrack;
+            ui->mModDestParamId = ui->mPlayModXDest;
+        }
+    } else if (data->callerType == 5) { // Play Mod Y (standard or Split Left)
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mModDestBtnLabel = ui->mPlaySplitLeftModYLbl;
+            ui->mModDestTrack = ui->mPlaySplitLeftModYTrack;
+            ui->mModDestParamId = ui->mPlaySplitLeftModYDest;
+        } else {
+            ui->mModDestBtnLabel = ui->mPlayModYDestLbl;
+            ui->mModDestTrack = ui->mPlayModYTrack;
+            ui->mModDestParamId = ui->mPlayModYDest;
+        }
+    } else if (data->callerType == 6) { // Play Mod X (Split Right)
+        ui->mModDestBtnLabel = ui->mPlaySplitRightModXLbl;
+        ui->mModDestTrack = ui->mPlaySplitRightModXTrack;
+        ui->mModDestParamId = ui->mPlaySplitRightModXDest;
+    } else if (data->callerType == 7) { // Play Mod Y (Split Right)
+        ui->mModDestBtnLabel = ui->mPlaySplitRightModYLbl;
+        ui->mModDestTrack = ui->mPlaySplitRightModYTrack;
+        ui->mModDestParamId = ui->mPlaySplitRightModYDest;
     } else {
         ui->mModDestBtnLabel = nullptr;
     }
@@ -10405,10 +10434,10 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
         } else if (ui->mModDestModalCallerType == 1) {
             std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
             lv_label_set_text(ui->mModDestBtnLabel, compactName.c_str());
-        } else if (ui->mModDestModalCallerType == 4) {
+        } else if (ui->mModDestModalCallerType == 4 || ui->mModDestModalCallerType == 6) {
             std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
             lv_label_set_text_fmt(ui->mModDestBtnLabel, "X: %s", compactName.c_str());
-        } else if (ui->mModDestModalCallerType == 5) {
+        } else if (ui->mModDestModalCallerType == 5 || ui->mModDestModalCallerType == 7) {
             std::string compactName = getCompactDestName(ui->mModDestTrack, ui->mModDestParamId, &(ui->mEngine));
             lv_label_set_text_fmt(ui->mModDestBtnLabel, "Y: %s", compactName.c_str());
         } else {
@@ -10436,15 +10465,39 @@ void UIManager::modDestParamClickEventCb(lv_event_t* e) {
         ui->mAftertouchDestParamId[ui->mActiveTrack] = data->paramId;
         ui->mEngine.setRouting(data->trackIdx, ui->mActiveTrack, 27, 5, 1.0f, data->paramId);
     } else if (ui->mModDestModalCallerType == 4) {
-        ui->mPlayModXTrack = data->trackIdx;
-        ui->mPlayModXDest = data->paramId;
-        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
-                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mPlaySplitLeftModXTrack = data->trackIdx;
+            ui->mPlaySplitLeftModXDest = data->paramId;
+            ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                         ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+        } else {
+            ui->mPlayModXTrack = data->trackIdx;
+            ui->mPlayModXDest = data->paramId;
+            ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                         ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        }
     } else if (ui->mModDestModalCallerType == 5) {
-        ui->mPlayModYTrack = data->trackIdx;
-        ui->mPlayModYDest = data->paramId;
-        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
-                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mPlaySplitLeftModYTrack = data->trackIdx;
+            ui->mPlaySplitLeftModYDest = data->paramId;
+            ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                         ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+        } else {
+            ui->mPlayModYTrack = data->trackIdx;
+            ui->mPlayModYDest = data->paramId;
+            ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                         ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        }
+    } else if (ui->mModDestModalCallerType == 6) {
+        ui->mPlaySplitRightModXTrack = data->trackIdx;
+        ui->mPlaySplitRightModXDest = data->paramId;
+        ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                     ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+    } else if (ui->mModDestModalCallerType == 7) {
+        ui->mPlaySplitRightModYTrack = data->trackIdx;
+        ui->mPlaySplitRightModYDest = data->paramId;
+        ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                     ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
     }
 
     if (ui->mActiveNav == 4 && ui->mActiveRoutingsContainer) {
@@ -10507,19 +10560,45 @@ void UIManager::clearModDestModalEventCb(lv_event_t* e) {
             lv_label_set_text(ui->mModDestBtnLabel, "AFTERTOUCH DEST: NONE (TAP TO ASSIGN)");
         }
     } else if (ui->mModDestModalCallerType == 4) { // Play Mod X
-        ui->mPlayModXDest = -1;
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mPlaySplitLeftModXDest = -1;
+            ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                         ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+        } else {
+            ui->mPlayModXDest = -1;
+            ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                         ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        }
         if (ui->mModDestBtnLabel) {
             lv_label_set_text(ui->mModDestBtnLabel, "X: None");
         }
-        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
-                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
     } else if (ui->mModDestModalCallerType == 5) { // Play Mod Y
-        ui->mPlayModYDest = -1;
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            ui->mPlaySplitLeftModYDest = -1;
+            ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                         ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+        } else {
+            ui->mPlayModYDest = -1;
+            ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
+                                         ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+        }
         if (ui->mModDestBtnLabel) {
             lv_label_set_text(ui->mModDestBtnLabel, "Y: None");
         }
-        ui->mEngine.setPadModRouting(ui->mActiveTrack, ui->mPlayModXDest, ui->mPlayModXIntensity,
-                                     ui->mPlayModYDest, ui->mPlayModYIntensity, ui->mPlayVoiceLinkPoly);
+    } else if (ui->mModDestModalCallerType == 6) { // Play Mod X (Split Right)
+        ui->mPlaySplitRightModXDest = -1;
+        ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                     ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "X: None");
+        }
+    } else if (ui->mModDestModalCallerType == 7) { // Play Mod Y (Split Right)
+        ui->mPlaySplitRightModYDest = -1;
+        ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                     ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+        if (ui->mModDestBtnLabel) {
+            lv_label_set_text(ui->mModDestBtnLabel, "Y: None");
+        }
     }
 
     if (ui->mActiveNav == 4 && ui->mActiveRoutingsContainer) {
@@ -10905,6 +10984,15 @@ std::vector<std::pair<int, std::string>> UIManager::getTrackParamOptions(int tra
         params.push_back({650, "CYM Decay"});
         params.push_back({651, "CYM Col"});
         params.push_back({655, "CYM Gain"});
+        // PERC
+        params.push_back({660, "PERC Decay"});
+        params.push_back({661, "PERC Tone"});
+        params.push_back({662, "PERC Tune"});
+        params.push_back({665, "PERC Gain"});
+        // NOISE
+        params.push_back({670, "NOISE Decay"});
+        params.push_back({671, "NOISE Tone"});
+        params.push_back({675, "NOISE Gain"});
     } else if (engineType == 9) { // SoundFont
         params.push_back({180, "SF Preset"});
         params.push_back({181, "SF Bank"});
@@ -13337,10 +13425,10 @@ void UIManager::populateParamSubtractiveFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow1, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow1, "A", 100, 0.001f, 4.0f, 2, false, 220);
-    addSynthSlider(faderRow1, "D", 101, 0.0f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow1, "A", 100, 0.001f, 15.0f, 2, false, 220);
+    addSynthSlider(faderRow1, "D", 101, 0.0f, 15.0f, 2, false, 220);
     addSynthSlider(faderRow1, "S", 102, 0.0f, 1.0f, 2, true, 220);
-    addSynthSlider(faderRow1, "R", 103, 0.001f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow1, "R", 103, 0.001f, 15.0f, 2, false, 220);
 
     // --- 4. FILTER ENVELOPE CARD (Bottom-Right: 490px x 300px) ---
     lv_obj_t* filterEnvCard = createFilterCard(tab, "FILTER ENVELOPE", 490, 300);
@@ -13362,10 +13450,10 @@ void UIManager::populateParamSubtractiveFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow2, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow2, "A", 114, 0.001f, 4.0f, 2, false, 220);
-    addSynthSlider(faderRow2, "D", 115, 0.0f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow2, "A", 114, 0.001f, 15.0f, 2, false, 220);
+    addSynthSlider(faderRow2, "D", 115, 0.0f, 15.0f, 2, false, 220);
     addSynthSlider(faderRow2, "S", 116, 0.0f, 1.0f, 2, true, 220);
-    addSynthSlider(faderRow2, "R", 117, 0.001f, 4.0f, 2, false, 220);
+    addSynthSlider(faderRow2, "R", 117, 0.001f, 15.0f, 2, false, 220);
 }
 
 void UIManager::populateParamSubtractiveEnvTab(lv_obj_t* tab) {
@@ -13895,10 +13983,10 @@ void UIManager::populateParamFmOperatorsTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(midCol, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     int base = 160 + mSelectedOpIdx * 6;
-    addSynthSlider(midCol, "A", base + 1, 0.001f, 4.0f, 2, false, 380);
-    addSynthSlider(midCol, "D", base + 2, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(midCol, "A", base + 1, 0.001f, 15.0f, 2, false, 380);
+    addSynthSlider(midCol, "D", base + 2, 0.0f, 15.0f, 2, false, 380);
     addSynthSlider(midCol, "S", base + 3, 0.0f, 1.0f, 2, true, 380);
-    addSynthSlider(midCol, "R", base + 4, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(midCol, "R", base + 4, 0.001f, 15.0f, 2, false, 380);
 
     // Right Column: Level & Ratio Knobs
     lv_obj_t* rightCol = lv_obj_create(detailCard);
@@ -14132,10 +14220,10 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow1, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow1, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow1, "A", 114, 0.001f, 4.0f, 2, false, 380);
-    addSynthSlider(faderRow1, "D", 115, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow1, "A", 114, 0.001f, 15.0f, 2, false, 380);
+    addSynthSlider(faderRow1, "D", 115, 0.0f, 15.0f, 2, false, 380);
     addSynthSlider(faderRow1, "S", 116, 0.0f, 1.0f, 2, true, 380);
-    addSynthSlider(faderRow1, "R", 117, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow1, "R", 117, 0.001f, 15.0f, 2, false, 380);
 
     lv_obj_t* bottomAmt = lv_obj_create(filterEnvCard);
     lv_obj_set_size(bottomAmt, 356, 120);
@@ -14162,10 +14250,10 @@ void UIManager::populateParamFmFilterTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(faderRow2, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(faderRow2, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(faderRow2, "A", 100, 0.001f, 4.0f, 2, false, 380);
-    addSynthSlider(faderRow2, "D", 101, 0.0f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow2, "A", 100, 0.001f, 15.0f, 2, false, 380);
+    addSynthSlider(faderRow2, "D", 101, 0.0f, 15.0f, 2, false, 380);
     addSynthSlider(faderRow2, "S", 102, 0.0f, 1.0f, 2, true, 380);
-    addSynthSlider(faderRow2, "R", 103, 0.001f, 4.0f, 2, false, 380);
+    addSynthSlider(faderRow2, "R", 103, 0.001f, 15.0f, 2, false, 380);
 
     // Spacer block to keep symmetry
     lv_obj_t* spacer = lv_obj_create(ampEnvCard);
@@ -14500,10 +14588,10 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(ampRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(ampRow, "A", 454, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(ampRow, "D", 455, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "A", 454, 0.001f, 15.0f, 2, false, 230);
+    addSynthSlider(ampRow, "D", 455, 0.0f, 15.0f, 2, false, 230);
     addSynthSlider(ampRow, "S", 456, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(ampRow, "R", 457, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "R", 457, 0.001f, 15.0f, 2, false, 230);
 
     // --- FILTER ENVELOPE CARD (515px) ---
     lv_obj_t* filterEnvCard = createCard(row3, "FILTER ENVELOPE", 515, 280);
@@ -14517,10 +14605,10 @@ void UIManager::populateParamWavetableTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(filterEnvRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(filterEnvRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(filterEnvRow, "A", 471, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(filterEnvRow, "D", 472, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "A", 471, 0.001f, 15.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "D", 472, 0.0f, 15.0f, 2, false, 230);
     addSynthSlider(filterEnvRow, "S", 473, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "R", 474, 0.001f, 15.0f, 2, false, 230);
 }
 
 void UIManager::populateParamWavetableFilterTab(lv_obj_t* tab) {
@@ -14674,6 +14762,27 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_PRESSING, this);
     lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_RELEASED, this);
     lv_obj_add_event_cb(mSamplerWaveformContainer, samplerWaveformContainerEventCb, LV_EVENT_PRESS_LOST, this);
+
+    // Play / Audition Button in upper left corner of waveform preview
+    mSamplerPlayBtn = lv_btn_create(mSamplerWaveformContainer);
+    lv_obj_add_flag(mSamplerPlayBtn, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_size(mSamplerPlayBtn, 36, 36);
+    lv_obj_align(mSamplerPlayBtn, LV_ALIGN_TOP_LEFT, 6, 6);
+    lv_obj_set_style_radius(mSamplerPlayBtn, 8, 0);
+    lv_obj_set_style_bg_color(mSamplerPlayBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_bg_opa(mSamplerPlayBtn, LV_OPA_90, 0);
+    lv_obj_set_style_border_width(mSamplerPlayBtn, 1, 0);
+    lv_obj_set_style_border_color(mSamplerPlayBtn, trackColor, 0);
+    lv_obj_set_style_pad_all(mSamplerPlayBtn, 0, 0);
+    lv_obj_remove_flag(mSamplerPlayBtn, LV_OBJ_FLAG_SCROLLABLE);
+
+    mSamplerPlayBtnLabel = lv_label_create(mSamplerPlayBtn);
+    lv_label_set_text(mSamplerPlayBtnLabel, LV_SYMBOL_PLAY);
+    lv_obj_set_style_text_font(mSamplerPlayBtnLabel, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(mSamplerPlayBtnLabel, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_center(mSamplerPlayBtnLabel);
+
+    lv_obj_add_event_cb(mSamplerPlayBtn, UIManager::samplerPlayBtnEventCb, LV_EVENT_CLICKED, this);
 
     // Create 150 vertical bars representing amplitude
     for (int i = 0; i < 150; ++i) {
@@ -14841,6 +14950,7 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
 
     addSynthKnob(editsRow2, "SLICES", 340, 0.0f, 1.0f, 0, false);
     addSynthKnob(editsRow2, "SLICE SEL", 341, 0.0f, 1.0f, 0, false);
+    addSynthKnob(editsRow2, "SCRUB", 360, 0.0f, 1.0f, 2, true);
 
     // Button Row (Reverse & Slice Lock)
     lv_obj_t* editsBtnRow = lv_obj_create(editsCard);
@@ -14967,10 +15077,10 @@ void UIManager::populateParamSamplerTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(adsrRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(adsrRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(adsrRow, "A", 310, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(adsrRow, "D", 311, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(adsrRow, "A", 310, 0.001f, 15.0f, 2, false, 230);
+    addSynthSlider(adsrRow, "D", 311, 0.0f, 15.0f, 2, false, 230);
     addSynthSlider(adsrRow, "S", 312, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(adsrRow, "R", 313, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(adsrRow, "R", 313, 0.001f, 15.0f, 2, false, 230);
 
     lv_obj_t* envAmtCont = lv_obj_create(envCard);
     lv_obj_set_size(envAmtCont, 340, 90);
@@ -15063,12 +15173,48 @@ void UIManager::samplerTrimBtnEventCb(lv_event_t* e) {
     std::cout << "Trimmed sample and reset start/end markers." << std::endl;
 }
 
+void UIManager::samplerPlayBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    if (ui->mActiveTrack < 0 || ui->mActiveTrack >= (int)ui->mEngine.getTracks().size()) return;
+
+    GranularEngine::PlayheadInfo playheads[16];
+    ui->mEngine.getGranularPlayheads(ui->mActiveTrack, playheads, 16);
+    bool isPlaying = false;
+    for (int i = 0; i < 16; ++i) {
+        if (playheads[i].pos >= 0.0f) {
+            isPlaying = true;
+            break;
+        }
+    }
+
+    if (isPlaying) {
+        ui->mEngine.allNotesOff(ui->mActiveTrack);
+    } else {
+        ui->mEngine.triggerNote(ui->mActiveTrack, 60, 100, 60);
+    }
+    ui->updateSamplerWaveformPreview();
+}
+
 void UIManager::samplerScrubHandleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui) return;
     if (ui->mActiveTrack < 0 || ui->mActiveTrack >= (int)ui->mEngine.getTracks().size()) return;
 
     lv_event_code_t code = lv_event_get_code(e);
+
+    if (ui->mMidiLearnActive) {
+        if (code == LV_EVENT_PRESSED) {
+            ui->mMidiLearnTargetParamId = 360; // Scrub Position
+            ui->mMidiLearnTargetTrack = ui->mActiveTrack;
+            if (ui->mMidiLearnBtnLabel) {
+                std::string pName = getParameterNameString(ui->mActiveTrack, 360, &(ui->mEngine));
+                lv_label_set_text_fmt(ui->mMidiLearnBtnLabel, "LEARN: MOVE CC CONTROL TO MAP '%s'", pName.c_str());
+            }
+        }
+        return;
+    }
+
     if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
         lv_indev_t* indev = lv_indev_active();
         if (indev) {
@@ -15101,10 +15247,23 @@ void UIManager::samplerWaveformContainerEventCb(lv_event_t* e) {
     if (ui->mActiveTrack < 0 || ui->mActiveTrack >= (int)ui->mEngine.getTracks().size()) return;
     if (ui->mEngine.getTracks()[ui->mActiveTrack].engineType != 2) return;
 
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (ui->mMidiLearnActive) {
+        if (code == LV_EVENT_PRESSED) {
+            ui->mMidiLearnTargetParamId = 360; // Scrub Position
+            ui->mMidiLearnTargetTrack = ui->mActiveTrack;
+            if (ui->mMidiLearnBtnLabel) {
+                std::string pName = getParameterNameString(ui->mActiveTrack, 360, &(ui->mEngine));
+                lv_label_set_text_fmt(ui->mMidiLearnBtnLabel, "LEARN: MOVE CC CONTROL TO MAP '%s'", pName.c_str());
+            }
+        }
+        return;
+    }
+
     bool isScrubMode = (ui->mEngine.getTracks()[ui->mActiveTrack].parameters[320] >= 0.95f);
     if (!isScrubMode) return;
 
-    lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
         lv_indev_t* indev = lv_indev_active();
         if (indev) {
@@ -15216,6 +15375,26 @@ void UIManager::updateSamplerWaveformPreview() {
     GranularEngine::PlayheadInfo playheads[16];
     mEngine.getGranularPlayheads(mActiveTrack, playheads, 16);
 
+    // Update Waveform Play / Audition Button State
+    if (mSamplerPlayBtn && mSamplerPlayBtnLabel) {
+        bool isAnyPlaying = false;
+        for (int i = 0; i < 16; ++i) {
+            if (playheads[i].pos >= 0.0f) {
+                isAnyPlaying = true;
+                break;
+            }
+        }
+        if (isAnyPlaying) {
+            lv_label_set_text(mSamplerPlayBtnLabel, LV_SYMBOL_STOP);
+            lv_obj_set_style_bg_color(mSamplerPlayBtn, trackColor, 0);
+            lv_obj_set_style_text_color(mSamplerPlayBtnLabel, lv_color_hex(0x000000), 0);
+        } else {
+            lv_label_set_text(mSamplerPlayBtnLabel, LV_SYMBOL_PLAY);
+            lv_obj_set_style_bg_color(mSamplerPlayBtn, lv_color_hex(0x222222), 0);
+            lv_obj_set_style_text_color(mSamplerPlayBtnLabel, lv_color_hex(0xFFFFFF), 0);
+        }
+    }
+
     if (isScrubMode) {
         // Hide all playhead shades and other playhead lines
         for (int i = 0; i < 16; ++i) {
@@ -15244,7 +15423,7 @@ void UIManager::updateSamplerWaveformPreview() {
 
             if (mSamplerScrubHandle) {
                 lv_obj_set_style_bg_color(mSamplerScrubHandle, oppositeColor, 0);
-                lv_obj_align(mSamplerScrubHandle, LV_ALIGN_BOTTOM_LEFT, x - 12, 10);
+                lv_obj_align(mSamplerScrubHandle, LV_ALIGN_BOTTOM_LEFT, x - 12, -6);
                 lv_obj_clear_flag(mSamplerScrubHandle, LV_OBJ_FLAG_HIDDEN);
             }
         }
@@ -15836,10 +16015,10 @@ void UIManager::populateParamGranularSynthTab(lv_obj_t* tab) {
     lv_obj_set_flex_flow(ampRow, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    addSynthSlider(ampRow, "A", 425, 0.001f, 4.0f, 2, false, 140);
-    addSynthSlider(ampRow, "D", 426, 0.0f, 4.0f, 2, false, 140);
+    addSynthSlider(ampRow, "A", 425, 0.001f, 15.0f, 2, false, 140);
+    addSynthSlider(ampRow, "D", 426, 0.0f, 15.0f, 2, false, 140);
     addSynthSlider(ampRow, "S", 427, 0.0f, 1.0f, 2, true, 140);
-    addSynthSlider(ampRow, "R", 428, 0.001f, 4.0f, 2, false, 140);
+    addSynthSlider(ampRow, "R", 428, 0.001f, 15.0f, 2, false, 140);
 
     // --- PITCH & RANDOMNESS CARD ---
     lv_obj_t* pitchCard = createEnvCard(bottomRow, "PITCH & RANDOM", 370);
@@ -16339,10 +16518,10 @@ void UIManager::populateParamSoundFontLibraryTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(faderRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(faderRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 4.0f, 2, false, 240);
-    addSynthSlider(faderRow, "DECAY", 101, 0.0f, 4.0f, 2, false, 240);
+    addSynthSlider(faderRow, "ATTACK", 100, 0.001f, 15.0f, 2, false, 240);
+    addSynthSlider(faderRow, "DECAY", 101, 0.0f, 15.0f, 2, false, 240);
     addSynthSlider(faderRow, "SUSTAIN", 102, 0.0f, 1.0f, 2, true, 240);
-    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 4.0f, 2, false, 240);
+    addSynthSlider(faderRow, "RELEASE", 103, 0.001f, 15.0f, 2, false, 240);
 }
 
 void UIManager::populateParamSoundFontSynthTab(lv_obj_t* tab) {
@@ -17004,10 +17183,10 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(ampRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(ampRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(ampRow, "A", 100, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(ampRow, "D", 101, 0.0f, 4.0f, 2, false, 230);
+    addSynthSlider(ampRow, "A", 100, 0.001f, 15.0f, 2, false, 230);
+    addSynthSlider(ampRow, "D", 101, 0.0f, 15.0f, 2, false, 230);
     addSynthSlider(ampRow, "S", 102, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(ampRow, "R", 103, 0.001f, 8.0f, 2, false, 230);
+    addSynthSlider(ampRow, "R", 103, 0.001f, 15.0f, 2, false, 230);
 
     // 2.3 Filter Envelope Card (330px)
     lv_obj_t* filterEnvCard = lv_obj_create(row2);
@@ -17036,10 +17215,10 @@ void UIManager::populateParamAudioInTab(lv_obj_t* tab) {
     lv_obj_set_flex_align(filterEnvRow, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_align(filterEnvRow, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    addSynthSlider(filterEnvRow, "A", 114, 0.001f, 4.0f, 2, false, 230);
-    addSynthSlider(filterEnvRow, "D", 115, 0.001f, 4.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "A", 114, 0.001f, 15.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "D", 115, 0.0f, 15.0f, 2, false, 230);
     addSynthSlider(filterEnvRow, "S", 116, 0.0f, 1.0f, 2, true, 230);
-    addSynthSlider(filterEnvRow, "R", 117, 0.001f, 8.0f, 2, false, 230);
+    addSynthSlider(filterEnvRow, "R", 117, 0.001f, 15.0f, 2, false, 230);
 }
 
 void UIManager::populateParamAudioInFilterEnvTab(lv_obj_t* tab) {
@@ -17620,13 +17799,13 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 102, rRange(0.1f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 2.0f));  // R
 
         // Filter ADSR
         ui->mEngine.setParameter(activeTrk, 114, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 115, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 116, rRange(0.0f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 2.0f));  // R
 
         // LFO
         ui->mEngine.setParameter(activeTrk, 7, rRange(0.05f, 0.8f));    // LFO Rate
@@ -17647,13 +17826,13 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 102, rRange(0.2f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 2.0f));  // R
 
         // Filter EG
         ui->mEngine.setParameter(activeTrk, 114, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 115, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 116, rRange(0.0f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 2.0f));  // R
         ui->mEngine.setParameter(activeTrk, 118, rRange(-1.0f, 1.0f)); // Env Amt
 
         // Active/Carrier masks (Ensure at least Op 1 is active)
@@ -17667,9 +17846,9 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
             int base = 160 + op * 6;
             ui->mEngine.setParameter(activeTrk, base + 0, rRange(0.0f, 1.0f));   // Level
             ui->mEngine.setParameter(activeTrk, base + 1, rRange(0.001f, 2.0f)); // Attack
-            ui->mEngine.setParameter(activeTrk, base + 2, rRange(0.01f, 3.0f));  // Decay
+            ui->mEngine.setParameter(activeTrk, base + 2, rRange(0.01f, 2.0f));  // Decay
             ui->mEngine.setParameter(activeTrk, base + 3, rRange(0.0f, 1.0f));   // Sustain
-            ui->mEngine.setParameter(activeTrk, base + 4, rRange(0.01f, 4.0f));  // Release
+            ui->mEngine.setParameter(activeTrk, base + 4, rRange(0.01f, 2.0f));  // Release
             
             float ratioOptions[] = {0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 8.0f, 10.0f, 12.0f};
             float selRatio = ratioOptions[rand() % 10];
@@ -17688,13 +17867,13 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 102, rRange(0.1f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 2.0f));  // R
 
         // Filter ADSR
         ui->mEngine.setParameter(activeTrk, 114, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 115, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 116, rRange(0.0f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 2.0f));  // R
     }
     // Granular (3)
     else if (engineType == 3) {
@@ -17733,7 +17912,7 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
     }
     // Analogue Drum (6)
     else if (engineType == 6) {
-        for (int d = 0; d < 6; ++d) {
+        for (int d = 0; d < 8; ++d) {
             int base = 600 + d * 10;
             ui->mEngine.setParameter(activeTrk, base + 0, rRange(0.05f, 0.65f)); // Decay
             ui->mEngine.setParameter(activeTrk, base + 1, rRange(0.0f, 1.0f));   // Tone/Color
@@ -17753,13 +17932,13 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 102, rRange(0.1f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 2.0f));  // R
 
         // Filter ADSR
         ui->mEngine.setParameter(activeTrk, 114, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 115, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 116, rRange(0.0f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 117, rRange(0.01f, 2.0f));  // R
 
         // EQ Bands
         ui->mEngine.setParameter(activeTrk, 1530, rRange(0.2f, 0.8f)); // Low
@@ -17778,7 +17957,7 @@ void UIManager::randomizeParamsBtnEventCb(lv_event_t* e) {
         ui->mEngine.setParameter(activeTrk, 100, rRange(0.001f, 1.5f)); // A
         ui->mEngine.setParameter(activeTrk, 101, rRange(0.01f, 2.0f));  // D
         ui->mEngine.setParameter(activeTrk, 102, rRange(0.1f, 1.0f));   // S
-        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 3.0f));  // R
+        ui->mEngine.setParameter(activeTrk, 103, rRange(0.01f, 2.0f));  // R
 
         // LFO
         ui->mEngine.setParameter(activeTrk, 7, rRange(0.05f, 0.8f));    // LFO Rate
@@ -17919,18 +18098,30 @@ void UIManager::applyDefaultMidiMappings(int trackIdx, int engineType) {
         mSeqMidiFaderParam[trackIdx][1] = 455;  // Amp Decay (455)
         mSeqMidiFaderParam[trackIdx][2] = 456;  // Amp Sustain (456)
         mSeqMidiFaderParam[trackIdx][3] = 457;  // Amp Release (457)
-    } else if (engineType == 5 || engineType == 6) { // FM Drum & Analogue Drum
-        // Knobs 1-4: BD Decay, SD Decay, CH Decay, Cutoff
-        mSeqMidiKnobParam[trackIdx][0] = 201; // BD Decay
-        mSeqMidiKnobParam[trackIdx][1] = 211; // SD Decay
-        mSeqMidiKnobParam[trackIdx][2] = 221; // CH Decay
-        mSeqMidiKnobParam[trackIdx][3] = 1; // Cutoff
+    } else if (engineType == 5) { // FM Drum
+        // Knobs 1-4: BD Decay, SD Decay, CH Decay, OH Decay
+        mSeqMidiKnobParam[trackIdx][0] = 202; // BD Decay
+        mSeqMidiKnobParam[trackIdx][1] = 212; // SD Decay
+        mSeqMidiKnobParam[trackIdx][2] = 232; // CH Decay
+        mSeqMidiKnobParam[trackIdx][3] = 242; // OH Decay
 
-        // Faders 1-4: BD Tune, SD Tune, CH Tune, OH Tune
+        // Faders 1-4: BD Tune, SD Tune, CH Tune, CYM Decay
         mSeqMidiFaderParam[trackIdx][0] = 200; // BD Tune
         mSeqMidiFaderParam[trackIdx][1] = 210; // SD Tune
-        mSeqMidiFaderParam[trackIdx][2] = 220; // CH Tune
-        mSeqMidiFaderParam[trackIdx][3] = 240; // OH Tune
+        mSeqMidiFaderParam[trackIdx][2] = 230; // CH Tune
+        mSeqMidiFaderParam[trackIdx][3] = 252; // CYM Decay
+    } else if (engineType == 6) { // Analogue Drum
+        // Knobs 1-4: BD Decay, SD Decay, CH Decay, OH Decay
+        mSeqMidiKnobParam[trackIdx][0] = 600; // BD Decay
+        mSeqMidiKnobParam[trackIdx][1] = 610; // SD Decay
+        mSeqMidiKnobParam[trackIdx][2] = 630; // CH Decay
+        mSeqMidiKnobParam[trackIdx][3] = 640; // OH Decay
+
+        // Faders 1-4: BD Tune, SD Tune, RIM Decay, CYM Decay
+        mSeqMidiFaderParam[trackIdx][0] = 602; // BD Tune
+        mSeqMidiFaderParam[trackIdx][1] = 612; // SD Tune
+        mSeqMidiFaderParam[trackIdx][2] = 620; // RIM Decay
+        mSeqMidiFaderParam[trackIdx][3] = 650; // CYM Decay
     } else { // Fallback/General
         mSeqMidiKnobParam[trackIdx][0] = 1; // Cutoff
         mSeqMidiKnobParam[trackIdx][1] = 2; // Resonance
@@ -18262,43 +18453,71 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 
     std::thread updateThread([ui]() {
         ui->mUpdateInstallStatusStr = "Checking for updates...";
-        int ret = std::system("git fetch origin");
+
+        // 1. Detect current branch
+        std::string branch = "main";
+        auto branchLines = runCommandAndGetLines("git rev-parse --abbrev-ref HEAD");
+        if (!branchLines.empty() && !branchLines[0].empty() && branchLines[0] != "HEAD") {
+            branch = branchLines[0];
+        }
+
+        // 2. Fetch updates for this branch
+        ui->mUpdateInstallStatusStr = "Fetching " + branch + "...";
+        std::string fetchCmd = "git fetch origin " + branch;
+        int ret = std::system(fetchCmd.c_str());
         if (ret != 0) {
-            ui->mUpdateInstallStatusStr = "Network error: Could not check for updates.";
-            ui->mUpdateInstallFinished = true;
-            ui->mUpdateInstallActive = false;
-            return;
+            ret = std::system("git fetch origin");
+            if (ret != 0) {
+                ui->mUpdateInstallStatusStr = "Network error: Could not check for updates.";
+                ui->mUpdateInstallFinished = true;
+                ui->mUpdateInstallActive = false;
+                return;
+            }
         }
         ui->mUpdateInstallProgressPercent = 25;
         
-        // Compare local HEAD against origin/main
+        // 3. Compare local HEAD against origin/<branch>
         std::string localHash = "";
         std::string remoteHash = "";
         auto localLines = runCommandAndGetLines("git rev-parse HEAD");
         if (!localLines.empty()) localHash = localLines[0];
-        auto remoteLines = runCommandAndGetLines("git rev-parse origin/main");
+        auto remoteLines = runCommandAndGetLines(("git rev-parse origin/" + branch).c_str());
         if (!remoteLines.empty()) remoteHash = remoteLines[0];
 
         if (!localHash.empty() && !remoteHash.empty() && localHash == remoteHash) {
-            ui->mUpdateInstallStatusStr = "Loom is already up to date.";
+            ui->mUpdateInstallStatusStr = "Loom is already up to date (" + branch + ").";
             ui->mUpdateInstallProgressPercent = 100;
             ui->mUpdateInstallFinished = true;
             ui->mUpdateInstallActive = false;
             return;
         }
 
-        ui->mUpdateInstallStatusStr = "Pulling updates...";
-        ret = std::system("git pull origin main");
+        ui->mUpdateInstallStatusStr = "Pulling updates (" + branch + ")...";
+        std::string pullCmd = "git pull --ff-only origin " + branch;
+        ret = std::system(pullCmd.c_str());
         if (ret != 0) {
-            ui->mUpdateInstallStatusStr = "Git pull failed.";
-            ui->mUpdateInstallFinished = true;
-            ui->mUpdateInstallActive = false;
-            return;
+            pullCmd = "git pull origin " + branch;
+            ret = std::system(pullCmd.c_str());
+            if (ret != 0) {
+                ui->mUpdateInstallStatusStr = "Git pull failed for " + branch + ".";
+                ui->mUpdateInstallFinished = true;
+                ui->mUpdateInstallActive = false;
+                return;
+            }
         }
+
+        // 4. Locate repo root and build folder
+        std::string repoRoot = ".";
+        auto rootLines = runCommandAndGetLines("git rev-parse --show-toplevel");
+        if (!rootLines.empty() && !rootLines[0].empty()) {
+            repoRoot = rootLines[0];
+        }
+        std::string buildDir = repoRoot + "/build";
 
         ui->mUpdateInstallProgressPercent = 50;
         ui->mUpdateInstallStatusStr = "Generating build configuration...";
-        ret = std::system("cmake -S .. -B . -DCMAKE_BUILD_TYPE=Release");
+        std::string cmakeConfigCmd = "cmake -S \"" + repoRoot + "\" -B \"" + buildDir + "\" -DCMAKE_BUILD_TYPE=Release";
+        ret = std::system(cmakeConfigCmd.c_str());
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "CMake build generation failed.";
             ui->mUpdateInstallFinished = true;
@@ -18308,7 +18527,8 @@ void UIManager::settingsUpdateBtnEventCb(lv_event_t* e) {
 
         ui->mUpdateInstallProgressPercent = 70;
         ui->mUpdateInstallStatusStr = "Compiling system (takes ~2 mins)...";
-        ret = std::system("cmake --build . --config Release -j4");
+        std::string cmakeBuildCmd = "cmake --build \"" + buildDir + "\" --config Release -j4";
+        ret = std::system(cmakeBuildCmd.c_str());
         if (ret != 0) {
             ui->mUpdateInstallStatusStr = "Compilation failed.";
             ui->mUpdateInstallFinished = true;
@@ -19146,7 +19366,7 @@ void UIManager::populatePlayScreen() {
     lv_obj_set_style_text_font(mPlayScaleDd, &lv_font_montserrat_10, 0);
     lv_obj_add_event_cb(mPlayScaleDd, playScaleDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Center Group: Chord Mode & Octave (brought close to Scale group)
+    // Center Group: Chord Mode
     lv_obj_t* chordGrp = lv_obj_create(topBar);
     lv_obj_set_size(chordGrp, LV_SIZE_CONTENT, 40);
     lv_obj_set_style_bg_opa(chordGrp, LV_OPA_TRANSP, 0);
@@ -19169,8 +19389,18 @@ void UIManager::populatePlayScreen() {
     lv_obj_set_style_text_font(mPlayChordDd, &lv_font_montserrat_10, 0);
     lv_obj_add_event_cb(mPlayChordDd, playChordDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Octave - / +
-    lv_obj_t* octDownBtn = lv_button_create(chordGrp);
+    // Octave - / + Group (for single track modes)
+    mPlayTopOctaveGrp = lv_obj_create(topBar);
+    lv_obj_set_size(mPlayTopOctaveGrp, LV_SIZE_CONTENT, 40);
+    lv_obj_set_style_bg_opa(mPlayTopOctaveGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mPlayTopOctaveGrp, 0, 0);
+    lv_obj_set_style_pad_all(mPlayTopOctaveGrp, 0, 0);
+    lv_obj_set_layout(mPlayTopOctaveGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mPlayTopOctaveGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(mPlayTopOctaveGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(mPlayTopOctaveGrp, 6, 0);
+
+    lv_obj_t* octDownBtn = lv_button_create(mPlayTopOctaveGrp);
     lv_obj_set_size(octDownBtn, 32, 34);
     lv_obj_set_style_bg_color(octDownBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_user_data(octDownBtn, (void*)(intptr_t)-1);
@@ -19179,12 +19409,12 @@ void UIManager::populatePlayScreen() {
     lv_label_set_text(octDownLbl, "-");
     lv_obj_center(octDownLbl);
 
-    mPlayOctaveLbl = lv_label_create(chordGrp);
+    mPlayOctaveLbl = lv_label_create(mPlayTopOctaveGrp);
     lv_label_set_text_fmt(mPlayOctaveLbl, "OCT %s%d", (mPlayOctaveOffset >= 0 ? "+" : ""), mPlayOctaveOffset);
     lv_obj_set_style_text_font(mPlayOctaveLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mPlayOctaveLbl, trackColor, 0);
 
-    lv_obj_t* octUpBtn = lv_button_create(chordGrp);
+    lv_obj_t* octUpBtn = lv_button_create(mPlayTopOctaveGrp);
     lv_obj_set_size(octUpBtn, 32, 34);
     lv_obj_set_style_bg_color(octUpBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_user_data(octUpBtn, (void*)(intptr_t)1);
@@ -19193,19 +19423,19 @@ void UIManager::populatePlayScreen() {
     lv_label_set_text(octUpLbl, "+");
     lv_obj_center(octUpLbl);
 
-    // Right Group: X/Y Touch Modulation Assignment & Pad Grid Sizing
-    lv_obj_t* modGrp = lv_obj_create(topBar);
-    lv_obj_set_size(modGrp, LV_SIZE_CONTENT, 42);
-    lv_obj_set_style_bg_opa(modGrp, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(modGrp, 0, 0);
-    lv_obj_set_style_pad_all(modGrp, 0, 0);
-    lv_obj_set_layout(modGrp, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(modGrp, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(modGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(modGrp, 8, 0);
+    // Single-track X/Y Touch Modulation Assignment (for single track modes)
+    mPlayTopModGrp = lv_obj_create(topBar);
+    lv_obj_set_size(mPlayTopModGrp, LV_SIZE_CONTENT, 42);
+    lv_obj_set_style_bg_opa(mPlayTopModGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mPlayTopModGrp, 0, 0);
+    lv_obj_set_style_pad_all(mPlayTopModGrp, 0, 0);
+    lv_obj_set_layout(mPlayTopModGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mPlayTopModGrp, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(mPlayTopModGrp, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(mPlayTopModGrp, 8, 0);
 
     // X Intensity Knob (Attenuates X modulation depth)
-    lv_obj_t* xIntGrp = lv_obj_create(modGrp);
+    lv_obj_t* xIntGrp = lv_obj_create(mPlayTopModGrp);
     lv_obj_set_size(xIntGrp, LV_SIZE_CONTENT, 42);
     lv_obj_set_style_bg_opa(xIntGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(xIntGrp, 0, 0);
@@ -19257,7 +19487,7 @@ void UIManager::populatePlayScreen() {
     lv_obj_add_event_cb(mPlayModXIntensityArc, playModXIntensityArcEventCb, LV_EVENT_VALUE_CHANGED, this);
 
     // Y Intensity Knob (Attenuates Y modulation depth)
-    lv_obj_t* yIntGrp = lv_obj_create(modGrp);
+    lv_obj_t* yIntGrp = lv_obj_create(mPlayTopModGrp);
     lv_obj_set_size(yIntGrp, LV_SIZE_CONTENT, 42);
     lv_obj_set_style_bg_opa(yIntGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(yIntGrp, 0, 0);
@@ -19314,7 +19544,7 @@ void UIManager::populatePlayScreen() {
                              mPlayModYDest, mPlayModYIntensity, mPlayVoiceLinkPoly);
 
     // X MOD button: opens Loom's full Modulation Destination Picker Modal
-    mPlayModXDestBtn = lv_button_create(modGrp);
+    mPlayModXDestBtn = lv_button_create(mPlayTopModGrp);
     lv_obj_set_size(mPlayModXDestBtn, 100, 34);
     lv_obj_set_style_bg_color(mPlayModXDestBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(mPlayModXDestBtn, lv_color_hex(0x00FFFF), 0);
@@ -19335,7 +19565,7 @@ void UIManager::populatePlayScreen() {
     lv_obj_add_event_cb(mPlayModXDestBtn, xFreeCb, LV_EVENT_DELETE, xClickData);
 
     // Y MOD button: opens Loom's full Modulation Destination Picker Modal
-    mPlayModYDestBtn = lv_button_create(modGrp);
+    mPlayModYDestBtn = lv_button_create(mPlayTopModGrp);
     lv_obj_set_size(mPlayModYDestBtn, 100, 34);
     lv_obj_set_style_bg_color(mPlayModYDestBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(mPlayModYDestBtn, lv_color_hex(0xFF4081), 0);
@@ -19356,7 +19586,7 @@ void UIManager::populatePlayScreen() {
     lv_obj_add_event_cb(mPlayModYDestBtn, yFreeCb, LV_EVENT_DELETE, yClickData);
 
     // Voice Link Mode Toggle (POLY per-voice modulation vs GLITCH parameter-fighting)
-    mPlayVoiceLinkBtn = lv_button_create(modGrp);
+    mPlayVoiceLinkBtn = lv_button_create(topBar);
     lv_obj_set_size(mPlayVoiceLinkBtn, 84, 34);
     lv_obj_set_style_bg_color(mPlayVoiceLinkBtn, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(mPlayVoiceLinkBtn, mPlayVoiceLinkPoly ? lv_color_hex(0x00FFFF) : lv_color_hex(0xFF9800), 0);
@@ -19369,9 +19599,9 @@ void UIManager::populatePlayScreen() {
     lv_obj_center(mPlayVoiceLinkLbl);
     lv_obj_add_event_cb(mPlayVoiceLinkBtn, playVoiceLinkBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // Toggle Pad Density (16 Large vs 24 Squares vs 40 Dense)
-    mPlayPadCountBtn = lv_button_create(modGrp);
-    lv_obj_set_size(mPlayPadCountBtn, 44, 34);
+    // Toggle Pad Density (16 Large vs 24 Squares vs 40 Dense vs 20/20 Split)
+    mPlayPadCountBtn = lv_button_create(topBar);
+    lv_obj_set_size(mPlayPadCountBtn, 56, 34);
     lv_obj_set_style_bg_color(mPlayPadCountBtn, trackColor, 0);
     lv_obj_set_style_radius(mPlayPadCountBtn, 6, 0);
     lv_obj_t* padCountLbl = lv_label_create(mPlayPadCountBtn);
@@ -19385,12 +19615,20 @@ void UIManager::populatePlayScreen() {
         numSlices = std::max(1, std::min(16, numSlices));
         countText = std::to_string(numSlices);
     } else {
-        countText = (mPlayPadCount == 16) ? "16" : ((mPlayPadCount == 24) ? "24" : "40");
+        if (mPlayPadCount == PLAY_PADS_16) countText = "16";
+        else if (mPlayPadCount == PLAY_PADS_24) countText = "24";
+        else if (mPlayPadCount == PLAY_PADS_40) countText = "40";
+        else countText = "20/20";
     }
     lv_label_set_text(padCountLbl, countText.c_str());
     lv_obj_set_style_text_font(padCountLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(padCountLbl);
     lv_obj_add_event_cb(mPlayPadCountBtn, playPadCountToggleEventCb, LV_EVENT_CLICKED, this);
+
+    if (mPlayPadCount == PLAY_PADS_20_20) {
+        lv_obj_add_flag(mPlayTopOctaveGrp, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(mPlayTopModGrp, LV_OBJ_FLAG_HIDDEN);
+    }
 
     // -------------------------------------------------------------------------
     // 2. Maximized Pad Performance Grid Area (~720px height remaining)
@@ -19409,16 +19647,375 @@ void UIManager::rebuildPlayPadGrid() {
     if (!mPlayPadGrid) return;
     lv_obj_clean(mPlayPadGrid);
 
+    // Available center area inside mPlayPadGrid: ~1070px width x ~710px height
+    const int availW = 1060;
+    const int availH = 700;
+
+    // Build Scale table intervals
+    static const int kPlayScaleIntervals[21][12] = {
+        {0,1,2,3,4,5,6,7,8,9,10,11},   // Chromatic
+        {0,2,4,5,7,9,11,-1,-1,-1,-1,-1}, // Major
+        {0,2,3,5,7,8,10,-1,-1,-1,-1,-1}, // Natural Minor
+        {0,2,3,5,7,8,11,-1,-1,-1,-1,-1}, // Harmonic Minor
+        {0,2,3,5,7,9,11,-1,-1,-1,-1,-1}, // Melodic Minor
+        {0,2,3,5,7,9,10,-1,-1,-1,-1,-1}, // Dorian
+        {0,1,3,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian
+        {0,2,4,6,7,9,11,-1,-1,-1,-1,-1}, // Lydian
+        {0,2,4,5,7,9,10,-1,-1,-1,-1,-1}, // Mixolydian
+        {0,1,3,5,6,8,10,-1,-1,-1,-1,-1}, // Locrian
+        {0,1,4,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian Dom
+        {0,2,4,6,7,9,10,-1,-1,-1,-1,-1}, // Lydian Dom
+        {0,2,4,7,9,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Maj
+        {0,3,5,7,10,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Min
+        {0,3,5,6,7,10,-1,-1,-1,-1,-1,-1},// Blues
+        {0,2,3,4,7,9,-1,-1,-1,-1,-1,-1}, // Blues Maj
+        {0,2,4,6,8,10,-1,-1,-1,-1,-1,-1},// Whole Tone
+        {0,2,3,7,8,-1,-1,-1,-1,-1,-1,-1},// Hirajoshi
+        {0,1,5,7,10,-1,-1,-1,-1,-1,-1,-1},// In-Sen
+        {0,2,5,7,9,-1,-1,-1,-1,-1,-1,-1},// Yo
+        {0,1,5,6,10,-1,-1,-1,-1,-1,-1,-1} // Iwato
+    };
+
+    std::vector<int> intervals;
+    int scaleIdx = (mPlaySelectedScaleIdx >= 0 && mPlaySelectedScaleIdx < 21) ? mPlaySelectedScaleIdx : 1;
+    const int* scaleRow = kPlayScaleIntervals[scaleIdx];
+    for (int i = 0; i < 12 && scaleRow[i] >= 0; ++i) intervals.push_back(scaleRow[i]);
+    if (intervals.empty()) intervals = {0,2,4,5,7,9,11};
+
+    // -------------------------------------------------------------
+    // 20/20 Dual-Track Split Performance Grid
+    // -------------------------------------------------------------
+    if (mPlayPadCount == PLAY_PADS_20_20) {
+        int leftTrack = (mPlaySplitLeftTrack >= 0 && mPlaySplitLeftTrack < 8) ? mPlaySplitLeftTrack : 0;
+        int rightTrack = (mPlaySplitRightTrack >= 0 && mPlaySplitRightTrack < 8) ? mPlaySplitRightTrack : 1;
+        lv_color_t trackColorLeft = getTrackColor(leftTrack);
+        lv_color_t trackColorRight = getTrackColor(rightTrack);
+
+        // Build dynamic track options list
+        std::string trkOptions;
+        static const char* kEngNames[] = { "Sub", "FM", "Sampler", "Wave", "DrumFM", "DrumAna" };
+        for (int t = 0; t < 8; ++t) {
+            if (t > 0) trkOptions += "\n";
+            trkOptions += "T" + std::to_string(t + 1) + ": ";
+            int eng = mEngine.getTracks()[t].engineType;
+            if (eng >= 0 && eng < 6) trkOptions += kEngNames[eng];
+            else trkOptions += "Synth";
+        }
+
+        const int bankW = 502;
+        const int dividerGap = 26;
+        const int totalW = bankW * 2 + dividerGap; // 1030
+        const int startOffsetX = std::max(0, (availW - totalW) / 2); // 15
+        const int headerH = 36;
+        const int headerGap = 10;
+        const int padW = 118;
+        const int padH = 114;
+        const int gapX = 10;
+        const int gapY = 10;
+        const int totalPadH = 5 * padH + 4 * gapY; // 610
+        const int totalBankH = headerH + headerGap + totalPadH; // 656
+        const int startOffsetY = std::max(0, (availH - totalBankH) / 2); // 22
+
+        // Lambda to build a bank's top header banner
+        auto createBankHeader = [this, &trkOptions](int startX, int startY, int bW, int hH,
+                                                    int bank, int trackIdx, lv_color_t themeColor,
+                                                    int octVal, int modXDest, float modXInt, int modYDest, float modYInt,
+                                                    lv_obj_t*& outTrackDd, lv_obj_t*& outOctLbl,
+                                                    lv_obj_t*& outModXBtn, lv_obj_t*& outModXLbl, lv_obj_t*& outModXArc,
+                                                    lv_obj_t*& outModYBtn, lv_obj_t*& outModYLbl, lv_obj_t*& outModYArc) {
+            lv_obj_t* header = lv_obj_create(mPlayPadGrid);
+            lv_obj_set_pos(header, startX, startY);
+            lv_obj_set_size(header, bW, hH);
+            lv_obj_set_style_bg_color(header, lv_color_hex(0x1A1A1A), 0);
+            lv_obj_set_style_border_color(header, themeColor, 0);
+            lv_obj_set_style_border_width(header, 1, 0);
+            lv_obj_set_style_radius(header, 8, 0);
+            lv_obj_set_style_pad_hor(header, 6, 0);
+            lv_obj_set_style_pad_ver(header, 2, 0);
+            lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_set_layout(header, LV_LAYOUT_FLEX);
+            lv_obj_set_flex_flow(header, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(header, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+            // 1. Track dropdown
+            outTrackDd = lv_dropdown_create(header);
+            lv_dropdown_set_options(outTrackDd, trkOptions.c_str());
+            lv_dropdown_set_selected(outTrackDd, trackIdx);
+            lv_obj_set_size(outTrackDd, 110, 28);
+            lv_obj_set_style_text_font(outTrackDd, &lv_font_montserrat_10, 0);
+            lv_obj_add_event_cb(outTrackDd, (bank == 1) ? playSplitLeftTrackDdEventCb : playSplitRightTrackDdEventCb,
+                                LV_EVENT_VALUE_CHANGED, this);
+
+            // 2. Octave group: [-] [OCT 0] [+]
+            lv_obj_t* octGrp = lv_obj_create(header);
+            lv_obj_set_size(octGrp, LV_SIZE_CONTENT, 30);
+            lv_obj_set_style_bg_opa(octGrp, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(octGrp, 0, 0);
+            lv_obj_set_style_pad_all(octGrp, 0, 0);
+            lv_obj_set_layout(octGrp, LV_LAYOUT_FLEX);
+            lv_obj_set_flex_flow(octGrp, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(octGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+            lv_obj_set_style_pad_column(octGrp, 3, 0);
+
+            lv_obj_t* octDownBtn = lv_button_create(octGrp);
+            lv_obj_set_size(octDownBtn, 24, 26);
+            lv_obj_set_style_bg_color(octDownBtn, lv_color_hex(0x2D2D2D), 0);
+            lv_obj_set_user_data(octDownBtn, (void*)(intptr_t)-1);
+            lv_obj_add_event_cb(octDownBtn, (bank == 1) ? playSplitLeftOctBtnEventCb : playSplitRightOctBtnEventCb,
+                                LV_EVENT_CLICKED, this);
+            lv_obj_t* downLbl = lv_label_create(octDownBtn);
+            lv_label_set_text(downLbl, "-");
+            lv_obj_set_style_text_font(downLbl, &lv_font_montserrat_10, 0);
+            lv_obj_center(downLbl);
+
+            outOctLbl = lv_label_create(octGrp);
+            lv_label_set_text_fmt(outOctLbl, "OCT %s%d", (octVal >= 0 ? "+" : ""), octVal);
+            lv_obj_set_style_text_font(outOctLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(outOctLbl, themeColor, 0);
+
+            lv_obj_t* octUpBtn = lv_button_create(octGrp);
+            lv_obj_set_size(octUpBtn, 24, 26);
+            lv_obj_set_style_bg_color(octUpBtn, lv_color_hex(0x2D2D2D), 0);
+            lv_obj_set_user_data(octUpBtn, (void*)(intptr_t)1);
+            lv_obj_add_event_cb(octUpBtn, (bank == 1) ? playSplitLeftOctBtnEventCb : playSplitRightOctBtnEventCb,
+                                LV_EVENT_CLICKED, this);
+            lv_obj_t* upLbl = lv_label_create(octUpBtn);
+            lv_label_set_text(upLbl, "+");
+            lv_obj_set_style_text_font(upLbl, &lv_font_montserrat_10, 0);
+            lv_obj_center(upLbl);
+
+            // 3. X Mod group: [X: Dest] + Mini Arc
+            lv_obj_t* xGrp = lv_obj_create(header);
+            lv_obj_set_size(xGrp, LV_SIZE_CONTENT, 30);
+            lv_obj_set_style_bg_opa(xGrp, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(xGrp, 0, 0);
+            lv_obj_set_style_pad_all(xGrp, 0, 0);
+            lv_obj_set_layout(xGrp, LV_LAYOUT_FLEX);
+            lv_obj_set_flex_flow(xGrp, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(xGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+            lv_obj_set_style_pad_column(xGrp, 4, 0);
+
+            outModXBtn = lv_button_create(xGrp);
+            lv_obj_set_size(outModXBtn, 76, 26);
+            lv_obj_set_style_bg_color(outModXBtn, lv_color_hex(0x222222), 0);
+            lv_obj_set_style_border_color(outModXBtn, lv_color_hex(0x00FFFF), 0);
+            lv_obj_set_style_border_width(outModXBtn, 1, 0);
+            lv_obj_set_style_radius(outModXBtn, 5, 0);
+            outModXLbl = lv_label_create(outModXBtn);
+            std::string xName = getCompactDestName(trackIdx, modXDest, &mEngine);
+            lv_label_set_text_fmt(outModXLbl, "X: %s", xName.c_str());
+            lv_obj_set_style_text_font(outModXLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(outModXLbl, lv_color_hex(0x00FFFF), 0);
+            lv_obj_center(outModXLbl);
+            int xCallerType = (bank == 1) ? 4 : 6;
+            ModDestModalData* xData = new ModDestModalData{this, xCallerType, 0, 0};
+            lv_obj_add_event_cb(outModXBtn, openModDestModalEventCb, LV_EVENT_CLICKED, xData);
+            lv_obj_add_event_cb(outModXBtn, [](lv_event_t* e){ delete (ModDestModalData*)lv_event_get_user_data(e); },
+                                LV_EVENT_DELETE, xData);
+
+            outModXArc = lv_arc_create(xGrp);
+            lv_obj_set_size(outModXArc, 26, 26);
+            lv_arc_set_range(outModXArc, 0, 100);
+            lv_arc_set_value(outModXArc, (int)(modXInt * 100.0f));
+            lv_obj_set_style_arc_color(outModXArc, lv_color_hex(0x00FFFF), LV_PART_INDICATOR);
+            lv_obj_set_style_arc_width(outModXArc, 2, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_width(outModXArc, 2, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(outModXArc, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_style_border_width(outModXArc, 0, LV_PART_KNOB);
+            lv_obj_remove_flag(outModXArc, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_t* xValLbl = lv_label_create(outModXArc);
+            lv_label_set_text_fmt(xValLbl, "%d", (int)(modXInt * 100.0f));
+            lv_obj_set_style_text_font(xValLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(xValLbl, lv_color_hex(0xCCCCCC), 0);
+            lv_obj_center(xValLbl);
+            lv_obj_set_user_data(outModXArc, xValLbl);
+            lv_obj_add_event_cb(outModXArc, (bank == 1) ? playSplitLeftModXArcEventCb : playSplitRightModXArcEventCb,
+                                LV_EVENT_VALUE_CHANGED, this);
+
+            // 4. Y Mod group: [Y: Dest] + Mini Arc
+            lv_obj_t* yGrp = lv_obj_create(header);
+            lv_obj_set_size(yGrp, LV_SIZE_CONTENT, 30);
+            lv_obj_set_style_bg_opa(yGrp, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(yGrp, 0, 0);
+            lv_obj_set_style_pad_all(yGrp, 0, 0);
+            lv_obj_set_layout(yGrp, LV_LAYOUT_FLEX);
+            lv_obj_set_flex_flow(yGrp, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(yGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+            lv_obj_set_style_pad_column(yGrp, 4, 0);
+
+            outModYBtn = lv_button_create(yGrp);
+            lv_obj_set_size(outModYBtn, 76, 26);
+            lv_obj_set_style_bg_color(outModYBtn, lv_color_hex(0x222222), 0);
+            lv_obj_set_style_border_color(outModYBtn, lv_color_hex(0xFF4081), 0);
+            lv_obj_set_style_border_width(outModYBtn, 1, 0);
+            lv_obj_set_style_radius(outModYBtn, 5, 0);
+            outModYLbl = lv_label_create(outModYBtn);
+            std::string yName = getCompactDestName(trackIdx, modYDest, &mEngine);
+            lv_label_set_text_fmt(outModYLbl, "Y: %s", yName.c_str());
+            lv_obj_set_style_text_font(outModYLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(outModYLbl, lv_color_hex(0xFF4081), 0);
+            lv_obj_center(outModYLbl);
+            int yCallerType = (bank == 1) ? 5 : 7;
+            ModDestModalData* yData = new ModDestModalData{this, yCallerType, 0, 0};
+            lv_obj_add_event_cb(outModYBtn, openModDestModalEventCb, LV_EVENT_CLICKED, yData);
+            lv_obj_add_event_cb(outModYBtn, [](lv_event_t* e){ delete (ModDestModalData*)lv_event_get_user_data(e); },
+                                LV_EVENT_DELETE, yData);
+
+            outModYArc = lv_arc_create(yGrp);
+            lv_obj_set_size(outModYArc, 26, 26);
+            lv_arc_set_range(outModYArc, 0, 100);
+            lv_arc_set_value(outModYArc, (int)(modYInt * 100.0f));
+            lv_obj_set_style_arc_color(outModYArc, lv_color_hex(0xFF4081), LV_PART_INDICATOR);
+            lv_obj_set_style_arc_width(outModYArc, 2, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_width(outModYArc, 2, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(outModYArc, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_style_border_width(outModYArc, 0, LV_PART_KNOB);
+            lv_obj_remove_flag(outModYArc, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_t* yValLbl = lv_label_create(outModYArc);
+            lv_label_set_text_fmt(yValLbl, "%d", (int)(modYInt * 100.0f));
+            lv_obj_set_style_text_font(yValLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(yValLbl, lv_color_hex(0xCCCCCC), 0);
+            lv_obj_center(yValLbl);
+            lv_obj_set_user_data(outModYArc, yValLbl);
+            lv_obj_add_event_cb(outModYArc, (bank == 1) ? playSplitLeftModYArcEventCb : playSplitRightModYArcEventCb,
+                                LV_EVENT_VALUE_CHANGED, this);
+        };
+
+        // Create Left Bank Header
+        createBankHeader(startOffsetX, startOffsetY, bankW, headerH,
+                         1, leftTrack, trackColorLeft,
+                         mPlaySplitLeftOctave, mPlaySplitLeftModXDest, mPlaySplitLeftModXInt,
+                         mPlaySplitLeftModYDest, mPlaySplitLeftModYInt,
+                         mPlaySplitLeftTrackDd, mPlaySplitLeftOctLbl,
+                         mPlaySplitLeftModXBtn, mPlaySplitLeftModXLbl, mPlaySplitLeftModXArc,
+                         mPlaySplitLeftModYBtn, mPlaySplitLeftModYLbl, mPlaySplitLeftModYArc);
+
+        // Center Divider
+        lv_obj_t* divider = lv_obj_create(mPlayPadGrid);
+        lv_obj_set_pos(divider, startOffsetX + bankW + (dividerGap - 2) / 2, startOffsetY + 2);
+        lv_obj_set_size(divider, 2, totalBankH - 4);
+        lv_obj_set_style_bg_color(divider, lv_color_hex(0x333333), 0);
+        lv_obj_set_style_border_width(divider, 0, 0);
+
+        // Create Right Bank Header
+        createBankHeader(startOffsetX + bankW + dividerGap, startOffsetY, bankW, headerH,
+                         2, rightTrack, trackColorRight,
+                         mPlaySplitRightOctave, mPlaySplitRightModXDest, mPlaySplitRightModXInt,
+                         mPlaySplitRightModYDest, mPlaySplitRightModYInt,
+                         mPlaySplitRightTrackDd, mPlaySplitRightOctLbl,
+                         mPlaySplitRightModXBtn, mPlaySplitRightModXLbl, mPlaySplitRightModXArc,
+                         mPlaySplitRightModYBtn, mPlaySplitRightModYLbl, mPlaySplitRightModYArc);
+
+        // Build 20 Pads for each Bank
+        int padStartY = startOffsetY + headerH + headerGap;
+        for (int b = 1; b <= 2; ++b) {
+            int bTrack = (b == 1) ? leftTrack : rightTrack;
+            lv_color_t bColor = (b == 1) ? trackColorLeft : trackColorRight;
+            int bOct = (b == 1) ? mPlaySplitLeftOctave : mPlaySplitRightOctave;
+            int bBaseNote = 48 + mPlaySelectedRoot + bOct * 12;
+            int bStartX = (b == 1) ? startOffsetX : (startOffsetX + bankW + dividerGap);
+            int bEng = mEngine.getTracks()[bTrack].engineType;
+            bool bIsDrum = (bEng == 5 || bEng == 6);
+            bool bIsChops = (bEng == 2 && mEngine.getTracks()[bTrack].samplerEngine.getPlayMode() >= 3);
+
+            for (int i = 0; i < 20; ++i) {
+                int r = 4 - (i / 4); // 0 to 4 bottom-to-top
+                int c = i % 4;
+                int x = bStartX + c * (padW + gapX);
+                int y = padStartY + r * (padH + gapY);
+
+                int note = 60;
+                if (bIsDrum) {
+                    note = 60 + (i % 8);
+                } else if (bIsChops) {
+                    note = 60 + i;
+                } else {
+                    int octShift = i / (int)intervals.size();
+                    int degIdx = i % (int)intervals.size();
+                    note = bBaseNote + octShift * 12 + intervals[degIdx];
+                    if (note < 0) note = 0;
+                    if (note > 127) note = 127;
+                }
+
+                bool isRoot = (!bIsDrum && !bIsChops && ((note % 12) == mPlaySelectedRoot));
+
+                lv_obj_t* pad = lv_obj_create(mPlayPadGrid);
+                lv_obj_set_size(pad, padW, padH);
+                lv_obj_set_pos(pad, x, y);
+                lv_obj_set_style_bg_color(pad, isRoot ? bColor : lv_color_hex(0x1F1F1F), 0);
+                lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
+                lv_obj_set_style_border_color(pad, isRoot ? bColor : lv_color_hex(0x333333), 0);
+                lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
+                lv_obj_set_style_radius(pad, 10, 0);
+                lv_obj_remove_flag(pad, LV_OBJ_FLAG_SCROLLABLE);
+                lv_obj_add_flag(pad, LV_OBJ_FLAG_CLICKABLE);
+
+                // User data encodes bank (1 or 2), track (0..7), note (0..127):
+                int packed = (b << 10) | ((bTrack & 0x07) << 7) | (note & 0x7F);
+                lv_obj_set_user_data(pad, (void*)(intptr_t)packed);
+
+                // Crosshair lines
+                lv_obj_t* xLine = lv_obj_create(pad);
+                lv_obj_set_size(xLine, 1, padH - 20);
+                lv_obj_center(xLine);
+                lv_obj_set_style_bg_color(xLine, lv_color_hex(0x333333), 0);
+                lv_obj_set_style_border_width(xLine, 0, 0);
+                lv_obj_remove_flag(xLine, LV_OBJ_FLAG_CLICKABLE);
+
+                lv_obj_t* yLine = lv_obj_create(pad);
+                lv_obj_set_size(yLine, padW - 20, 1);
+                lv_obj_center(yLine);
+                lv_obj_set_style_bg_color(yLine, lv_color_hex(0x333333), 0);
+                lv_obj_set_style_border_width(yLine, 0, 0);
+                lv_obj_remove_flag(yLine, LV_OBJ_FLAG_CLICKABLE);
+
+                // Pad text
+                lv_obj_t* noteLbl = lv_label_create(pad);
+                if (bIsDrum) {
+                    if (i < 8) {
+                        const char* dName = (bEng == 5) ? kFmDrumNames[i] : kAnalogDrumNames[i];
+                        lv_label_set_text(noteLbl, dName);
+                    } else {
+                        lv_label_set_text_fmt(noteLbl, "Drm %d", i + 1);
+                    }
+                    lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_12, 0);
+                    lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xFFFFFF), 0);
+                } else if (bIsChops) {
+                    lv_label_set_text_fmt(noteLbl, "SmpSlc %d", i + 1);
+                    lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_12, 0);
+                    lv_obj_set_style_text_color(noteLbl, lv_color_hex(0xFFFFFF), 0);
+                } else {
+                    int noteName = note % 12;
+                    int octave = (note / 12) - 1;
+                    lv_label_set_text_fmt(noteLbl, "%s%d", kNoteNames[noteName], octave);
+                    lv_obj_set_style_text_font(noteLbl, &lv_font_montserrat_12, 0);
+                    lv_obj_set_style_text_color(noteLbl, isRoot ? lv_color_hex(0xFFFFFF) : lv_color_hex(0xCCCCCC), 0);
+                }
+                lv_obj_center(noteLbl);
+
+                // Pad index top-left
+                lv_obj_t* numLbl = lv_label_create(pad);
+                lv_label_set_text_fmt(numLbl, "%d", i + 1);
+                lv_obj_set_style_text_font(numLbl, &lv_font_montserrat_10, 0);
+                lv_obj_set_style_text_color(numLbl, lv_color_hex(0x666666), 0);
+                lv_obj_align(numLbl, LV_ALIGN_TOP_LEFT, 5, 5);
+
+                // Register touch callbacks
+                lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSED, this);
+                lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESSING, this);
+                lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_RELEASED, this);
+                lv_obj_add_event_cb(pad, playPadTouchEventCb, LV_EVENT_PRESS_LOST, this);
+            }
+        }
+        return;
+    }
+
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
     bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
     bool isFmDrum = (engineType == 5);
     bool isAnalogDrum = (engineType == 6);
-
-    // Available center area inside mPlayPadGrid: ~1070px width x ~710px height
-    const int availW = 1060;
-    const int availH = 700;
 
     if (isFmDrum || isAnalogDrum) {
         // 8 drum pads in the middle two rows (rows 1 & 2 of the 16-pad layout)
@@ -19597,36 +20194,7 @@ void UIManager::rebuildPlayPadGrid() {
     int startOffsetX = std::max(0, (availW - totalGridW) / 2);
     int startOffsetY = std::max(0, (availH - totalGridH) / 2);
 
-    // Build Scale table intervals
-    static const int kPlayScaleIntervals[21][12] = {
-        {0,1,2,3,4,5,6,7,8,9,10,11},   // Chromatic
-        {0,2,4,5,7,9,11,-1,-1,-1,-1,-1}, // Major
-        {0,2,3,5,7,8,10,-1,-1,-1,-1,-1}, // Natural Minor
-        {0,2,3,5,7,8,11,-1,-1,-1,-1,-1}, // Harmonic Minor
-        {0,2,3,5,7,9,11,-1,-1,-1,-1,-1}, // Melodic Minor
-        {0,2,3,5,7,9,10,-1,-1,-1,-1,-1}, // Dorian
-        {0,1,3,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian
-        {0,2,4,6,7,9,11,-1,-1,-1,-1,-1}, // Lydian
-        {0,2,4,5,7,9,10,-1,-1,-1,-1,-1}, // Mixolydian
-        {0,1,3,5,6,8,10,-1,-1,-1,-1,-1}, // Locrian
-        {0,1,4,5,7,8,10,-1,-1,-1,-1,-1}, // Phrygian Dom
-        {0,2,4,6,7,9,10,-1,-1,-1,-1,-1}, // Lydian Dom
-        {0,2,4,7,9,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Maj
-        {0,3,5,7,10,-1,-1,-1,-1,-1,-1,-1},// Pentatonic Min
-        {0,3,5,6,7,10,-1,-1,-1,-1,-1,-1},// Blues
-        {0,2,3,4,7,9,-1,-1,-1,-1,-1,-1}, // Blues Maj
-        {0,2,4,6,8,10,-1,-1,-1,-1,-1,-1},// Whole Tone
-        {0,2,3,7,8,-1,-1,-1,-1,-1,-1,-1},// Hirajoshi
-        {0,1,5,7,10,-1,-1,-1,-1,-1,-1,-1},// In-Sen
-        {0,2,5,7,9,-1,-1,-1,-1,-1,-1,-1},// Yo
-        {0,1,5,6,10,-1,-1,-1,-1,-1,-1,-1} // Iwato
-    };
 
-    std::vector<int> intervals;
-    int scaleIdx = (mPlaySelectedScaleIdx >= 0 && mPlaySelectedScaleIdx < 21) ? mPlaySelectedScaleIdx : 1;
-    const int* row = kPlayScaleIntervals[scaleIdx];
-    for (int i = 0; i < 12 && row[i] >= 0; ++i) intervals.push_back(row[i]);
-    if (intervals.empty()) intervals = {0,2,4,5,7,9,11};
 
     int baseNote = 48 + mPlaySelectedRoot + mPlayOctaveOffset * 12;
 
@@ -19701,40 +20269,44 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* pad = (lv_obj_t*)lv_event_get_target(e);
     lv_event_code_t code = lv_event_get_code(e);
-    int note = (int)(intptr_t)lv_obj_get_user_data(pad);
+    int packed = (int)(intptr_t)lv_obj_get_user_data(pad);
+    int note = packed & 0x7F;
+    int padTrack = (packed >> 7) & 0x07;
+    int bank = (packed >> 10) & 0x03;
+    if (bank == 0) padTrack = ui->mActiveTrack;
 
-    int engType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
-    bool isSamplerChops = (engType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    int engType = ui->mEngine.getTracks()[padTrack].engineType;
+    bool isSamplerChops = (engType == 2 && ui->mEngine.getTracks()[padTrack].samplerEngine.getPlayMode() >= 3);
     bool isDrum = (engType == 5 || engType == 6 || isSamplerChops);
 
     if (code == LV_EVENT_PRESSED) {
-        lv_obj_set_style_bg_color(pad, ui->getTrackColor(ui->mActiveTrack), 0);
+        lv_obj_set_style_bg_color(pad, ui->getTrackColor(padTrack), 0);
         lv_obj_set_style_bg_opa(pad, LV_OPA_80, 0);
         lv_obj_set_style_border_color(pad, lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_border_width(pad, 3, 0);
 
         // Trigger note or chord
         if (isDrum || ui->mPlayChordType == 0) {
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 110, note);
+            ui->mEngine.triggerNote(padTrack, note, 110, note);
         } else if (ui->mPlayChordType == 1) { // Triad
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(padTrack, note, 105, note);
+            ui->mEngine.triggerNote(padTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 7, 100, note);
         } else if (ui->mPlayChordType == 2) { // 7th
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95, note);
+            ui->mEngine.triggerNote(padTrack, note, 105, note);
+            ui->mEngine.triggerNote(padTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 10, 95, note);
         } else if (ui->mPlayChordType == 3) { // 9th
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 4, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 10, 95, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 14, 90, note);
+            ui->mEngine.triggerNote(padTrack, note, 105, note);
+            ui->mEngine.triggerNote(padTrack, note + 4, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 10, 95, note);
+            ui->mEngine.triggerNote(padTrack, note + 14, 90, note);
         } else if (ui->mPlayChordType == 4) { // Sus4
-            ui->mEngine.triggerNote(ui->mActiveTrack, note, 105, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 5, 100, note);
-            ui->mEngine.triggerNote(ui->mActiveTrack, note + 7, 100, note);
+            ui->mEngine.triggerNote(padTrack, note, 105, note);
+            ui->mEngine.triggerNote(padTrack, note + 5, 100, note);
+            ui->mEngine.triggerNote(padTrack, note + 7, 100, note);
         }
     }
 
@@ -19752,10 +20324,33 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             normX = std::max(0.0f, std::min(1.0f, normX));
             normY = std::max(0.0f, std::min(1.0f, normY));
 
+            int modXTrack = ui->mPlayModXTrack;
+            int modXDest  = ui->mPlayModXDest;
+            float modXInt = ui->mPlayModXIntensity;
+            int modYTrack = ui->mPlayModYTrack;
+            int modYDest  = ui->mPlayModYDest;
+            float modYInt = ui->mPlayModYIntensity;
+
+            if (bank == 1) { // Split Left
+                modXTrack = ui->mPlaySplitLeftModXTrack;
+                modXDest  = ui->mPlaySplitLeftModXDest;
+                modXInt   = ui->mPlaySplitLeftModXInt;
+                modYTrack = ui->mPlaySplitLeftModYTrack;
+                modYDest  = ui->mPlaySplitLeftModYDest;
+                modYInt   = ui->mPlaySplitLeftModYInt;
+            } else if (bank == 2) { // Split Right
+                modXTrack = ui->mPlaySplitRightModXTrack;
+                modXDest  = ui->mPlaySplitRightModXDest;
+                modXInt   = ui->mPlaySplitRightModXInt;
+                modYTrack = ui->mPlaySplitRightModYTrack;
+                modYDest  = ui->mPlaySplitRightModYDest;
+                modYInt   = ui->mPlaySplitRightModYInt;
+            }
+
             bool isSynthTrack = (engType != 5 && engType != 6);
             if (ui->mPlayVoiceLinkPoly && isSynthTrack) {
                 // Per-voice polyphonic modulation!
-                ui->mEngine.setVoicePadMod(ui->mActiveTrack, note, normX, normY);
+                ui->mEngine.setVoicePadMod(padTrack, note, normX, normY);
 
                 auto isVoiceParam = [](int eng, int pid) -> bool {
                     if (pid == 1 || pid == 2) return true; // Common Cutoff / Resonance
@@ -19779,61 +20374,60 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
                     return false;
                 };
 
-                // If destination is on another track, or is NOT handled per-voice (e.g. Volume, Pan, Sends, Global FX), route via setParameter
-                if (ui->mPlayModXDest >= 0) {
-                    int targetXTrack = (ui->mPlayModXTrack >= 0 && ui->mPlayModXTrack < 8) ? ui->mPlayModXTrack : ui->mActiveTrack;
+                // Route to target track / parameter
+                if (modXDest >= 0) {
+                    int targetXTrack = (modXTrack >= 0 && modXTrack < 8) ? modXTrack : padTrack;
                     int targetXEng = ui->mEngine.getTracks()[targetXTrack].engineType;
-                    if (targetXTrack != ui->mActiveTrack || !isVoiceParam(targetXEng, ui->mPlayModXDest)) {
-                        ui->mEngine.setParameter(targetXTrack, ui->mPlayModXDest, normX * ui->mPlayModXIntensity);
+                    if (targetXTrack != padTrack || !isVoiceParam(targetXEng, modXDest)) {
+                        ui->mEngine.setParameter(targetXTrack, modXDest, normX * modXInt);
                     }
                 }
-                if (ui->mPlayModYDest >= 0) {
-                    int targetYTrack = (ui->mPlayModYTrack >= 0 && ui->mPlayModYTrack < 8) ? ui->mPlayModYTrack : ui->mActiveTrack;
+                if (modYDest >= 0) {
+                    int targetYTrack = (modYTrack >= 0 && modYTrack < 8) ? modYTrack : padTrack;
                     int targetYEng = ui->mEngine.getTracks()[targetYTrack].engineType;
-                    if (targetYTrack != ui->mActiveTrack || !isVoiceParam(targetYEng, ui->mPlayModYDest)) {
-                        ui->mEngine.setParameter(targetYTrack, ui->mPlayModYDest, normY * ui->mPlayModYIntensity);
+                    if (targetYTrack != padTrack || !isVoiceParam(targetYEng, modYDest)) {
+                        ui->mEngine.setParameter(targetYTrack, modYDest, normY * modYInt);
                     }
                 }
             } else {
                 // Parameter-fighting Glitch mode: Modulate assigned parameters directly on the track
-                int targetXTrack = (ui->mPlayModXTrack >= 0 && ui->mPlayModXTrack < 8) ? ui->mPlayModXTrack : ui->mActiveTrack;
-                int targetYTrack = (ui->mPlayModYTrack >= 0 && ui->mPlayModYTrack < 8) ? ui->mPlayModYTrack : ui->mActiveTrack;
-                if (ui->mPlayModXDest >= 0) {
-                    float effectiveX = normX * ui->mPlayModXIntensity;
-                    ui->mEngine.setParameter(targetXTrack, ui->mPlayModXDest, effectiveX);
+                int targetXTrack = (modXTrack >= 0 && modXTrack < 8) ? modXTrack : padTrack;
+                int targetYTrack = (modYTrack >= 0 && modYTrack < 8) ? modYTrack : padTrack;
+                if (modXDest >= 0) {
+                    float effectiveX = normX * modXInt;
+                    ui->mEngine.setParameter(targetXTrack, modXDest, effectiveX);
                 }
-                if (ui->mPlayModYDest >= 0) {
-                    float effectiveY = normY * ui->mPlayModYIntensity;
-                    ui->mEngine.setParameter(targetYTrack, ui->mPlayModYDest, effectiveY);
+                if (modYDest >= 0) {
+                    float effectiveY = normY * modYInt;
+                    ui->mEngine.setParameter(targetYTrack, modYDest, effectiveY);
                 }
             }
         }
     }
 
     if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+        lv_color_t padColor = ui->getTrackColor(padTrack);
         if (isDrum) {
-            lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
             lv_obj_set_style_bg_color(pad, lv_color_hex(0x1F1F1F), 0);
             lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
-            lv_obj_set_style_border_color(pad, trackColor, 0);
+            lv_obj_set_style_border_color(pad, padColor, 0);
             lv_obj_set_style_border_width(pad, 2, 0);
-            ui->mEngine.releaseNote(ui->mActiveTrack, note);
+            ui->mEngine.releaseNote(padTrack, note);
         } else {
             bool isRoot = ((note % 12) == ui->mPlaySelectedRoot);
-            lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
-            lv_obj_set_style_bg_color(pad, isRoot ? trackColor : lv_color_hex(0x1F1F1F), 0);
+            lv_obj_set_style_bg_color(pad, isRoot ? padColor : lv_color_hex(0x1F1F1F), 0);
             lv_obj_set_style_bg_opa(pad, isRoot ? LV_OPA_30 : LV_OPA_COVER, 0);
-            lv_obj_set_style_border_color(pad, isRoot ? trackColor : lv_color_hex(0x333333), 0);
+            lv_obj_set_style_border_color(pad, isRoot ? padColor : lv_color_hex(0x333333), 0);
             lv_obj_set_style_border_width(pad, isRoot ? 2 : 1, 0);
 
             // Note off
-            ui->mEngine.releaseNote(ui->mActiveTrack, note);
+            ui->mEngine.releaseNote(padTrack, note);
             if (ui->mPlayChordType > 0) {
-                ui->mEngine.releaseNote(ui->mActiveTrack, note + 4);
-                ui->mEngine.releaseNote(ui->mActiveTrack, note + 5);
-                ui->mEngine.releaseNote(ui->mActiveTrack, note + 7);
-                ui->mEngine.releaseNote(ui->mActiveTrack, note + 10);
-                ui->mEngine.releaseNote(ui->mActiveTrack, note + 14);
+                ui->mEngine.releaseNote(padTrack, note + 4);
+                ui->mEngine.releaseNote(padTrack, note + 5);
+                ui->mEngine.releaseNote(padTrack, note + 7);
+                ui->mEngine.releaseNote(padTrack, note + 10);
+                ui->mEngine.releaseNote(padTrack, note + 14);
             }
         }
     }
@@ -19871,27 +20465,128 @@ void UIManager::playPadCountToggleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
     bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
-    if (engineType == 5 || engineType == 6 || isSamplerChops) {
+    if (ui->mPlayPadCount != PLAY_PADS_20_20 && (engineType == 5 || engineType == 6 || isSamplerChops)) {
         return; // Fixed pad count for drum / chop tracks
     }
-    // Cycle 16 -> 24 -> 40 -> 16
-    if (ui->mPlayPadCount == 16) {
-        ui->mPlayPadCount = 24;
-    } else if (ui->mPlayPadCount == 24) {
-        ui->mPlayPadCount = 40;
+    // Cycle 16 -> 24 -> 40 -> 20/20 -> 16
+    if (ui->mPlayPadCount == PLAY_PADS_16) {
+        ui->mPlayPadCount = PLAY_PADS_24;
+    } else if (ui->mPlayPadCount == PLAY_PADS_24) {
+        ui->mPlayPadCount = PLAY_PADS_40;
+    } else if (ui->mPlayPadCount == PLAY_PADS_40) {
+        ui->mPlayPadCount = PLAY_PADS_20_20;
     } else {
-        ui->mPlayPadCount = 16;
+        ui->mPlayPadCount = PLAY_PADS_16;
+    }
+
+    if (ui->mPlayTopOctaveGrp && ui->mPlayTopModGrp) {
+        if (ui->mPlayPadCount == PLAY_PADS_20_20) {
+            lv_obj_add_flag(ui->mPlayTopOctaveGrp, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui->mPlayTopModGrp, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(ui->mPlayTopOctaveGrp, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_remove_flag(ui->mPlayTopModGrp, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
     if (ui->mPlayPadCountBtn) {
         lv_obj_t* lbl = lv_obj_get_child(ui->mPlayPadCountBtn, 0);
         if (lbl) {
-            const char* txt = (ui->mPlayPadCount == 16) ? "16" : ((ui->mPlayPadCount == 24) ? "24" : "40");
+            const char* txt = (ui->mPlayPadCount == PLAY_PADS_16) ? "16" : 
+                             ((ui->mPlayPadCount == PLAY_PADS_24) ? "24" : 
+                             ((ui->mPlayPadCount == PLAY_PADS_40) ? "40" : "20/20"));
             lv_label_set_text(lbl, txt);
         }
     }
     ui->rebuildPlayPadGrid();
 }
+
+void UIManager::playSplitLeftTrackDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    ui->mPlaySplitLeftTrack = lv_dropdown_get_selected(dd);
+    if (ui->mPlaySplitLeftModXTrack < 0 || ui->mPlaySplitLeftModXTrack >= 8) ui->mPlaySplitLeftModXTrack = ui->mPlaySplitLeftTrack;
+    if (ui->mPlaySplitLeftModYTrack < 0 || ui->mPlaySplitLeftModYTrack >= 8) ui->mPlaySplitLeftModYTrack = ui->mPlaySplitLeftTrack;
+    ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                 ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playSplitRightTrackDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    ui->mPlaySplitRightTrack = lv_dropdown_get_selected(dd);
+    if (ui->mPlaySplitRightModXTrack < 0 || ui->mPlaySplitRightModXTrack >= 8) ui->mPlaySplitRightModXTrack = ui->mPlaySplitRightTrack;
+    if (ui->mPlaySplitRightModYTrack < 0 || ui->mPlaySplitRightModYTrack >= 8) ui->mPlaySplitRightModYTrack = ui->mPlaySplitRightTrack;
+    ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                 ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playSplitLeftOctBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int delta = (int)(intptr_t)lv_obj_get_user_data(btn);
+    ui->mPlaySplitLeftOctave += delta;
+    if (ui->mPlaySplitLeftOctave < -3) ui->mPlaySplitLeftOctave = -3;
+    if (ui->mPlaySplitLeftOctave > 3) ui->mPlaySplitLeftOctave = 3;
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playSplitRightOctBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+    int delta = (int)(intptr_t)lv_obj_get_user_data(btn);
+    ui->mPlaySplitRightOctave += delta;
+    if (ui->mPlaySplitRightOctave < -3) ui->mPlaySplitRightOctave = -3;
+    if (ui->mPlaySplitRightOctave > 3) ui->mPlaySplitRightOctave = 3;
+    ui->rebuildPlayPadGrid();
+}
+
+void UIManager::playSplitLeftModXArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlaySplitLeftModXInt = (float)val / 100.0f;
+    if (valLbl) lv_label_set_text_fmt(valLbl, "%d", (int)val);
+    ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                 ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+}
+
+void UIManager::playSplitLeftModYArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlaySplitLeftModYInt = (float)val / 100.0f;
+    if (valLbl) lv_label_set_text_fmt(valLbl, "%d", (int)val);
+    ui->mEngine.setPadModRouting(ui->mPlaySplitLeftTrack, ui->mPlaySplitLeftModXDest, ui->mPlaySplitLeftModXInt,
+                                 ui->mPlaySplitLeftModYDest, ui->mPlaySplitLeftModYInt, ui->mPlayVoiceLinkPoly);
+}
+
+void UIManager::playSplitRightModXArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlaySplitRightModXInt = (float)val / 100.0f;
+    if (valLbl) lv_label_set_text_fmt(valLbl, "%d", (int)val);
+    ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                 ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+}
+
+void UIManager::playSplitRightModYArcEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* arc = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t* valLbl = (lv_obj_t*)lv_obj_get_user_data(arc);
+    int32_t val = lv_arc_get_value(arc);
+    ui->mPlaySplitRightModYInt = (float)val / 100.0f;
+    if (valLbl) lv_label_set_text_fmt(valLbl, "%d", (int)val);
+    ui->mEngine.setPadModRouting(ui->mPlaySplitRightTrack, ui->mPlaySplitRightModXDest, ui->mPlaySplitRightModXInt,
+                                 ui->mPlaySplitRightModYDest, ui->mPlaySplitRightModYInt, ui->mPlayVoiceLinkPoly);
+}
+
 
 void UIManager::playModXDestDdEventCb(lv_event_t* e) {
     (void)e;

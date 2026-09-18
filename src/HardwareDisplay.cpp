@@ -86,15 +86,42 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 
     // Query physical display resolution from KMS / windowing system
-    SDL_DisplayMode dm;
-    s_physWidth = uiWidth;
-    s_physHeight = uiHeight;
-    if (SDL_GetCurrentDisplayMode(0, &dm) == 0 && dm.w > 0 && dm.h > 0) {
-        s_physWidth = dm.w;
-        s_physHeight = dm.h;
-        std::cout << "[HardwareDisplay] SDL reported physical display mode: "
-                  << s_physWidth << "x" << s_physHeight << "@" << dm.refresh_rate << "Hz" << std::endl;
+    const char* driverName = SDL_GetCurrentVideoDriver();
+    std::cout << "[HardwareDisplay] SDL Video Driver: " << (driverName ? driverName : "Unknown") << std::endl;
+
+    int numDisplays = SDL_GetNumVideoDisplays();
+    std::cout << "[HardwareDisplay] Total video displays reported by SDL: " << numDisplays << std::endl;
+
+    int activeDisplayIdx = 0;
+    SDL_DisplayMode chosenMode;
+    std::memset(&chosenMode, 0, sizeof(chosenMode));
+
+    for (int i = 0; i < numDisplays; ++i) {
+        SDL_DisplayMode dmDesk, dmCur;
+        std::memset(&dmDesk, 0, sizeof(dmDesk));
+        std::memset(&dmCur, 0, sizeof(dmCur));
+
+        SDL_GetDesktopDisplayMode(i, &dmDesk);
+        SDL_GetCurrentDisplayMode(i, &dmCur);
+
+        SDL_DisplayMode validMode = (dmDesk.w > 0 && dmDesk.h > 0) ? dmDesk : dmCur;
+        const char* dName = SDL_GetDisplayName(i);
+
+        std::cout << "  [Display " << i << "] (" << (dName ? dName : "Unknown") << "): "
+                  << validMode.w << "x" << validMode.h << "@" << validMode.refresh_rate << "Hz" << std::endl;
+
+        // Prefer a display that has an active refresh rate (> 0) or is not the 1024x768 dummy fallback
+        if (chosenMode.w == 0 || (validMode.refresh_rate > 0 && chosenMode.refresh_rate == 0) || (validMode.w != 1024 && validMode.h != 768)) {
+            chosenMode = validMode;
+            activeDisplayIdx = i;
+        }
     }
+
+    s_physWidth = (chosenMode.w > 0) ? chosenMode.w : uiWidth;
+    s_physHeight = (chosenMode.h > 0) ? chosenMode.h : uiHeight;
+
+    std::cout << "[HardwareDisplay] Active display [" << activeDisplayIdx << "] selected: "
+              << s_physWidth << "x" << s_physHeight << "@" << chosenMode.refresh_rate << "Hz" << std::endl;
 
     // Determine rotation angle
     const char* rotEnv = std::getenv("LOOM_ROTATION");
@@ -132,7 +159,8 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
 
     s_window = SDL_CreateWindow(
         "Loom Pi",
-        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(activeDisplayIdx),
+        SDL_WINDOWPOS_UNDEFINED_DISPLAY(activeDisplayIdx),
         winW, winH,
         windowFlags
     );
@@ -433,20 +461,25 @@ void HardwareDisplay::pushControlKey(uint32_t lvKey) {
 
 void HardwareDisplay::transformCoordinates(int rawX, int rawY, int& outX, int& outY) {
     if (s_rotationAngle == 270.0) {
-        // Physical panel is 800w x 1280h
-        // Long edge (1280) is UI horizontal, short edge (800) is UI vertical
-        outX = (s_physHeight - 1) - rawY;
-        outY = rawX;
+        // Physical panel is mounted in portrait (e.g. 800w x 1280h) rotated to landscape UI (1280w x 800h)
+        int rotX = (s_physHeight - 1) - rawY;
+        int rotY = rawX;
+        outX = static_cast<int>(rotX * ((float)s_uiWidth / (float)s_physHeight));
+        outY = static_cast<int>(rotY * ((float)s_uiHeight / (float)s_physWidth));
     } else if (s_rotationAngle == 90.0) {
-        outX = rawY;
-        outY = (s_physWidth - 1) - rawX;
+        int rotX = rawY;
+        int rotY = (s_physWidth - 1) - rawX;
+        outX = static_cast<int>(rotX * ((float)s_uiWidth / (float)s_physHeight));
+        outY = static_cast<int>(rotY * ((float)s_uiHeight / (float)s_physWidth));
     } else if (s_rotationAngle == 180.0) {
-        outX = (s_physWidth - 1) - rawX;
-        outY = (s_physHeight - 1) - rawY;
+        int rotX = (s_physWidth - 1) - rawX;
+        int rotY = (s_physHeight - 1) - rawY;
+        outX = static_cast<int>(rotX * ((float)s_uiWidth / (float)s_physWidth));
+        outY = static_cast<int>(rotY * ((float)s_uiHeight / (float)s_physHeight));
     } else {
         // 0 deg (standard landscape)
-        outX = rawX;
-        outY = rawY;
+        outX = static_cast<int>(rawX * ((float)s_uiWidth / (float)s_physWidth));
+        outY = static_cast<int>(rawY * ((float)s_uiHeight / (float)s_physHeight));
     }
 
     outX = std::max(0, std::min(outX, s_uiWidth - 1));

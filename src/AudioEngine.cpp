@@ -232,6 +232,13 @@ void AudioEngine::initTrack(int i) {
     mTracks[i].parameters[base + 3] = 0.5f;  // Param A
     mTracks[i].parameters[base + 4] = 0.5f;  // Param B
     mTracks[i].parameters[base + 5] = 0.65f; // Gain
+
+    mTracks[i].appliedParameters[base + 0] = 0.5f;
+    mTracks[i].appliedParameters[base + 1] = 0.5f;
+    mTracks[i].appliedParameters[base + 2] = 0.5f;
+    mTracks[i].appliedParameters[base + 3] = 0.5f;
+    mTracks[i].appliedParameters[base + 4] = 0.5f;
+    mTracks[i].appliedParameters[base + 5] = 0.65f;
     
     mTracks[i].analogDrumEngine.setParameter(k, 0, 0.5f);
     mTracks[i].analogDrumEngine.setParameter(k, 1, 0.5f);
@@ -251,6 +258,11 @@ void AudioEngine::initTrack(int i) {
     mTracks[i].parameters[base + 1] = 0.5f;  // Tone
     mTracks[i].parameters[base + 2] = 0.20f; // Decay
     mTracks[i].parameters[base + 5] = 0.65f; // Gain / LVL
+
+    mTracks[i].appliedParameters[base + 0] = 0.5f;
+    mTracks[i].appliedParameters[base + 1] = 0.5f;
+    mTracks[i].appliedParameters[base + 2] = 0.20f;
+    mTracks[i].appliedParameters[base + 5] = 0.65f;
 
     mTracks[i].fmDrumEngine.setParameter(k, 0, 0.5f);  // Pitch
     mTracks[i].fmDrumEngine.setParameter(k, 1, 0.5f);  // Tone
@@ -349,6 +361,17 @@ void AudioEngine::initTrack(int i) {
       setParameter(i, baseId + 5, 0.7f);  // Gain
       setParameter(i, baseId + 2, 0.20f); // Decay
       setParameter(i, baseId + 1, 0.5f);  // Tone/Feedback
+    }
+  } else if (type == 6) { // Analog Drum
+    // Initialize 8 analog drums
+    for (int drum = 0; drum < 8; ++drum) {
+      int baseId = 600 + (drum * 10);
+      setParameter(i, baseId + 0, 0.5f);  // Decay
+      setParameter(i, baseId + 1, 0.5f);  // Tone / Snap
+      setParameter(i, baseId + 2, 0.5f);  // Tune
+      setParameter(i, baseId + 3, 0.5f);  // Param A
+      setParameter(i, baseId + 4, 0.5f);  // Param B
+      setParameter(i, baseId + 5, 0.65f); // Gain
     }
   } else if (type == 4) { // Wavetable
     mTracks[i].wavetableEngine.resetToDefaults();
@@ -478,6 +501,11 @@ void AudioEngine::initTrack(int i) {
     setParameter(i, 1534, 0.5f); // EQ Band 5
   } else {
     setParameter(i, 350, 1.0f); // Default Env usage True
+  }
+
+  // Ensure appliedParameters matches parameters across the track
+  for (int p = 0; p < 2500; ++p) {
+    mTracks[i].appliedParameters[p] = mTracks[i].parameters[p];
   }
 
   clearSequencer(i);
@@ -3925,6 +3953,25 @@ void AudioEngine::panic() {
     for (int v = 0; v < Track::MAX_POLYPHONY; ++v) {
       track.mActiveNotes[v].active = false;
     }
+  }
+}
+
+void AudioEngine::allNotesOff(int trackIndex) {
+  std::lock_guard<std::recursive_mutex> lock(mLock);
+  if (trackIndex < 0 || trackIndex >= (int)mTracks.size())
+    return;
+  auto &track = mTracks[trackIndex];
+  track.subtractiveEngine.allNotesOff();
+  track.fmEngine.allNotesOff();
+  track.fmDrumEngine.allNotesOff();
+  track.analogDrumEngine.allNotesOff();
+  track.wavetableEngine.allNotesOff();
+  track.samplerEngine.allNotesOff();
+  track.granularEngine.allNotesOff();
+  track.soundFontEngine.allNotesOff();
+
+  for (int v = 0; v < Track::MAX_POLYPHONY; ++v) {
+    track.mActiveNotes[v].active = false;
   }
 }
 
