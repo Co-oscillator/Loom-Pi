@@ -22,8 +22,14 @@ public:
     Chops,
     OneShotChops,
     LoopChops,
-    Scrub
+    Scrub,
+    SliceScrub
   };
+
+  bool isChopMode() const {
+    return (mPlayMode == Chops || mPlayMode == OneShotChops ||
+            mPlayMode == LoopChops || mPlayMode == SliceScrub);
+  }
 
   struct Slice {
     size_t start;
@@ -72,11 +78,14 @@ public:
 
     uint32_t controlCounter = 0;
 
-    // Per-voice modulation state
+    // Per-voice modulation and scrub state
     int originNote = -1;
     float modX = 0.0f;
     float modY = 0.0f;
     bool hasVoiceMod = false;
+    double smoothSpeed = 0.0;
+    double smoothedScrubPos = 0.0;
+    bool hasScrubTarget = false;
 
     void reset() {
       active = false;
@@ -85,6 +94,9 @@ public:
       modX = 0.0f;
       modY = 0.0f;
       hasVoiceMod = false;
+      smoothSpeed = 0.0;
+      smoothedScrubPos = 0.0;
+      hasScrubTarget = false;
       sliceIdx = -1;
       position = 0.0;
       grainPosition = 0.0;
@@ -488,9 +500,7 @@ public:
     v.envelope.setParameters(mAttack, mDecay, mSustain, mRelease);
     v.envelope.trigger();
 
-    if ((mPlayMode == Chops || mPlayMode == OneShotChops ||
-         mPlayMode == LoopChops) &&
-        !mSlices.empty()) {
+    if (isChopMode() && !mSlices.empty()) {
       // In CHOP modes, slice index is determined by the MIDI note (Note 60 =
       // Slice 0) mSliceIndex is now used ONLY for UI parameter focus in
       // "Slice Lock" mode.
@@ -546,8 +556,7 @@ public:
     }
     v.envelope.trigger();
 
-    float keyShift = (mPlayMode == Chops || mPlayMode == OneShotChops ||
-                      mPlayMode == LoopChops)
+    float keyShift = isChopMode()
                          ? 0.0f
                          : (float)(note - 60);
 
@@ -576,7 +585,7 @@ public:
     for (auto &v : mVoices) {
       if (v.active && v.note == note) {
         if (mPlayMode == Sustain || mPlayMode == Loop ||
-            mPlayMode == LoopChops) {
+            mPlayMode == LoopChops || mPlayMode == SliceScrub) {
           v.envelope.release();
         }
       }
@@ -612,8 +621,7 @@ public:
       mPitch = (value - 0.5f) * 48.0f;
       for (auto &v : mVoices) {
         if (v.active) {
-          float keyShift = (mPlayMode == Chops || mPlayMode == OneShotChops ||
-                            mPlayMode == LoopChops)
+          float keyShift = isChopMode()
                                ? 0.0f
                                : (float)(v.note - 60);
           v.targetPitchRatio = powf(2.0f, (mPitch + keyShift) / 12.0f) * mSpeed;
@@ -627,8 +635,7 @@ public:
       mSpeed = powf(value, 3.0f) * 9.99f + 0.01f;
       for (auto &v : mVoices) {
         if (v.active) {
-          float keyShift = (mPlayMode == Chops || mPlayMode == OneShotChops ||
-                            mPlayMode == LoopChops)
+          float keyShift = isChopMode()
                                ? 0.0f
                                : (float)(v.note - 60);
           v.targetPitchRatio = powf(2.0f, (mPitch + keyShift) / 12.0f) * mSpeed;
@@ -671,19 +678,23 @@ public:
       setFilterResonance(value);
       break;
     case 320: {
-      int newMode = Scrub;
-      if (value < 0.16f)
+      int newMode = SliceScrub;
+      if (value < 0.125f)
         newMode = OneShot;
-      else if (value < 0.33f)
+      else if (value < 0.25f)
         newMode = Sustain;
-      else if (value < 0.5f)
+      else if (value < 0.375f)
         newMode = Loop;
-      else if (value < 0.66f)
+      else if (value < 0.5f)
         newMode = Chops;
-      else if (value < 0.83f)
+      else if (value < 0.625f)
         newMode = OneShotChops;
-      else if (value < 0.95f)
+      else if (value < 0.75f)
         newMode = LoopChops;
+      else if (value < 0.875f)
+        newMode = Scrub;
+      else
+        newMode = SliceScrub;
 
       if (newMode != mPlayMode) {
         mPlayMode = (PlayMode)newMode;
@@ -865,12 +876,23 @@ public:
       if (!v.active)
         continue;
 
+      bool isSliceScrubMod = (mPlayMode == SliceScrub && v.hasVoiceMod &&
+                              (mModXDest == 360 || mModXDest == 330 ||
+                               mModYDest == 360 || mModYDest == 330));
+
       // If Envelope is disabled, behave like a Gate (1.0 while held, 0.0 on
       // release)
       float env = 1.0f;
       if (mPlayMode == Scrub && i == 0) {
         if (mScrubGate || mMotorRunning || mInteractionTimer > 0) {
           env = 1.0f;
+        } else {
+          env = v.envelope.nextValue();
+        }
+      } else if (isSliceScrubMod) {
+        if (v.envelope.getStage() != AdsrStage::Idle && v.envelope.getStage() != AdsrStage::Release) {
+          env = 1.0f;
+          v.envelope.nextValue();
         } else {
           env = v.envelope.nextValue();
         }
@@ -932,15 +954,19 @@ public:
           useGranular = false; // FORCE CLASSIC MODE (Fixes Grainy Sound)
           traverseRate = 0;
         }
+      } else if (mPlayMode == SliceScrub) {
+        useGranular = false; // Scrubbing slices uses direct resampling
+        if (isSliceScrubMod) {
+          baseResampleRate = (float)v.smoothSpeed * bendFactor;
+          traverseRate = 0;
+        }
       }
 
       if (std::abs(mStretch - 1.0f) > 0.02f)
         traverseRate /= std::max(0.01f, mStretch);
 
       // Update loop/trim points dynamically
-      // Update loop/trim points dynamically
-      if (mPlayMode != Chops && mPlayMode != OneShotChops &&
-          mPlayMode != LoopChops && mPlayMode != Scrub) {
+      if (!isChopMode() && mPlayMode != Scrub) {
         v.start = static_cast<size_t>(mTrimStart * buffer.size());
         v.end = static_cast<size_t>(mTrimEnd * buffer.size());
       } else if (mPlayMode == Scrub) {
@@ -1018,6 +1044,53 @@ public:
             mSmoothSpeed = -12.0;
 
           baseResampleRate = (float)mSmoothSpeed;
+        } else if (isSliceScrubMod) {
+          double sliceLen = (double)(v.end - v.start);
+          if (sliceLen > 1.0) {
+            float normMod = 0.0f;
+            if (mModXDest == 360 || mModXDest == 330) {
+              normMod = v.modX * mModXIntensity;
+            } else if (mModYDest == 360 || mModYDest == 330) {
+              normMod = v.modY * mModYIntensity;
+            }
+            normMod = std::max(0.0f, std::min(1.0f, normMod));
+            double targetSample = (double)v.start + (double)normMod * sliceLen;
+
+            if (!v.hasScrubTarget) {
+              v.smoothedScrubPos = targetSample;
+              v.position = targetSample;
+              v.smoothSpeed = 0.0;
+              v.hasScrubTarget = true;
+            }
+
+            // Slew-limit the target position
+            v.smoothedScrubPos += (targetSample - v.smoothedScrubPos) * 0.00025;
+            double currentTarget = std::max((double)v.start,
+                                           std::min((double)v.end - 1.0, v.smoothedScrubPos));
+
+            if (v.envelope.getStage() != AdsrStage::Release && v.envelope.getStage() != AdsrStage::Idle) {
+              // Active tracking while held
+              double targetSpeed = (currentTarget - v.position) * 0.0008;
+              v.smoothSpeed += (targetSpeed - v.smoothSpeed) * 0.004;
+            } else {
+              // Natural physical decay on release
+              v.smoothSpeed *= 0.9995;
+              double coulombDecel = 0.00015;
+              if (v.smoothSpeed > 0.0) {
+                v.smoothSpeed = std::max(0.0, v.smoothSpeed - coulombDecel);
+              } else if (v.smoothSpeed < 0.0) {
+                v.smoothSpeed = std::min(0.0, v.smoothSpeed + coulombDecel);
+              }
+            }
+
+            // Limit speed
+            if (v.smoothSpeed > 12.0)
+              v.smoothSpeed = 12.0;
+            if (v.smoothSpeed < -12.0)
+              v.smoothSpeed = -12.0;
+
+            baseResampleRate = (float)v.smoothSpeed * bendFactor;
+          }
         }
 
         v.position += baseResampleRate;
@@ -1027,24 +1100,32 @@ public:
           if (mPlayMode == Sustain || mPlayMode == Loop ||
               mPlayMode == LoopChops) {
             v.position = (double)v.start;
+          } else if (isSliceScrubMod) {
+            v.position = (double)v.end - 0.001;
+            v.smoothSpeed = 0.0;
           } else {
             v.position = (double)v.end - 0.001;
             v.envelope.release();
-            if (mPlayMode == Scrub) {
+            if (mPlayMode == Scrub || mPlayMode == SliceScrub) {
               mMotorRunning = false;
-              mSmoothSpeed = 0.0; // Stop velocity on wall
+              if (mPlayMode == Scrub) mSmoothSpeed = 0.0;
+              v.smoothSpeed = 0.0; // Stop velocity on wall
             }
           }
         } else if (v.position < (double)v.start) {
           if (mPlayMode == Sustain || mPlayMode == Loop ||
               mPlayMode == LoopChops) {
             v.position = (double)v.end - 1.0;
+          } else if (isSliceScrubMod) {
+            v.position = (double)v.start;
+            v.smoothSpeed = 0.0;
           } else {
             v.position = (double)v.start;
             v.envelope.release();
-            if (mPlayMode == Scrub) {
+            if (mPlayMode == Scrub || mPlayMode == SliceScrub) {
               mMotorRunning = false;
-              mSmoothSpeed = 0.0; // Stop velocity on wall
+              if (mPlayMode == Scrub) mSmoothSpeed = 0.0;
+              v.smoothSpeed = 0.0; // Stop velocity on wall
             }
           }
         }
@@ -1054,7 +1135,7 @@ public:
           // Use High-Quality Cubic (Hermite) Interpolation specifically for
           // Scrubbing to provide a smooth, analogue quality and minimize
           // aliasing noise.
-          if (mPlayMode == Scrub && i == 0) {
+          if ((mPlayMode == Scrub && i == 0) || mPlayMode == SliceScrub) {
             voiceOutput = getCubicInterpolatedSample(buffer, v.position);
           } else {
             voiceOutput = getInterpolatedSample(buffer, v.position);

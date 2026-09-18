@@ -926,7 +926,7 @@ void AudioEngine::triggerNoteLocked(int trackIndex, int note, int velocity,
                                              (double)subStep});
           }
         } else if (track.engineType == 2 &&
-                   track.samplerEngine.getPlayMode() >= 3) {
+                   track.samplerEngine.isChopMode()) {
           int drumIdx = -1;
           if (note >= 60)
             drumIdx = note - 60;
@@ -1682,7 +1682,7 @@ void AudioEngine::processCommands() {
         int drumIdx = -1;
         bool isSamplerChops =
             (mTracks[cmd.trackIndex].engineType == 2 &&
-             mTracks[cmd.trackIndex].samplerEngine.getPlayMode() >= 3);
+             mTracks[cmd.trackIndex].samplerEngine.isChopMode());
 
         if (mTracks[cmd.trackIndex].engineType == 5 ||
             mTracks[cmd.trackIndex].engineType == 6 || isSamplerChops) {
@@ -2699,7 +2699,7 @@ void AudioEngine::renderOutput(float *outputData, int32_t numFrames, int32_t num
 
             // Drum Sequencer
             bool isSamplerChops = (track.engineType == 2 &&
-                                   track.samplerEngine.getPlayMode() >= 3);
+                                   track.samplerEngine.isChopMode());
             if (track.engineType == 5 || track.engineType == 6 ||
                 isSamplerChops) {
               for (int d = 0; d < 16; ++d) {
@@ -3175,7 +3175,7 @@ void AudioEngine::setPlaying(bool playing) {
 
       track.sequencer.jumpToStep(0);
       if (track.engineType == 5 || track.engineType == 6 ||
-          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3)) {
+          (track.engineType == 2 && track.samplerEngine.isChopMode())) {
         for (int d = 0; d < 16; ++d)
           track.drumSequencers[d].jumpToStep(0);
       }
@@ -3207,7 +3207,7 @@ void AudioEngine::setPlaying(bool playing) {
       track.sequencer.reset();
       // Reset Drum Sequencers too
       if (track.engineType == 5 || track.engineType == 6 ||
-          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3)) {
+          (track.engineType == 2 && track.samplerEngine.isChopMode())) {
         for (int d = 0; d < 16; ++d) {
           track.drumSequencers[d].reset();
         }
@@ -5706,7 +5706,7 @@ void pushLaunchkeyLedUpdate(AudioEngine* engine, UIManager* ui) {
     int pageStart = gLoomPiLaunchkeyPage * 16;
     
     bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
-                  (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                  (track.engineType == 2 && track.samplerEngine.isChopMode()));
     
     std::vector<Step> currentSteps = isDrum ? engine->getDrumSequencerSteps(activeTrack, ui->getActiveDrumIdx())
                                             : engine->getSequencerSteps(activeTrack);

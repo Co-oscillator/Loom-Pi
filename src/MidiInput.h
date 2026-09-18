@@ -338,7 +338,7 @@ static void midiInputCallback(const MIDIPacketList *pktlist, void *readProcRefCo
                         if (seqPadIdx >= 0) {
                             auto& track = data->engine->getTracks()[activeTrack];
                             bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
-                                          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                                          (track.engineType == 2 && track.samplerEngine.isChopMode()));
                             auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
                                                  : track.sequencer.getStepsMutable();
                             if (seqPadIdx < (int)steps.size()) {
@@ -1080,7 +1080,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 auto& track = data->engine->getTracks()[activeTrack];
                 
                 bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
-                              (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                              (track.engineType == 2 && track.samplerEngine.isChopMode()));
                 
                 auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
                                      : track.sequencer.getStepsMutable();
@@ -1117,7 +1117,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
                 int activeTrack = data->ui->getActiveTrack();
                 auto& track = data->engine->getTracks()[activeTrack];
                 bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
-                              (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                              (track.engineType == 2 && track.samplerEngine.isChopMode()));
                 auto& steps = isDrum ? track.drumSequencers[data->ui->getActiveDrumIdx()].getStepsMutable()
                                      : track.sequencer.getStepsMutable();
                 if (seqPadIdx < (int)steps.size()) {
@@ -1138,7 +1138,7 @@ static void processMidiMessage(uint8_t status, uint8_t d1, uint8_t d2, MidiCallb
             auto& track = data->engine->getTracks()[activeTrack];
             
             bool isDrum = (track.engineType == 5 || track.engineType == 6 || 
-                          (track.engineType == 2 && track.samplerEngine.getPlayMode() >= 3));
+                          (track.engineType == 2 && track.samplerEngine.isChopMode()));
             
             auto& step = isDrum ? track.drumSequencers[data->ui->mActiveDrumIdx].getStepsMutable()[stepIdx]
                                 : track.sequencer.getStepsMutable()[stepIdx];

@@ -2648,7 +2648,7 @@ std::string UIManager::getDrumRowNoteLabel(int targetTrack, int note) {
             int idx = note - 60;
             if (idx >= 0 && idx < 8) return kAnalogDrumNames[idx];
         }
-    } else if (engType == 2 && mEngine.getTracks()[targetTrack].samplerEngine.getPlayMode() >= 3) {
+    } else if (engType == 2 && mEngine.getTracks()[targetTrack].samplerEngine.isChopMode()) {
         // Sampler Chops
         int numSlices = (int)mEngine.getSamplerSlicePoints(targetTrack).size();
         if (note >= 60 && (note - 60) < numSlices) {
@@ -4786,7 +4786,7 @@ void UIManager::update() {
 
     if (mStepModal && mEditingStepIdx >= 0) {
         int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-        bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+        bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
         bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
         
         std::vector<Step> currentSteps = isDrum ? mEngine.getDrumSequencerSteps(mActiveTrack, mActiveDrumIdx)
@@ -4931,13 +4931,14 @@ void UIManager::update() {
                         lv_label_set_text_fmt(w.valLbl, "%d", (int)(rawVal * 15.0f) + 1);
                     } else if (w.paramId == 320) {
                         const char* modeStr = "1-HIT";
-                        if (rawVal < 0.16f) modeStr = "1-HIT";
-                        else if (rawVal < 0.33f) modeStr = "SUSTN";
-                        else if (rawVal < 0.50f) modeStr = "LOOP";
-                        else if (rawVal < 0.66f) modeStr = "CHOP";
-                        else if (rawVal < 0.83f) modeStr = "1-CHP";
-                        else if (rawVal < 0.95f) modeStr = "L-CHP";
-                        else modeStr = "SCRUB";
+                        if (rawVal < 0.125f) modeStr = "1-HIT";
+                        else if (rawVal < 0.25f) modeStr = "SUSTN";
+                        else if (rawVal < 0.375f) modeStr = "LOOP";
+                        else if (rawVal < 0.50f) modeStr = "CHOP";
+                        else if (rawVal < 0.625f) modeStr = "1-CHP";
+                        else if (rawVal < 0.75f) modeStr = "L-CHP";
+                        else if (rawVal < 0.875f) modeStr = "SCRUB";
+                        else modeStr = "SL-SCR";
                         lv_label_set_text(w.valLbl, modeStr);
                     } else if (w.paramId == 150) {
                         int algo = (int)(rawVal * 31.99f);
@@ -5194,7 +5195,7 @@ void UIManager::update() {
         int activeDrumIdx = -1;
         int numDrumLanes = 0;
         int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-        bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+        bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
         if (engineType == 5 || engineType == 6 || isSamplerChops) {
             isDrum = true;
             activeDrumIdx = mActiveDrumIdx;
@@ -5410,7 +5411,7 @@ void UIManager::populateSeqScreen() {
 
     // 1. Check if drum/chop engine to build the horizontal tab row
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
     
     if (engineType == 5 || engineType == 6 || isSamplerChops) {
         lv_obj_t* drumTabRow = lv_obj_create(seqTab);
@@ -5946,7 +5947,7 @@ void UIManager::rebuildSeqSidePanel() {
 
     // Fetch step data
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
     bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
 
     std::vector<Step> currentSteps;
@@ -6257,7 +6258,7 @@ void UIManager::rebuildSeqGrid() {
     int activeDrumIdx = -1;
     int numDrumLanes = 0;
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
     if (engineType == 5 || engineType == 6 || isSamplerChops) {
         isDrum = true;
         activeDrumIdx = mActiveDrumIdx;
@@ -6792,7 +6793,7 @@ void UIManager::seqGridBtnEventCb(lv_event_t* e) {
         ui->mSeqTrackSteps[ui->mActiveTrack][stepIdx] = active;
         
         int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
-        bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+        bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.isChopMode());
         bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
         
         std::vector<Step> currentSteps;
@@ -7159,7 +7160,7 @@ void UIManager::seqOctaveBtnEventCb(lv_event_t* e) {
 void UIManager::seqCopyBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.isChopMode());
     bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
 
     if (isDrum) {
@@ -7174,7 +7175,7 @@ void UIManager::seqPasteBtnEventCb(lv_event_t* e) {
     if (ui->mSeqClipboard.empty()) return;
 
     int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.isChopMode());
     bool isDrum = (engineType == 5 || engineType == 6 || isSamplerChops);
 
     int total = ui->mSeqTrackIs4x4[ui->mActiveTrack] ? 16 : 64;
@@ -13523,13 +13524,14 @@ void UIManager::addSynthKnob(lv_obj_t* parent, const char* labelText, int paramI
         lv_label_set_text_fmt(valLbl, "%d", (int)(currentVal * 15.0f) + 1);
     } else if (paramId == 320) {
         const char* modeStr = "1-HIT";
-        if (currentVal < 0.16f) modeStr = "1-HIT";
-        else if (currentVal < 0.33f) modeStr = "SUSTN";
-        else if (currentVal < 0.50f) modeStr = "LOOP";
-        else if (currentVal < 0.66f) modeStr = "CHOP";
-        else if (currentVal < 0.83f) modeStr = "1-CHP";
-        else if (currentVal < 0.95f) modeStr = "L-CHP";
-        else modeStr = "SCRUB";
+        if (currentVal < 0.125f) modeStr = "1-HIT";
+        else if (currentVal < 0.25f) modeStr = "SUSTN";
+        else if (currentVal < 0.375f) modeStr = "LOOP";
+        else if (currentVal < 0.50f) modeStr = "CHOP";
+        else if (currentVal < 0.625f) modeStr = "1-CHP";
+        else if (currentVal < 0.75f) modeStr = "L-CHP";
+        else if (currentVal < 0.875f) modeStr = "SCRUB";
+        else modeStr = "SL-SCR";
         lv_label_set_text(valLbl, modeStr);
     } else if (paramId == 150) {
         int algo = (int)(currentVal * 31.99f);
@@ -13755,13 +13757,14 @@ void UIManager::synthParamSliderEventCb(lv_event_t* e) {
             lv_label_set_text_fmt(d->valLabel, "%d", (int)(rawVal * 15.0f) + 1);
         } else if (d->paramId == 320) {
             const char* modeStr = "1-HIT";
-            if (rawVal < 0.16f) modeStr = "1-HIT";
-            else if (rawVal < 0.33f) modeStr = "SUSTN";
-            else if (rawVal < 0.50f) modeStr = "LOOP";
-            else if (rawVal < 0.66f) modeStr = "CHOP";
-            else if (rawVal < 0.83f) modeStr = "1-CHP";
-            else if (rawVal < 0.95f) modeStr = "L-CHP";
-            else modeStr = "SCRUB";
+            if (rawVal < 0.125f) modeStr = "1-HIT";
+            else if (rawVal < 0.25f) modeStr = "SUSTN";
+            else if (rawVal < 0.375f) modeStr = "LOOP";
+            else if (rawVal < 0.50f) modeStr = "CHOP";
+            else if (rawVal < 0.625f) modeStr = "1-CHP";
+            else if (rawVal < 0.75f) modeStr = "L-CHP";
+            else if (rawVal < 0.875f) modeStr = "SCRUB";
+            else modeStr = "SL-SCR";
             lv_label_set_text(d->valLabel, modeStr);
         } else if (d->paramId == 150) {
             int algo = (int)(rawVal * 31.99f);
@@ -15261,7 +15264,7 @@ void UIManager::samplerWaveformContainerEventCb(lv_event_t* e) {
         return;
     }
 
-    bool isScrubMode = (ui->mEngine.getTracks()[ui->mActiveTrack].parameters[320] >= 0.95f);
+    bool isScrubMode = (ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() == SamplerEngine::Scrub);
     if (!isScrubMode) return;
 
     if (code == LV_EVENT_PRESSED || code == LV_EVENT_PRESSING) {
@@ -15369,7 +15372,7 @@ void UIManager::updateSamplerWaveformPreview() {
     }
 
     // 1. Scrub Mode vs Normal Playhead
-    bool isScrubMode = (mEngine.getTracks()[mActiveTrack].parameters[320] >= 0.95f);
+    bool isScrubMode = (mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() == SamplerEngine::Scrub);
 
     // Query active playheads and update playhead line & shade
     GranularEngine::PlayheadInfo playheads[16];
@@ -19606,7 +19609,7 @@ void UIManager::populatePlayScreen() {
     lv_obj_set_style_radius(mPlayPadCountBtn, 6, 0);
     lv_obj_t* padCountLbl = lv_label_create(mPlayPadCountBtn);
     int activeEngType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isChopTrack = (activeEngType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isChopTrack = (activeEngType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
     std::string countText;
     if (activeEngType == 5 || activeEngType == 6) {
         countText = "8";
@@ -19916,7 +19919,7 @@ void UIManager::rebuildPlayPadGrid() {
             int bStartX = (b == 1) ? startOffsetX : (startOffsetX + bankW + dividerGap);
             int bEng = mEngine.getTracks()[bTrack].engineType;
             bool bIsDrum = (bEng == 5 || bEng == 6);
-            bool bIsChops = (bEng == 2 && mEngine.getTracks()[bTrack].samplerEngine.getPlayMode() >= 3);
+            bool bIsChops = (bEng == 2 && mEngine.getTracks()[bTrack].samplerEngine.isChopMode());
 
             for (int i = 0; i < 20; ++i) {
                 int r = 4 - (i / 4); // 0 to 4 bottom-to-top
@@ -20013,7 +20016,7 @@ void UIManager::rebuildPlayPadGrid() {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     int engineType = mEngine.getTracks()[mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && mEngine.getTracks()[mActiveTrack].samplerEngine.isChopMode());
     bool isFmDrum = (engineType == 5);
     bool isAnalogDrum = (engineType == 6);
 
@@ -20276,7 +20279,7 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
     if (bank == 0) padTrack = ui->mActiveTrack;
 
     int engType = ui->mEngine.getTracks()[padTrack].engineType;
-    bool isSamplerChops = (engType == 2 && ui->mEngine.getTracks()[padTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engType == 2 && ui->mEngine.getTracks()[padTrack].samplerEngine.isChopMode());
     bool isDrum = (engType == 5 || engType == 6 || isSamplerChops);
 
     if (code == LV_EVENT_PRESSED) {
@@ -20348,7 +20351,8 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             }
 
             bool isSynthTrack = (engType != 5 && engType != 6);
-            if (ui->mPlayVoiceLinkPoly && isSynthTrack) {
+            bool isChopScrub = (engType == 2 && ui->mEngine.getTracks()[padTrack].samplerEngine.getPlayMode() == SamplerEngine::SliceScrub);
+            if ((ui->mPlayVoiceLinkPoly || isChopScrub) && isSynthTrack) {
                 // Per-voice polyphonic modulation!
                 ui->mEngine.setVoicePadMod(padTrack, note, normX, normY);
 
@@ -20365,7 +20369,7 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
                         if (pid == 151 || pid == 152) return true;
                         return false;
                     } else if (eng == 2) { // Sampler
-                        if (pid == 303 || pid == 304) return true;
+                        if (pid == 303 || pid == 304 || pid == 360 || pid == 330) return true;
                         return false;
                     } else if (eng == 4) { // Wavetable
                         if (pid == 458 || pid == 459 || pid == 450 || pid == 300 || pid == 310) return true;
@@ -20464,7 +20468,7 @@ void UIManager::playOctaveBtnEventCb(lv_event_t* e) {
 void UIManager::playPadCountToggleEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     int engineType = ui->mEngine.getTracks()[ui->mActiveTrack].engineType;
-    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.getPlayMode() >= 3);
+    bool isSamplerChops = (engineType == 2 && ui->mEngine.getTracks()[ui->mActiveTrack].samplerEngine.isChopMode());
     if (ui->mPlayPadCount != PLAY_PADS_20_20 && (engineType == 5 || engineType == 6 || isSamplerChops)) {
         return; // Fixed pad count for drum / chop tracks
     }
