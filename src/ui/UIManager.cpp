@@ -4258,11 +4258,13 @@ void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
         case 3: { // FM Drum - trigger voice
             int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
             ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
+            ui->mEngine.releaseNote(ui->mActiveTrack, 60 + drumIdx);
             break;
         }
         case 4: { // Analogue Drum - trigger voice
             int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
             ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
+            ui->mEngine.releaseNote(ui->mActiveTrack, 60 + drumIdx);
             break;
         }
         case 5: { // Slices - trigger slice note on active track
@@ -4271,6 +4273,7 @@ void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
             if (numSlices <= 0) numSlices = 1;
             int sliceIdx = padIdx % numSlices;
             ui->mEngine.triggerNote(ui->mActiveTrack, 60 + sliceIdx, 100);
+            ui->mEngine.releaseNote(ui->mActiveTrack, 60 + sliceIdx);
             break;
         }
     }

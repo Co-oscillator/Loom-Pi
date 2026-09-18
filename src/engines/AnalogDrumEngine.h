@@ -92,48 +92,48 @@ private:
 
       switch (type) {
       case DrumType::Kick: {
-        float kickDecayTime = 0.15f + (d * d * 2.35f); // 150ms to 2.5s
+        float kickDecayTime = 0.15f + (d * 0.70f); // tau: 0.15s to 0.85s (audible 1.3s to 7.2s)
         decayCoeff = expf(-1.0f / (sr * kickDecayTime));
-        float pTime = 0.020f + (paramA * 0.040f);      // 20ms to 60ms pitch sweep
+        float pTime = 0.020f + (paramA * 0.040f);  // 20ms to 60ms pitch sweep
         pitchDecayCoeff = expf(-1.0f / (sr * pTime));
         break;
       }
       case DrumType::Snare: {
-        float shellTime = 0.04f + (d * 0.22f); // 40ms to 260ms shell ring
-        float wiresTime = 0.08f + (d * 0.72f); // 80ms to 800ms snare wires
+        float shellTime = 0.05f + (d * 0.15f);     // 50ms to 200ms shell ring (audible 0.4s to 1.7s)
+        float wiresTime = 0.08f + (d * 0.32f);     // 80ms to 400ms snare wires (audible 0.7s to 3.4s)
         decayCoeff = expf(-1.0f / (sr * shellTime));
         decayCoeff2 = expf(-1.0f / (sr * wiresTime));
         break;
       }
       case DrumType::Clap: {
-        float tailTime = 0.10f + (d * 1.10f); // 100ms to 1.2s tail
+        float tailTime = 0.08f + (d * 0.27f);      // 80ms to 350ms tail (audible 0.7s to 3.0s)
         decayCoeff = expf(-1.0f / (sr * tailTime));
         decayCoeff2 = expf(-1.0f / (sr * 0.012f)); // 12ms burst decay
         break;
       }
       case DrumType::HiHatClosed: {
-        float hatTime = 0.030f + (d * 0.22f); // 30ms to 250ms
+        float hatTime = 0.030f + (d * 0.070f);     // 30ms to 100ms (audible 250ms to 850ms)
         decayCoeff = expf(-1.0f / (sr * hatTime));
         break;
       }
       case DrumType::HiHatOpen: {
-        float hatTime = 0.150f + (d * 1.45f); // 150ms to 1.6s
+        float hatTime = 0.150f + (d * 0.350f);     // 150ms to 500ms (audible 1.3s to 4.2s)
         decayCoeff = expf(-1.0f / (sr * hatTime));
         break;
       }
       case DrumType::Cymbal: {
-        float cymTime = 0.30f + (d * 2.70f); // 300ms to 3.0s
+        float cymTime = 0.25f + (d * 0.45f);       // 250ms to 700ms (audible 2.1s to 6.0s)
         decayCoeff = expf(-1.0f / (sr * cymTime));
         attackTime = 0.003f + (paramA * 0.080f);
         break;
       }
       case DrumType::Perc: {
-        float percTime = 0.060f + (d * 0.94f); // 60ms to 1.0s
+        float percTime = 0.060f + (d * 0.240f);    // 60ms to 300ms (audible 0.5s to 2.5s)
         decayCoeff = expf(-1.0f / (sr * percTime));
         break;
       }
       case DrumType::Noise: {
-        float noiseTime = 0.050f + (d * 1.45f); // 50ms to 1.5s
+        float noiseTime = 0.050f + (d * 0.350f);   // 50ms to 400ms (audible 0.4s to 3.4s)
         decayCoeff = expf(-1.0f / (sr * noiseTime));
         break;
       }
@@ -270,7 +270,7 @@ private:
         float hp1 = cluster - filterState;
         filterState2 += (hp1 - filterState2) * hpFreq;
         float hp2 = hp1 - filterState2;
-        out = hp2 * env * 1.25f;
+        out = hp2 * env * 5.0f;
         break;
       }
 
@@ -307,7 +307,7 @@ private:
         float hp1 = cluster - filterState;
         filterState2 += (hp1 - filterState2) * hpFreq;
         float hp2 = hp1 - filterState2;
-        out = hp2 * env * 1.35f;
+        out = hp2 * env * 3.5f;
         break;
       }
 

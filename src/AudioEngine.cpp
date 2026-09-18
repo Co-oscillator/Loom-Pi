@@ -4786,6 +4786,24 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
               break;
             }
           }
+          if (track.engineType == 6 && track.analogDrumEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 5 && track.fmDrumEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 0 && track.subtractiveEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 1 && track.fmEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 4 && track.wavetableEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 2 && track.samplerEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 3 && track.granularEngine.isActive()) {
+            activeVoices = true;
+          } else if (track.engineType == 9 && track.soundFontEngine.hasActiveVoices()) {
+            activeVoices = true;
+          }
+
           if (track.mPhysicallyHeldNoteCount == 0 && !activeVoices) {
             track.isActive = false;
             track.mSilenceFrames = 2500;
