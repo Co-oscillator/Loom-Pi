@@ -5905,6 +5905,21 @@ void UIManager::rebuildSeqSidePanel() {
     lv_obj_set_style_text_font(loadLbl, &lv_font_montserrat_12, 0); lv_obj_center(loadLbl);
     lv_obj_add_event_cb(loadBtn, seqLoadBtnEventCb, LV_EVENT_CLICKED, this);
 
+    // 7. Melody In (Audio-to-MIDI) Transcriber button
+    lv_obj_t* melGrp = makeSideGroup(mSeqTrackTab, 48);
+    lv_obj_t* melBtn = lv_button_create(melGrp);
+    lv_obj_set_size(melBtn, 220, 38);
+    lv_obj_set_style_bg_color(melBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(melBtn, trackColor, 0);
+    lv_obj_set_style_border_width(melBtn, 2, 0);
+    lv_obj_set_style_radius(melBtn, 6, 0);
+    lv_obj_t* melLbl = lv_label_create(melBtn);
+    lv_label_set_text(melLbl, LV_SYMBOL_AUDIO "  Rec Melody (Mic)");
+    lv_obj_set_style_text_font(melLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(melLbl, trackColor, 0);
+    lv_obj_center(melLbl);
+    lv_obj_add_event_cb(melBtn, openMelodyBtnEventCb, LV_EVENT_CLICKED, this);
+
     // -------------------------------------------------------------------------
     // TAB 2: STEP PARAMETERS & P-LOCKS EDITOR
     // -------------------------------------------------------------------------
@@ -6779,6 +6794,602 @@ void UIManager::closeFileBrowser() {
     mFileBrowserCurrentPath = "";
     mFileBrowserTa = nullptr;
     resetFileBrowserFlags();
+}
+
+// =========================================================================
+// --- Melody In (Audio-to-MIDI) Transcriber Modal ---
+// =========================================================================
+
+void UIManager::openMelodyTranscriberModal() {
+    if (mMelodyModal) {
+        closeMelodyTranscriberModal();
+    }
+
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    // Full screen overlay
+    lv_obj_t* overlay = lv_obj_create(lv_screen_active());
+    lv_obj_set_size(overlay, SCREEN_WIDTH, SCREEN_HEIGHT);
+    lv_obj_set_pos(overlay, 0, 0);
+    lv_obj_set_style_bg_color(overlay, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_80, 0);
+    lv_obj_set_style_border_width(overlay, 0, 0);
+    lv_obj_add_flag(overlay, LV_OBJ_FLAG_FLOATING);
+    mMelodyModal = overlay;
+
+    // Modal Card
+    lv_obj_t* card = lv_obj_create(overlay);
+    lv_obj_set_size(card, (SCREEN_WIDTH >= 1280) ? 960 : 760, (SCREEN_HEIGHT >= 800) ? 580 : 450);
+    lv_obj_center(card);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0x181818), 0);
+    lv_obj_set_style_border_color(card, trackColor, 0);
+    lv_obj_set_style_border_width(card, 2, 0);
+    lv_obj_set_style_radius(card, 12, 0);
+    lv_obj_set_style_pad_all(card, 16, 0);
+    lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(card, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Row 1: Header (Title + Track Info + BPM)
+    lv_obj_t* headerRow = lv_obj_create(card);
+    lv_obj_set_size(headerRow, lv_pct(100), 38);
+    lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(headerRow, 0, 0);
+    lv_obj_set_style_pad_all(headerRow, 0, 0);
+    lv_obj_remove_flag(headerRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(headerRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(headerRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(headerRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t* titleLbl = lv_label_create(headerRow);
+    lv_label_set_text(titleLbl, LV_SYMBOL_AUDIO "  MELODY IN: AUDIO TO MIDI");
+    lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(titleLbl, trackColor, 0);
+
+    lv_obj_t* infoLbl = lv_label_create(headerRow);
+    lv_label_set_text_fmt(infoLbl, "Track %d  |  %.0f BPM  |  %s", 
+                          mActiveTrack + 1, mEngine.getBpm(), 
+                          mEngine.getTracks()[mActiveTrack].engineType == 0 ? "Subtractive" :
+                          mEngine.getTracks()[mActiveTrack].engineType == 1 ? "FM Synth" :
+                          mEngine.getTracks()[mActiveTrack].engineType == 9 ? "SoundFont" : "Synth");
+    lv_obj_set_style_text_font(infoLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(infoLbl, lv_color_hex(0xAAAAAA), 0);
+
+    // Row 2: Controls Toolbar
+    // [Source: MIC/LINE] [Noise Gate: Slider] [Scale Snap: Toggle] [Count-in: 1 Bar] [Length: 1/2/4 Bars]
+    lv_obj_t* toolbar = lv_obj_create(card);
+    lv_obj_set_size(toolbar, lv_pct(100), 52);
+    lv_obj_set_style_bg_color(toolbar, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(toolbar, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(toolbar, 1, 0);
+    lv_obj_set_style_radius(toolbar, 8, 0);
+    lv_obj_set_style_pad_all(toolbar, 6, 0);
+    lv_obj_remove_flag(toolbar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(toolbar, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(toolbar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(toolbar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // 1. Input Source Button
+    lv_obj_t* srcBtn = lv_button_create(toolbar);
+    mMelodyInputSourceBtn = srcBtn;
+    lv_obj_set_size(srcBtn, 110, 36);
+    lv_obj_set_style_bg_color(srcBtn, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(srcBtn, 6, 0);
+    lv_obj_t* srcLbl = lv_label_create(srcBtn);
+    mMelodyInputSourceLbl = srcLbl;
+    lv_label_set_text(srcLbl, (mMelodyInputSource == 0) ? "Src: MIC" : "Src: LINE");
+    lv_obj_set_style_text_font(srcLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(srcLbl);
+    lv_obj_add_event_cb(srcBtn, melodyInputSourceBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // 2. Noise Gate Slider Group
+    lv_obj_t* gateGrp = lv_obj_create(toolbar);
+    lv_obj_set_size(gateGrp, 210, 40);
+    lv_obj_set_style_bg_opa(gateGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(gateGrp, 0, 0);
+    lv_obj_set_style_pad_all(gateGrp, 0, 0);
+    lv_obj_set_layout(gateGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(gateGrp, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(gateGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(gateGrp, LV_OBJ_FLAG_SCROLLABLE);
+
+    mMelodyGateValLbl = lv_label_create(gateGrp);
+    lv_label_set_text_fmt(mMelodyGateValLbl, "Noise Gate: %.0fdB", mMelodyGateDb);
+    lv_obj_set_style_text_font(mMelodyGateValLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mMelodyGateValLbl, lv_color_hex(0x888888), 0);
+
+    mMelodyGateSlider = lv_slider_create(gateGrp);
+    lv_obj_set_size(mMelodyGateSlider, 190, 8);
+    lv_slider_set_range(mMelodyGateSlider, -60, -12);
+    lv_slider_set_value(mMelodyGateSlider, (int)mMelodyGateDb, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mMelodyGateSlider, melodyGateSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // 3. Scale Snap Button
+    lv_obj_t* scBtn = lv_button_create(toolbar);
+    mMelodyScaleBtn = scBtn;
+    lv_obj_set_size(scBtn, 140, 36);
+    lv_obj_set_style_bg_color(scBtn, mMelodyScaleSnap ? trackColor : lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(scBtn, 6, 0);
+    lv_obj_t* scLbl = lv_label_create(scBtn);
+    mMelodyScaleLbl = scLbl;
+    lv_label_set_text(scLbl, mMelodyScaleSnap ? "Scale: Snap ON" : "Scale: Chromatic");
+    lv_obj_set_style_text_font(scLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(scLbl);
+    lv_obj_add_event_cb(scBtn, melodyScaleBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // 4. Count-In Dropdown
+    mMelodyCountInDd = lv_dropdown_create(toolbar);
+    lv_obj_set_size(mMelodyCountInDd, 115, 36);
+    lv_dropdown_set_options(mMelodyCountInDd, "No Count\n1 Bar In\n2 Bars In");
+    lv_dropdown_set_selected(mMelodyCountInDd, mMelodyCountInBars);
+    lv_obj_set_style_bg_color(mMelodyCountInDd, lv_color_hex(0x282828), 0);
+    lv_obj_set_style_text_font(mMelodyCountInDd, &lv_font_montserrat_12, 0);
+    lv_obj_add_event_cb(mMelodyCountInDd, melodyCountInDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // 5. Length Dropdown
+    mMelodyBarsDd = lv_dropdown_create(toolbar);
+    lv_obj_set_size(mMelodyBarsDd, 125, 36);
+    lv_dropdown_set_options(mMelodyBarsDd, "1 Bar (16 Stp)\n2 Bars (32 Stp)\n4 Bars (64 Stp)");
+    int barSel = (mMelodyRecordBars == 4) ? 2 : (mMelodyRecordBars == 2 ? 1 : 0);
+    lv_dropdown_set_selected(mMelodyBarsDd, barSel);
+    lv_obj_set_style_bg_color(mMelodyBarsDd, lv_color_hex(0x282828), 0);
+    lv_obj_set_style_text_font(mMelodyBarsDd, &lv_font_montserrat_12, 0);
+    lv_obj_add_event_cb(mMelodyBarsDd, melodyBarsDdEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // Row 3: Live Input Status & VU Meter
+    lv_obj_t* meterRow = lv_obj_create(card);
+    lv_obj_set_size(meterRow, lv_pct(100), 32);
+    lv_obj_set_style_bg_opa(meterRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(meterRow, 0, 0);
+    lv_obj_set_style_pad_all(meterRow, 0, 0);
+    lv_obj_remove_flag(meterRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(meterRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(meterRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(meterRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // VU meter bar
+    lv_obj_t* vuCont = lv_obj_create(meterRow);
+    lv_obj_set_size(vuCont, 340, 26);
+    lv_obj_set_style_bg_opa(vuCont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(vuCont, 0, 0);
+    lv_obj_set_style_pad_all(vuCont, 0, 0);
+    lv_obj_set_layout(vuCont, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(vuCont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(vuCont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(vuCont, 8, 0);
+
+    lv_obj_t* vuTitle = lv_label_create(vuCont);
+    lv_label_set_text(vuTitle, "LEVEL:");
+    lv_obj_set_style_text_font(vuTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(vuTitle, lv_color_hex(0x888888), 0);
+
+    mMelodyVuBar = lv_bar_create(vuCont);
+    lv_obj_set_size(mMelodyVuBar, 200, 12);
+    lv_bar_set_range(mMelodyVuBar, -60, 0);
+    lv_bar_set_value(mMelodyVuBar, -60, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mMelodyVuBar, lv_color_hex(0x00FF88), LV_PART_INDICATOR);
+
+    mMelodyVuLbl = lv_label_create(vuCont);
+    lv_label_set_text(mMelodyVuLbl, "-60dB");
+    lv_obj_set_style_text_font(mMelodyVuLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mMelodyVuLbl, lv_color_hex(0xCCCCCC), 0);
+
+    // Live pitch note display
+    mMelodyPitchLbl = lv_label_create(meterRow);
+    lv_label_set_text(mMelodyPitchLbl, "PITCH: — (0 Hz)");
+    lv_obj_set_style_text_font(mMelodyPitchLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mMelodyPitchLbl, lv_color_hex(0x00D4FF), 0);
+
+    // Status text (Idle, Count-in, Recording...)
+    mMelodyStatusLbl = lv_label_create(meterRow);
+    lv_label_set_text(mMelodyStatusLbl, "Ready. Tap Record and whistle/sing.");
+    lv_obj_set_style_text_font(mMelodyStatusLbl, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(mMelodyStatusLbl, lv_color_hex(0xCCCCCC), 0);
+
+    // Row 4: Piano Roll Canvas (Central recording visualizer)
+    lv_obj_t* rollCard = lv_obj_create(card);
+    mMelodyPianoRoll = rollCard;
+    lv_obj_set_size(rollCard, lv_pct(100), (SCREEN_HEIGHT >= 800) ? 310 : 210);
+    lv_obj_set_style_bg_color(rollCard, lv_color_hex(0x121212), 0);
+    lv_obj_set_style_border_color(rollCard, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(rollCard, 1, 0);
+    lv_obj_set_style_radius(rollCard, 8, 0);
+    lv_obj_set_style_pad_all(rollCard, 0, 0);
+    lv_obj_remove_flag(rollCard, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Initial draw of piano roll grid
+    updateMelodyPianoRoll();
+
+    // Row 5: Action Buttons
+    // [ Cancel ]           [ Audition (Play) ] [ Record / Stop ]           [ Commit & Close ]
+    lv_obj_t* actionRow = lv_obj_create(card);
+    lv_obj_set_size(actionRow, lv_pct(100), 48);
+    lv_obj_set_style_bg_opa(actionRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(actionRow, 0, 0);
+    lv_obj_set_style_pad_all(actionRow, 0, 0);
+    lv_obj_remove_flag(actionRow, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(actionRow, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(actionRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(actionRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Cancel
+    lv_obj_t* cancelBtn = lv_button_create(actionRow);
+    lv_obj_set_size(cancelBtn, 120, 40);
+    lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(cancelBtn, 6, 0);
+    lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
+    lv_label_set_text(cancelLbl, "Cancel");
+    lv_obj_set_style_text_font(cancelLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(cancelLbl);
+    lv_obj_add_event_cb(cancelBtn, melodyCancelBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Audition
+    lv_obj_t* audBtn = lv_button_create(actionRow);
+    mMelodyAuditionBtn = audBtn;
+    lv_obj_set_size(audBtn, 160, 40);
+    lv_obj_set_style_bg_color(audBtn, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_color(audBtn, trackColor, 0);
+    lv_obj_set_style_border_width(audBtn, 1, 0);
+    lv_obj_set_style_radius(audBtn, 6, 0);
+    lv_obj_t* audLbl = lv_label_create(audBtn);
+    lv_label_set_text(audLbl, LV_SYMBOL_PLAY "  Audition Synth");
+    lv_obj_set_style_text_font(audLbl, &lv_font_montserrat_12, 0);
+    lv_obj_center(audLbl);
+    lv_obj_add_event_cb(audBtn, melodyAuditionBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Record / Stop Main Button
+    lv_obj_t* recBtn = lv_button_create(actionRow);
+    mMelodyRecBtn = recBtn;
+    lv_obj_set_size(recBtn, 170, 40);
+    lv_obj_set_style_bg_color(recBtn, lv_color_hex(0xAA1111), 0);
+    lv_obj_set_style_radius(recBtn, 6, 0);
+    lv_obj_t* recLbl = lv_label_create(recBtn);
+    mMelodyRecBtnLbl = recLbl;
+    lv_label_set_text(recLbl, LV_SYMBOL_AUDIO "  RECORD");
+    lv_obj_set_style_text_font(recLbl, &lv_font_montserrat_14, 0);
+    lv_obj_center(recLbl);
+    lv_obj_add_event_cb(recBtn, melodyRecBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Commit
+    lv_obj_t* commitBtn = lv_button_create(actionRow);
+    mMelodyCommitBtn = commitBtn;
+    lv_obj_set_size(commitBtn, 180, 40);
+    lv_obj_set_style_bg_color(commitBtn, trackColor, 0);
+    lv_obj_set_style_radius(commitBtn, 6, 0);
+    lv_obj_t* commitLbl = lv_label_create(commitBtn);
+    lv_label_set_text(commitLbl, LV_SYMBOL_OK "  Commit to Track");
+    lv_obj_set_style_text_font(commitLbl, &lv_font_montserrat_14, 0);
+    lv_obj_center(commitLbl);
+    lv_obj_add_event_cb(commitBtn, melodyCommitBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // Configure MelodyTracker
+    auto& tracker = mEngine.getMelodyTracker();
+    tracker.setTempoAndSteps(mEngine.getBpm(), mMelodyRecordBars * 16);
+    tracker.setNoiseGateDb(mMelodyGateDb);
+    int rootKey = mEngine.getScaleRoot();
+    tracker.setScaleFilter(rootKey, mSelectedScaleIdx);
+    tracker.setScaleFilterEnabled(mMelodyScaleSnap);
+
+    // Start 30Hz polling timer
+    mMelodyTimer = lv_timer_create(melodyTimerCb, 33, this);
+}
+
+void UIManager::closeMelodyTranscriberModal() {
+    auto& tracker = mEngine.getMelodyTracker();
+    tracker.stopRecording();
+
+    if (mMelodyTimer) {
+        lv_timer_delete(mMelodyTimer);
+        mMelodyTimer = nullptr;
+    }
+    if (mMelodyModal) {
+        lv_obj_delete(mMelodyModal);
+        mMelodyModal = nullptr;
+    }
+    mMelodyPianoRoll = nullptr;
+    mMelodyVuBar = nullptr;
+    mMelodyVuLbl = nullptr;
+    mMelodyPitchLbl = nullptr;
+    mMelodyGateSlider = nullptr;
+    mMelodyGateValLbl = nullptr;
+    mMelodyStatusLbl = nullptr;
+    mMelodyRecBtn = nullptr;
+    mMelodyRecBtnLbl = nullptr;
+    mMelodyAuditionBtn = nullptr;
+    mMelodyCommitBtn = nullptr;
+}
+
+void UIManager::updateMelodyPianoRoll() {
+    if (!mMelodyPianoRoll) return;
+    lv_obj_clean(mMelodyPianoRoll);
+
+    int totalSteps = mMelodyRecordBars * 16;
+    int rollW = lv_obj_get_width(mMelodyPianoRoll);
+    int rollH = lv_obj_get_height(mMelodyPianoRoll);
+    if (rollW <= 0) rollW = (SCREEN_WIDTH >= 1280) ? 920 : 720;
+    if (rollH <= 0) rollH = (SCREEN_HEIGHT >= 800) ? 300 : 200;
+
+    lv_color_t trackColor = getTrackColor(mActiveTrack);
+
+    // Pitch range displayed: C2 (MIDI 36) to C6 (MIDI 84) = 48 semitones
+    constexpr int MIN_NOTE = 36;
+    constexpr int MAX_NOTE = 84;
+    constexpr int NOTE_RANGE = MAX_NOTE - MIN_NOTE;
+
+    // Draw grid lines
+    float stepWidth = (float)rollW / (float)totalSteps;
+    for (int s = 0; s <= totalSteps; ++s) {
+        lv_obj_t* line = lv_obj_create(mMelodyPianoRoll);
+        int x = (int)(s * stepWidth);
+        lv_obj_set_size(line, (s % 16 == 0) ? 2 : ((s % 4 == 0) ? 1 : 1), rollH);
+        lv_obj_set_pos(line, x, 0);
+        lv_obj_set_style_bg_color(line, (s % 16 == 0) ? lv_color_hex(0x444444) : ((s % 4 == 0) ? lv_color_hex(0x282828) : lv_color_hex(0x1B1B1B)), 0);
+        lv_obj_set_style_border_width(line, 0, 0);
+        lv_obj_remove_flag(line, LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    // Draw semitone octave dividers
+    for (int n = MIN_NOTE; n <= MAX_NOTE; ++n) {
+        if (n % 12 == 0) { // C notes
+            float yRatio = 1.0f - (float)(n - MIN_NOTE) / (float)NOTE_RANGE;
+            int y = (int)(yRatio * (rollH - 12));
+            lv_obj_t* oLine = lv_obj_create(mMelodyPianoRoll);
+            lv_obj_set_size(oLine, rollW, 1);
+            lv_obj_set_pos(oLine, 0, y);
+            lv_obj_set_style_bg_color(oLine, lv_color_hex(0x2A2A2A), 0);
+            lv_obj_set_style_border_width(oLine, 0, 0);
+            lv_obj_remove_flag(oLine, LV_OBJ_FLAG_CLICKABLE);
+
+            // Note label C2, C3, C4...
+            lv_obj_t* nLbl = lv_label_create(mMelodyPianoRoll);
+            int oct = (n / 12) - 1;
+            lv_label_set_text_fmt(nLbl, "C%d", oct);
+            lv_obj_set_style_text_font(nLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(nLbl, lv_color_hex(0x666666), 0);
+            lv_obj_set_pos(nLbl, 4, std::max(0, y - 10));
+        }
+    }
+
+    // Draw transcribed notes
+    for (const auto& tn : mTranscribedNotesBuffer) {
+        int noteClamped = std::max(MIN_NOTE, std::min(MAX_NOTE, tn.midiNote));
+        float yRatio = 1.0f - (float)(noteClamped - MIN_NOTE) / (float)NOTE_RANGE;
+        int y = (int)(yRatio * (rollH - 16));
+        int x = (int)((tn.startStep + tn.subStepOffset) * stepWidth);
+        int w = (int)(tn.durationSteps * stepWidth);
+        if (w < 6) w = 6;
+
+        lv_obj_t* noteBlock = lv_obj_create(mMelodyPianoRoll);
+        lv_obj_set_size(noteBlock, w, 12);
+        lv_obj_set_pos(noteBlock, x, y);
+        lv_obj_set_style_bg_color(noteBlock, trackColor, 0);
+        lv_obj_set_style_bg_opa(noteBlock, (lv_opa_t)(tn.velocity * 255.0f), 0);
+        lv_obj_set_style_border_color(noteBlock, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_border_width(noteBlock, 1, 0);
+        lv_obj_set_style_radius(noteBlock, 3, 0);
+        lv_obj_remove_flag(noteBlock, LV_OBJ_FLAG_CLICKABLE);
+
+        // Pitch label inside block if wide enough
+        if (w > 26) {
+            lv_obj_t* bLbl = lv_label_create(noteBlock);
+            int oct = (tn.midiNote / 12) - 1;
+            lv_label_set_text_fmt(bLbl, "%s%d", kNoteNames[tn.midiNote % 12], oct);
+            lv_obj_set_style_text_font(bLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(bLbl, lv_color_hex(0xFFFFFF), 0);
+            lv_obj_center(bLbl);
+        }
+    }
+
+    // Draw recording progress playhead line
+    auto& tracker = mEngine.getMelodyTracker();
+    if (tracker.isRecording() && !tracker.isCountIn()) {
+        float progress = tracker.getRecordingProgress();
+        int curX = (int)(progress * (float)rollW);
+        lv_obj_t* cursor = lv_obj_create(mMelodyPianoRoll);
+        lv_obj_set_size(cursor, 2, rollH);
+        lv_obj_set_pos(cursor, curX, 0);
+        lv_obj_set_style_bg_color(cursor, lv_color_hex(0xFF2222), 0);
+        lv_obj_set_style_border_width(cursor, 0, 0);
+        lv_obj_remove_flag(cursor, LV_OBJ_FLAG_CLICKABLE);
+    }
+}
+
+void UIManager::melodyTimerCb(lv_timer_t* timer) {
+    UIManager* ui = (UIManager*)timer->user_data;
+    if (!ui || !ui->mMelodyModal) return;
+
+    auto& tracker = ui->mEngine.getMelodyTracker();
+
+    // 1. Update VU Meter
+    float vuDb = tracker.getLiveVuLevel();
+    if (ui->mMelodyVuBar) {
+        lv_bar_set_value(ui->mMelodyVuBar, (int)vuDb, LV_ANIM_OFF);
+        // Turn indicator red if near 0dB, orange above -6dB, green otherwise
+        if (vuDb > -1.0f) {
+            lv_obj_set_style_bg_color(ui->mMelodyVuBar, lv_color_hex(0xFF2222), LV_PART_INDICATOR);
+        } else if (vuDb > -6.0f) {
+            lv_obj_set_style_bg_color(ui->mMelodyVuBar, lv_color_hex(0xFFAA00), LV_PART_INDICATOR);
+        } else {
+            lv_obj_set_style_bg_color(ui->mMelodyVuBar, lv_color_hex(0x00FF88), LV_PART_INDICATOR);
+        }
+    }
+    if (ui->mMelodyVuLbl) {
+        lv_label_set_text_fmt(ui->mMelodyVuLbl, "%.0fdB", vuDb);
+    }
+
+    // 2. Update Live Pitch
+    float pitchHz = tracker.getLiveDetectedPitchHz();
+    int midi = tracker.getLiveDetectedMidi();
+    if (ui->mMelodyPitchLbl) {
+        if (pitchHz > 60.0f && midi > 0) {
+            int oct = (midi / 12) - 1;
+            lv_label_set_text_fmt(ui->mMelodyPitchLbl, "PITCH: %s%d (%.1f Hz)", 
+                                  kNoteNames[midi % 12], oct, pitchHz);
+        } else {
+            lv_label_set_text(ui->mMelodyPitchLbl, "PITCH: — (0 Hz)");
+        }
+    }
+
+    // 3. Update Status / Transport
+    static bool lastFinished = false;
+    bool isRec = tracker.isRecording();
+    bool isCount = tracker.isCountIn();
+    bool isFin = tracker.isFinished();
+
+    if (ui->mMelodyStatusLbl) {
+        if (isCount) {
+            int beats = tracker.getCountInBeatsLeft();
+            lv_label_set_text_fmt(ui->mMelodyStatusLbl, "COUNT-IN... %d", beats);
+            lv_obj_set_style_text_color(ui->mMelodyStatusLbl, lv_color_hex(0xFFAA00), 0);
+        } else if (isRec) {
+            int curStep = tracker.getCurrentRecordingStep();
+            int totalSteps = ui->mMelodyRecordBars * 16;
+            lv_label_set_text_fmt(ui->mMelodyStatusLbl, "● RECORDING: Step %d / %d", curStep + 1, totalSteps);
+            lv_obj_set_style_text_color(ui->mMelodyStatusLbl, lv_color_hex(0xFF3333), 0);
+        } else if (isFin) {
+            lv_label_set_text_fmt(ui->mMelodyStatusLbl, "Recording Complete (%d notes transcribed).", 
+                                  (int)ui->mTranscribedNotesBuffer.size());
+            lv_obj_set_style_text_color(ui->mMelodyStatusLbl, lv_color_hex(0x00FF88), 0);
+        } else {
+            lv_label_set_text(ui->mMelodyStatusLbl, "Ready. Tap Record and whistle/sing.");
+            lv_obj_set_style_text_color(ui->mMelodyStatusLbl, lv_color_hex(0xCCCCCC), 0);
+        }
+    }
+
+    // 4. If recording just finished, pull transcribed notes
+    if (isFin && !lastFinished) {
+        ui->mTranscribedNotesBuffer = tracker.getTranscribedNotes();
+        if (ui->mMelodyRecBtnLbl) {
+            lv_label_set_text(ui->mMelodyRecBtnLbl, LV_SYMBOL_AUDIO "  RE-TAKE");
+        }
+        ui->updateMelodyPianoRoll();
+    } else if (isRec && !isCount) {
+        // Live polling of notes during recording
+        ui->mTranscribedNotesBuffer = tracker.getTranscribedNotes();
+        ui->updateMelodyPianoRoll();
+    }
+    lastFinished = isFin;
+}
+
+void UIManager::openMelodyBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->openMelodyTranscriberModal();
+}
+
+void UIManager::melodyInputSourceBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->mMelodyInputSource = (ui->mMelodyInputSource == 0) ? 1 : 0;
+    ui->mEngine.mRecordingSource = (ui->mMelodyInputSource == 0) ? AudioEngine::MIC : AudioEngine::LINE_IN;
+    if (ui->mMelodyInputSourceLbl) {
+        lv_label_set_text(ui->mMelodyInputSourceLbl, (ui->mMelodyInputSource == 0) ? "Src: MIC" : "Src: LINE");
+    }
+}
+
+void UIManager::melodyScaleBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->mMelodyScaleSnap = !ui->mMelodyScaleSnap;
+    ui->mEngine.getMelodyTracker().setScaleFilterEnabled(ui->mMelodyScaleSnap);
+    if (ui->mMelodyScaleLbl) {
+        lv_label_set_text(ui->mMelodyScaleLbl, ui->mMelodyScaleSnap ? "Scale: Snap ON" : "Scale: Chromatic");
+    }
+    if (ui->mMelodyScaleBtn) {
+        lv_color_t trackColor = ui->getTrackColor(ui->mActiveTrack);
+        lv_obj_set_style_bg_color(ui->mMelodyScaleBtn, ui->mMelodyScaleSnap ? trackColor : lv_color_hex(0x333333), 0);
+    }
+}
+
+void UIManager::melodyGateSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyGateDb = (float)lv_slider_get_value(slider);
+    ui->mEngine.getMelodyTracker().setNoiseGateDb(ui->mMelodyGateDb);
+    if (ui->mMelodyGateValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyGateValLbl, "Noise Gate: %.0fdB", ui->mMelodyGateDb);
+    }
+}
+
+void UIManager::melodyCountInDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !dd) return;
+    ui->mMelodyCountInBars = lv_dropdown_get_selected(dd);
+}
+
+void UIManager::melodyBarsDdEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !dd) return;
+    int sel = lv_dropdown_get_selected(dd);
+    ui->mMelodyRecordBars = (sel == 2) ? 4 : (sel == 1 ? 2 : 1);
+    ui->mEngine.getMelodyTracker().setTempoAndSteps(ui->mEngine.getBpm(), ui->mMelodyRecordBars * 16);
+    ui->mTranscribedNotesBuffer.clear();
+    ui->updateMelodyPianoRoll();
+}
+
+void UIManager::melodyRecBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+
+    auto& tracker = ui->mEngine.getMelodyTracker();
+    if (tracker.isRecording()) {
+        tracker.stopRecording();
+        if (ui->mMelodyRecBtnLbl) {
+            lv_label_set_text(ui->mMelodyRecBtnLbl, LV_SYMBOL_AUDIO "  RE-TAKE");
+        }
+    } else {
+        ui->mTranscribedNotesBuffer.clear();
+        tracker.setTempoAndSteps(ui->mEngine.getBpm(), ui->mMelodyRecordBars * 16);
+        tracker.setNoiseGateDb(ui->mMelodyGateDb);
+        tracker.setScaleFilter(ui->mEngine.getScaleRoot(), ui->mSelectedScaleIdx);
+        tracker.setScaleFilterEnabled(ui->mMelodyScaleSnap);
+        tracker.startRecording(ui->mMelodyCountInBars, ui->mMelodyRecordBars);
+        if (ui->mMelodyRecBtnLbl) {
+            lv_label_set_text(ui->mMelodyRecBtnLbl, "STOP RECORD");
+        }
+    }
+}
+
+void UIManager::melodyAuditionBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui || ui->mTranscribedNotesBuffer.empty()) return;
+
+    // Trigger notes through engine with realistic preview timing
+    int trackIdx = ui->mActiveTrack;
+    for (const auto& tn : ui->mTranscribedNotesBuffer) {
+        ui->mEngine.triggerNote(trackIdx, tn.midiNote, (int)(tn.velocity * 127.0f));
+    }
+}
+
+void UIManager::melodyCommitBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+
+    if (!ui->mTranscribedNotesBuffer.empty()) {
+        ui->mEngine.commitMelodyToTrack(ui->mActiveTrack, ui->mTranscribedNotesBuffer, true);
+        ui->mSeqTrackLength[ui->mActiveTrack] = ui->mMelodyRecordBars * 16;
+        ui->mEngine.setPatternLength(ui->mActiveTrack, ui->mMelodyRecordBars * 16);
+        std::cout << "Committed " << ui->mTranscribedNotesBuffer.size() 
+                  << " melody notes to Track " << ui->mActiveTrack + 1 << std::endl;
+    }
+
+    ui->closeMelodyTranscriberModal();
+    ui->rebuildSeqGrid();
+    if (ui->mSeqLengthLbl) {
+        lv_label_set_text_fmt(ui->mSeqLengthLbl, "Length: %d", ui->mSeqTrackLength[ui->mActiveTrack]);
+    }
+}
+
+void UIManager::melodyCancelBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->closeMelodyTranscriberModal();
 }
 
 // =========================================================================

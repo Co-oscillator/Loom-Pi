@@ -12,6 +12,7 @@
 #include "EnvelopeFollower.h"
 #include "RoutingMatrix.h"
 #include "Sequencer.h"
+#include "MelodyTracker.h"
 #include "engines/AnalogDrumEngine.h"
 #include "engines/AudioInEngine.h"
 #include "engines/AutoPannerFx.h"
@@ -187,6 +188,10 @@ public:
   void setChainLength(int trackIndex, int length);
   void setChainSlot(int trackIndex, int slotIndex, int laneIndex,
                     const std::vector<Step> &steps);
+
+  // Melody Transcriber
+  MelodyTracker& getMelodyTracker() { return mMelodyTracker; }
+  void commitMelodyToTrack(int trackIndex, const std::vector<TranscribedNote>& notes, bool replace = true);
 
   // Audio Export
   void renderToWav(int numCycles, const std::string &path);
@@ -449,6 +454,7 @@ public:
     int activeFmPreset = 0;
   };
 
+  MelodyTracker mMelodyTracker;
   std::vector<Track> mTracks;
   RoutingMatrix mRoutingMatrix;
   std::atomic<bool> mIsPlaying{false};

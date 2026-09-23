@@ -696,6 +696,7 @@ void AudioEngine::updateSampleRate(float sampleRate) {
     t.soundFontEngine.setSampleRate(mSampleRate);
     t.audioInEngine.setSampleRate(mSampleRate);
   }
+  mMelodyTracker.setSampleRate(mSampleRate);
 }
 
 void AudioEngine::stop() {
@@ -2460,6 +2461,49 @@ void AudioEngine::renderInput(const float *inputData, int32_t numFrames, int32_t
         track.samplerEngine.pushSamples(batchBuffer, batchCount);
       else if (track.engineType == 3)
         track.granularEngine.pushSamples(batchBuffer, batchCount);
+    }
+  }
+
+  // Feed Melody Transcriber
+  if (numFrames > 0) {
+    constexpr int MAX_MELODY_BATCH = 1024;
+    float melodyBatch[MAX_MELODY_BATCH];
+    for (int i = 0; i < numFrames; i += MAX_MELODY_BATCH) {
+      int framesToDo = std::min(MAX_MELODY_BATCH, numFrames - i);
+      for (int f = 0; f < framesToDo; ++f) {
+        int idx = i + f;
+        if (channels == 2) {
+          melodyBatch[f] = (mRecordingSource == MIC) ? inputData[idx * 2] : inputData[idx * 2 + 1];
+        } else {
+          melodyBatch[f] = inputData[idx];
+        }
+      }
+      mMelodyTracker.pushAudio(melodyBatch, framesToDo);
+    }
+  }
+}
+
+void AudioEngine::commitMelodyToTrack(int trackIndex, const std::vector<TranscribedNote>& notes, bool replace) {
+  std::lock_guard<std::recursive_mutex> lock(mLock);
+  if (trackIndex < 0 || trackIndex >= (int)mTracks.size()) return;
+
+  auto& track = mTracks[trackIndex];
+  auto& seq = track.sequencer;
+
+  if (replace) {
+    for (int s = 0; s < 64; ++s) {
+      seq.getStepsMutable()[s].active = false;
+      seq.getStepsMutable()[s].notes.clear();
+      seq.getStepsMutable()[s].gate = 1.0f;
+    }
+  }
+
+  for (const auto& tn : notes) {
+    if (tn.startStep >= 0 && tn.startStep < 64) {
+      Step& step = seq.getStepsMutable()[tn.startStep];
+      step.active = true;
+      step.addNote(tn.midiNote, tn.velocity, tn.subStepOffset);
+      step.gate = std::max(0.1f, std::min(16.0f, tn.durationSteps));
     }
   }
 }

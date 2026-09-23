@@ -285,6 +285,49 @@ private:
     lv_obj_t* mStepModalPLockDd = nullptr;
     lv_obj_t* mStepModalPLockSlider = nullptr;
 
+    // Melody In Transcriber Modal State
+    lv_obj_t* mMelodyModal = nullptr;
+    lv_obj_t* mMelodyVuBar = nullptr;
+    lv_obj_t* mMelodyVuLbl = nullptr;
+    lv_obj_t* mMelodyPitchLbl = nullptr;
+    lv_obj_t* mMelodyGateSlider = nullptr;
+    lv_obj_t* mMelodyGateValLbl = nullptr;
+    lv_obj_t* mMelodyInputSourceBtn = nullptr;
+    lv_obj_t* mMelodyInputSourceLbl = nullptr;
+    lv_obj_t* mMelodyScaleBtn = nullptr;
+    lv_obj_t* mMelodyScaleLbl = nullptr;
+    lv_obj_t* mMelodyCountInDd = nullptr;
+    lv_obj_t* mMelodyBarsDd = nullptr;
+    lv_obj_t* mMelodyRecBtn = nullptr;
+    lv_obj_t* mMelodyRecBtnLbl = nullptr;
+    lv_obj_t* mMelodyStatusLbl = nullptr;
+    lv_obj_t* mMelodyAuditionBtn = nullptr;
+    lv_obj_t* mMelodyCommitBtn = nullptr;
+    lv_obj_t* mMelodyPianoRoll = nullptr;
+    lv_timer_t* mMelodyTimer = nullptr;
+
+    int mMelodyInputSource = 0; // 0=MIC, 1=LINE_IN
+    bool mMelodyScaleSnap = true;
+    int mMelodyCountInBars = 1;
+    int mMelodyRecordBars = 1;
+    float mMelodyGateDb = -36.0f;
+    std::vector<TranscribedNote> mTranscribedNotesBuffer;
+
+    void openMelodyTranscriberModal();
+    void closeMelodyTranscriberModal();
+    void updateMelodyPianoRoll();
+    static void melodyTimerCb(lv_timer_t* timer);
+    static void openMelodyBtnEventCb(lv_event_t* e);
+    static void melodyInputSourceBtnEventCb(lv_event_t* e);
+    static void melodyScaleBtnEventCb(lv_event_t* e);
+    static void melodyGateSliderEventCb(lv_event_t* e);
+    static void melodyCountInDdEventCb(lv_event_t* e);
+    static void melodyBarsDdEventCb(lv_event_t* e);
+    static void melodyRecBtnEventCb(lv_event_t* e);
+    static void melodyAuditionBtnEventCb(lv_event_t* e);
+    static void melodyCommitBtnEventCb(lv_event_t* e);
+    static void melodyCancelBtnEventCb(lv_event_t* e);
+
     void openSeqStepModal(int stepIdx);
     void rebuildSeqSidePanel();
     void closeSeqStepEditor();
