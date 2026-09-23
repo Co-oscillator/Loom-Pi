@@ -123,13 +123,44 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
     std::cout << "[HardwareDisplay] Active display [" << activeDisplayIdx << "] selected: "
               << s_physWidth << "x" << s_physHeight << "@" << chosenMode.refresh_rate << "Hz" << std::endl;
 
+    // Detect desktop environment vs embedded hardware (Raspberry Pi KMSDRM)
+    bool isDesktop = false;
+#ifdef __APPLE__
+    isDesktop = true;
+#endif
+    if (driverName) {
+        std::string drv = driverName;
+        std::transform(drv.begin(), drv.end(), drv.begin(), ::tolower);
+        if (drv == "x11" || drv == "wayland" || drv == "cocoa" || drv == "windows") {
+            isDesktop = true;
+        }
+    }
+    const char* desktopEnv = std::getenv("LOOM_DESKTOP");
+    if (desktopEnv) {
+        if (std::strcmp(desktopEnv, "1") == 0 || std::strcmp(desktopEnv, "true") == 0) isDesktop = true;
+        else if (std::strcmp(desktopEnv, "0") == 0 || std::strcmp(desktopEnv, "false") == 0) isDesktop = false;
+    }
+
+    bool isFullscreen = !isDesktop;
+    const char* fsEnv = std::getenv("LOOM_FULLSCREEN");
+    if (fsEnv) {
+        if (std::strcmp(fsEnv, "1") == 0 || std::strcmp(fsEnv, "true") == 0) isFullscreen = true;
+        else if (std::strcmp(fsEnv, "0") == 0 || std::strcmp(fsEnv, "false") == 0) isFullscreen = false;
+    }
+
     // Determine rotation angle
     const char* rotEnv = std::getenv("LOOM_ROTATION");
     if (rotEnv != nullptr && std::strlen(rotEnv) > 0) {
         s_rotationAngle = std::atof(rotEnv);
         std::cout << "[HardwareDisplay] LOOM_ROTATION environment variable override: "
                   << s_rotationAngle << " deg" << std::endl;
+    } else if (isDesktop) {
+        // Desktop environment: default to standard unrotated landscape window (0 deg),
+        // regardless of whether host monitor is landscape or portrait.
+        s_rotationAngle = 0.0;
+        std::cout << "[HardwareDisplay] Desktop simulator mode. Default rotation: 0 deg (1280x800 window)." << std::endl;
     } else {
+        // Embedded KMSDRM mode: auto-detect physical panel orientation
         if (s_physWidth < s_physHeight) {
             // Mobile portrait panel (e.g. 800x1280) mounted in landscape device
             s_rotationAngle = 270.0;
@@ -147,23 +178,34 @@ bool HardwareDisplay::init(int uiWidth, int uiHeight) {
     int winW = s_physWidth;
     int winH = s_physHeight;
 
-#ifdef __APPLE__
-    // On macOS desktop simulator: create normal window sized to UI
-    winW = s_uiWidth;
-    winH = s_uiHeight;
-    windowFlags |= SDL_WINDOW_RESIZABLE;
-#else
-    // On Raspberry Pi / Linux KMSDRM: run fullscreen at native CRTC resolution
-    windowFlags |= SDL_WINDOW_FULLSCREEN;
-#endif
+    if (isFullscreen) {
+        windowFlags |= SDL_WINDOW_FULLSCREEN;
+    } else {
+        windowFlags |= SDL_WINDOW_RESIZABLE;
+        if (s_rotationAngle == 90.0 || s_rotationAngle == 270.0) {
+            // When simulating portrait hardware rotation on desktop, size window to 800w x 1280h
+            winW = s_uiHeight; // 800
+            winH = s_uiWidth;  // 1280
+        } else {
+            // Standard landscape window: 1280w x 800h
+            winW = s_uiWidth;  // 1280
+            winH = s_uiHeight; // 800
+        }
+        s_physWidth = winW;
+        s_physHeight = winH;
+    }
 
     s_window = SDL_CreateWindow(
         "Loom Pi",
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(activeDisplayIdx),
-        SDL_WINDOWPOS_UNDEFINED_DISPLAY(activeDisplayIdx),
+        SDL_WINDOWPOS_CENTERED_DISPLAY(activeDisplayIdx),
+        SDL_WINDOWPOS_CENTERED_DISPLAY(activeDisplayIdx),
         winW, winH,
         windowFlags
     );
+
+    if (s_window) {
+        SDL_GetWindowSize(s_window, &s_physWidth, &s_physHeight);
+    }
 
     if (!s_window) {
         std::cerr << "[HardwareDisplay] Failed to create SDL Window: " << SDL_GetError() << std::endl;
@@ -302,6 +344,20 @@ double HardwareDisplay::getRotationAngle() {
 
 void HardwareDisplay::setRotationAngle(double angle) {
     s_rotationAngle = angle;
+    if (s_window) {
+        Uint32 flags = SDL_GetWindowFlags(s_window);
+        if (!(flags & SDL_WINDOW_FULLSCREEN)) {
+            int curW = 0, curH = 0;
+            SDL_GetWindowSize(s_window, &curW, &curH);
+            if ((angle == 90.0 || angle == 270.0) && curW > curH) {
+                SDL_SetWindowSize(s_window, s_uiHeight, s_uiWidth);
+                SDL_GetWindowSize(s_window, &s_physWidth, &s_physHeight);
+            } else if ((angle == 0.0 || angle == 180.0) && curW < curH) {
+                SDL_SetWindowSize(s_window, s_uiWidth, s_uiHeight);
+                SDL_GetWindowSize(s_window, &s_physWidth, &s_physHeight);
+            }
+        }
+    }
     if (s_display) {
         lv_obj_invalidate(lv_display_get_screen_active(s_display));
     }
@@ -488,6 +544,16 @@ void HardwareDisplay::transformCoordinates(int rawX, int rawY, int& outX, int& o
 
 bool HardwareDisplay::handleEvent(const SDL_Event& event) {
     switch (event.type) {
+        case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                s_physWidth = event.window.data1;
+                s_physHeight = event.window.data2;
+                if (s_display) {
+                    lv_obj_invalidate(lv_display_get_screen_active(s_display));
+                }
+            }
+            return false;
+
         case SDL_MOUSEBUTTONDOWN:
             if (event.button.button == SDL_BUTTON_LEFT) {
                 TouchSlot& slot = s_touchSlots[0];

@@ -225,7 +225,37 @@ bool switchCaptureDevice(const std::string& deviceName) {
     return true;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--rotate" || arg == "-r") {
+            if (i + 1 < argc) {
+                setenv("LOOM_ROTATION", argv[++i], 1);
+            }
+        } else if (arg == "--desktop" || arg == "-d") {
+            setenv("LOOM_DESKTOP", "1", 1);
+            setenv("LOOM_FULLSCREEN", "0", 1);
+        } else if (arg == "--fullscreen" || arg == "-f") {
+            setenv("LOOM_FULLSCREEN", "1", 1);
+        } else if (arg == "--windowed" || arg == "-w") {
+            setenv("LOOM_FULLSCREEN", "0", 1);
+        } else if (arg == "--help" || arg == "-h") {
+            std::cout << "Loom Pi Synthesizer & Sequencer\n"
+                      << "Usage: " << argv[0] << " [options]\n"
+                      << "Options:\n"
+                      << "  -r, --rotate <deg>    Set screen rotation (0, 90, 180, 270)\n"
+                      << "  -d, --desktop         Run in windowed desktop mode (default on macOS)\n"
+                      << "  -w, --windowed        Force windowed mode\n"
+                      << "  -f, --fullscreen      Force fullscreen mode\n"
+                      << "  -h, --help            Show this help message\n\n"
+                      << "Environment variables:\n"
+                      << "  LOOM_ROTATION=0|90|180|270\n"
+                      << "  LOOM_DESKTOP=1|0\n"
+                      << "  LOOM_FULLSCREEN=1|0\n";
+            return 0;
+        }
+    }
+
     std::cout << "Starting Loom Pi Audio Engine + UI..." << std::endl;
     
     // 1. Init Audio Engine
