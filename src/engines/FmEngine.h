@@ -162,7 +162,7 @@ public:
     mAttack = 0.01f;
     mDecay = 0.1f;
     mSustain = 1.0f;
-    mRelease = 0.2f;
+    mRelease = 0.5f;
   }
 
   void setSampleRate(float sr) {
@@ -318,8 +318,12 @@ public:
     for (int i = 0; i < 6; ++i) {
       v.operators[i].setSampleRate(mSampleRate);
       v.operators[i].setFrequency(startFreq, mOpRatios[i], mSampleRate);
+      float opRel = mOpRelease[i];
+      if (mCarrierMask & (1 << i)) {
+        opRel = std::max(opRel, mRelease);
+      }
       v.operators[i].setADSR(mOpAttack[i], mOpDecay[i], mOpSustain[i],
-                             mOpRelease[i]);
+                             opRel);
       v.operators[i].setUseEnvelope(mUseEnvelope);
       if (mActiveMask & (1 << i))
         v.operators[i].trigger();
@@ -338,11 +342,33 @@ public:
     v.pitchEnvDecay = mIgnoreNoteFrequency ? 0.005f : 0.001f;
   }
 
+  void updateLiveEnvelopes() {
+    for (auto &v : mVoices) {
+      if (v.active) {
+        v.masterEnv.setParameters(mAttack, mDecay, mSustain, mRelease);
+        v.filterEnv.setParameters(mFilterAttack, mFilterDecay, mFilterSustain, mFilterRelease);
+        for (int i = 0; i < 6; ++i) {
+          float opRel = mOpRelease[i];
+          if (mCarrierMask & (1 << i)) {
+            opRel = std::max(opRel, mRelease);
+          }
+          v.operators[i].setADSR(mOpAttack[i], mOpDecay[i], mOpSustain[i], opRel);
+        }
+      }
+    }
+  }
+
   void releaseNote(int note) {
     for (auto &v : mVoices)
       if (v.active && v.note == note) {
-        for (auto &op : v.operators)
-          op.release();
+        for (int i = 0; i < 6; ++i) {
+          float opRel = mOpRelease[i];
+          if (mCarrierMask & (1 << i)) {
+            opRel = std::max(opRel, mRelease);
+          }
+          v.operators[i].setADSR(mOpAttack[i], mOpDecay[i], mOpSustain[i], opRel);
+          v.operators[i].release();
+        }
         v.masterEnv.release();
         v.filterEnv.release();
       }
@@ -366,15 +392,19 @@ public:
   }
 
   void setParameter(int id, float value) {
-    if (id == 114)
+    if (id == 114) {
       mFilterAttack = value;
-    else if (id == 115)
+      updateLiveEnvelopes();
+    } else if (id == 115) {
       mFilterDecay = value;
-    else if (id == 116)
+      updateLiveEnvelopes();
+    } else if (id == 116) {
       mFilterSustain = value;
-    else if (id == 117)
+      updateLiveEnvelopes();
+    } else if (id == 117) {
       mFilterRelease = value;
-    else if (id == 118)
+      updateLiveEnvelopes();
+    } else if (id == 118)
       mFilterEnvAmount = value * 2.0f - 1.0f;
     else if (id == 151)
       mCutoff = value;
@@ -382,9 +412,10 @@ public:
       mResonance = value;
     else if (id == 150)
       setAlgorithm((int)(value * 31.99f));
-    else if (id == 153)
+    else if (id == 153) {
       mCarrierMask = (int)value;
-    else if (id == 154)
+      updateLiveEnvelopes();
+    } else if (id == 154)
       mFeedback = value;
     else if (id == 155)
       mActiveMask = (int)value;
@@ -396,29 +427,37 @@ public:
       mDetune = value;
     else if (id == 159)
       mFeedbackDrive = value;
-    else if (id == 100)
+    else if (id == 100) {
       mAttack = value;
-    else if (id == 101)
+      updateLiveEnvelopes();
+    } else if (id == 101) {
       mDecay = value;
-    else if (id == 102)
+      updateLiveEnvelopes();
+    } else if (id == 102) {
       mSustain = value;
-    else if (id == 103)
+      updateLiveEnvelopes();
+    } else if (id == 103) {
       mRelease = value;
-    else if (id >= 160 && id <= 195) {
+      updateLiveEnvelopes();
+    } else if (id >= 160 && id <= 195) {
       int opIdx = (id - 160) / 6;
       int subId = (id - 160) % 6;
       if (opIdx < 6) {
         if (subId == 0)
           mOpLevels[opIdx] = value;
-        else if (subId == 1)
+        else if (subId == 1) {
           mOpAttack[opIdx] = value;
-        else if (subId == 2)
+          updateLiveEnvelopes();
+        } else if (subId == 2) {
           mOpDecay[opIdx] = value;
-        else if (subId == 3)
+          updateLiveEnvelopes();
+        } else if (subId == 3) {
           mOpSustain[opIdx] = value;
-        else if (subId == 4)
+          updateLiveEnvelopes();
+        } else if (subId == 4) {
           mOpRelease[opIdx] = value;
-        else if (subId == 5)
+          updateLiveEnvelopes();
+        } else if (subId == 5)
           mOpRatios[opIdx] = value * 16.0f;
       }
     } else if (id == 355) {

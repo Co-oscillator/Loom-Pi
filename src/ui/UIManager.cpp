@@ -4258,13 +4258,11 @@ void UIManager::settingsPadBtnEventCb(lv_event_t* e) {
         case 3: { // FM Drum - trigger voice
             int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
             ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
-            ui->mEngine.releaseNote(ui->mActiveTrack, 60 + drumIdx);
             break;
         }
         case 4: { // Analogue Drum - trigger voice
             int drumIdx = ui->mSettingsPadDrumAssign[padIdx] % 8;
             ui->mEngine.triggerNote(ui->mActiveTrack, 60 + drumIdx, 100);
-            ui->mEngine.releaseNote(ui->mActiveTrack, 60 + drumIdx);
             break;
         }
         case 5: { // Slices - trigger slice note on active track
@@ -17305,7 +17303,6 @@ void UIManager::addDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumId
         DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
         if (!d) return;
         d->ui->mEngine.triggerNote(d->ui->mActiveTrack, 60 + d->drumIdx, 115);
-        d->ui->mEngine.releaseNote(d->ui->mActiveTrack, 60 + d->drumIdx);
     }, LV_EVENT_CLICKED, fmData);
     lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
         DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
@@ -17380,7 +17377,6 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
         DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
         if (!d) return;
         d->ui->mEngine.triggerNote(d->ui->mActiveTrack, 60 + d->drumIdx, 115);
-        d->ui->mEngine.releaseNote(d->ui->mActiveTrack, 60 + d->drumIdx);
     }, LV_EVENT_CLICKED, aData);
     lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
         DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
@@ -20466,7 +20462,6 @@ void UIManager::playPadTouchEventCb(lv_event_t* e) {
             lv_obj_set_style_bg_opa(pad, LV_OPA_COVER, 0);
             lv_obj_set_style_border_color(pad, padColor, 0);
             lv_obj_set_style_border_width(pad, 2, 0);
-            ui->mEngine.releaseNote(padTrack, note);
         } else {
             bool isRoot = ((note % 12) == ui->mPlaySelectedRoot);
             lv_obj_set_style_bg_color(pad, isRoot ? padColor : lv_color_hex(0x1F1F1F), 0);

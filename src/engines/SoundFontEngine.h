@@ -21,7 +21,6 @@ public:
         mCurrentPitchWheel(other.mCurrentPitchWheel),
         mSampleRate(other.mSampleRate), mBufferPos(other.mBufferPos),
         mBufferFrames(other.mBufferFrames), mMutex(std::move(other.mMutex)),
-        mEnvelope(std::move(other.mEnvelope)),
         mFilter(std::move(other.mFilter)), mAttack(other.mAttack),
         mDecay(other.mDecay), mSustain(other.mSustain),
         mRelease(other.mRelease), mCutoff(other.mCutoff),
@@ -47,7 +46,6 @@ public:
       mBufferPos = other.mBufferPos;
       mBufferFrames = other.mBufferFrames;
       mMutex = std::move(other.mMutex);
-      mEnvelope = std::move(other.mEnvelope);
       mFilter = std::move(other.mFilter);
       mAttack = other.mAttack;
       mDecay = other.mDecay;
@@ -95,7 +93,6 @@ public:
 
   void setSampleRate(float sr) {
     mSampleRate = sr;
-    mEnvelope.setSampleRate(sr);
     mFilter.setParams(mCutoff * 10000.0f, mResonance, sr);
     if (mTsf) {
       tsf_set_output(mTsf, TSF_STEREO_INTERLEAVED, (int)sr, 0.0f);
@@ -126,7 +123,19 @@ public:
   int getPresetCount() { return mTsf ? tsf_get_presetcount(mTsf) : 0; }
   int getPresetIndex() const { return mPresetIndex; }
 
-  bool hasActiveVoices() const { return mEnvelope.isActive(); }
+  bool hasActiveVoices() const {
+    if (mMutex && mTsf) {
+      std::lock_guard<std::mutex> lock(*mMutex);
+      return tsf_active_voice_count(mTsf) > 0;
+    }
+    return false;
+  }
+
+  void updateActiveVoiceEnvelopes() {
+    if (mTsf) {
+      tsf_update_all_voice_envelopes(mTsf, 0, mAttack, mDecay, mSustain, mRelease);
+    }
+  }
 
   void noteOn(int note, int velocity) {
     if (mMutex && mTsf) {
@@ -139,19 +148,15 @@ public:
       mLastNote = note;
       tsf_channel_note_on(mTsf, 0, note, velocity / 127.0f);
       updatePitchWheel();
-
-      mEnvelope.setParameters(mAttack, mDecay, mSustain, mRelease);
-      mEnvelope.trigger();
+      tsf_set_voice_envelope(mTsf, 0, note, mAttack, mDecay, mSustain, mRelease);
     }
   }
 
   void noteOff(int note) {
     if (mMutex && mTsf) {
       std::lock_guard<std::mutex> lock(*mMutex);
-      if (mLastNote == note) {
-        mEnvelope.release();
-      }
       tsf_channel_note_off(mTsf, 0, note);
+      tsf_set_voice_envelope(mTsf, 0, note, mAttack, mDecay, mSustain, mRelease);
     }
   }
 
@@ -185,7 +190,6 @@ public:
           mBufferPos = 0;
         }
 
-        float env = mEnvelope.nextValue();
         float sL = mInternalBuffer[mBufferPos * 2];
         float sR = mInternalBuffer[mBufferPos * 2 + 1];
 
@@ -233,8 +237,8 @@ public:
           fR = mFilter.process(sR, (TSvf::Type)mFilterMode);
         }
 
-        left[i] = fL * env;
-        right[i] = fR * env;
+        left[i] = fL;
+        right[i] = fR;
 
         mBufferPos++;
       }
@@ -249,7 +253,6 @@ public:
     if (mMutex && mTsf) {
       std::lock_guard<std::mutex> lock(*mMutex);
       tsf_note_off_all(mTsf);
-      mEnvelope.reset();
     }
   }
 
@@ -282,12 +285,16 @@ public:
         mLfoShape = (int)(value * 4.99f);
       } else if (id == 100) { // Forced Attack
         mAttack = value;
+        updateActiveVoiceEnvelopes();
       } else if (id == 101) { // Forced Decay
         mDecay = value;
+        updateActiveVoiceEnvelopes();
       } else if (id == 102) { // Forced Sustain
         mSustain = value;
+        updateActiveVoiceEnvelopes();
       } else if (id == 103) { // Forced Release
         mRelease = value;
+        updateActiveVoiceEnvelopes();
       } else if (id == 112 || id == 1) { // Forced Cutoff
         mCutoff = value;
         mFilter.setParams(mCutoff * 10000.0f, mResonance, mSampleRate);
@@ -315,7 +322,13 @@ public:
     // Implementation for mapping knobs to TSF generators (future expansion)
   }
 
-  float getEnvelopeValue() const { return mEnvelope.getValue(); }
+  float getEnvelopeValue() const {
+    if (mMutex && mTsf) {
+      std::lock_guard<std::mutex> lock(*mMutex);
+      return tsf_get_max_envelope_level(mTsf, 0);
+    }
+    return 0.0f;
+  }
 
 private:
   void updatePitchWheel() {
@@ -341,9 +354,8 @@ private:
   std::unique_ptr<std::mutex> mMutex;
 
   // New Bolt-on Components
-  Adsr mEnvelope;
   TSvf mFilter;
-  float mAttack = 0.01f, mDecay = 0.1f, mSustain = 1.0f, mRelease = 0.2f;
+  float mAttack = 0.01f, mDecay = 0.1f, mSustain = 1.0f, mRelease = 0.5f;
   float mCutoff = 1.0f, mResonance = 0.7f;
   int mFilterMode = 0;
 

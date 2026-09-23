@@ -2387,6 +2387,12 @@ void AudioEngine::releaseNoteLocked(int trackIndex, int note,
         }
       }
 
+      // Drum tracks (FM Drum and Analog Drum) are one-shot percussion instruments (808 style).
+      // Note-Off from pads, keys, or sequencers must NOT choke the audio envelope.
+      if (track.engineType == 5 || track.engineType == 6) {
+        return;
+      }
+
       track.subtractiveEngine.releaseNote(transposedNote);
       track.fmEngine.releaseNote(transposedNote);
       track.samplerEngine.releaseNote(transposedNote);
@@ -3069,7 +3075,9 @@ void AudioEngine::triggerDrumRowKey(int keyIdx, int track, int note, int ratchet
     }
   } else {
     mDrumRowActiveKeys[keyIdx].active = false;
-    releaseNoteLocked(track, note, true);
+    if (mTracks[track].engineType != 5 && mTracks[track].engineType != 6) {
+      releaseNoteLocked(track, note, true);
+    }
   }
 }
 

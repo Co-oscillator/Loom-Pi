@@ -243,6 +243,9 @@ TSFDEF float tsf_channel_get_volume(tsf* f, int channel);
 TSFDEF int tsf_channel_get_pitchwheel(tsf* f, int channel);
 TSFDEF float tsf_channel_get_pitchrange(tsf* f, int channel);
 TSFDEF float tsf_channel_get_tuning(tsf* f, int channel);
+TSFDEF void tsf_set_voice_envelope(tsf* f, int channel, int key, float attack, float decay, float sustain, float release);
+TSFDEF void tsf_update_all_voice_envelopes(tsf* f, int channel, float attack, float decay, float sustain, float release);
+TSFDEF float tsf_get_max_envelope_level(tsf* f, int channel);
 
 #ifdef __cplusplus
 #  undef CPP_DEFAULT0
@@ -2070,6 +2073,87 @@ TSFDEF float tsf_channel_get_pitchrange(tsf* f, int channel)
 TSFDEF float tsf_channel_get_tuning(tsf* f, int channel)
 {
 	return (f->channels && channel < f->channels->channelNum ? f->channels->channels[channel].tuning : 0.0f);
+}
+
+static void tsf_apply_envelope_to_voice_internal(tsf* f, struct tsf_voice* v, float attack, float decay, float sustain, float release)
+{
+	int totalSamples;
+	float sr = (f->outSampleRate > 0.0f ? f->outSampleRate : 48000.0f);
+	v->ampenv.parameters.attack = (attack > 0.0005f ? attack : 0.0005f);
+	v->ampenv.parameters.decay = (decay > 0.001f ? decay : 0.001f);
+	v->ampenv.parameters.sustain = (sustain < 0.0f ? 0.0f : (sustain > 1.0f ? 1.0f : sustain));
+	v->ampenv.parameters.release = (release > 0.001f ? release : 0.001f);
+
+	if (v->ampenv.segment == TSF_SEGMENT_ATTACK)
+	{
+		totalSamples = (int)(v->ampenv.parameters.attack * sr);
+		if (totalSamples < 1) totalSamples = 1;
+		v->ampenv.samplesUntilNextSegment = totalSamples;
+		v->ampenv.slope = (1.0f - v->ampenv.level) / (float)totalSamples;
+	}
+	else if (v->ampenv.segment == TSF_SEGMENT_DECAY)
+	{
+		totalSamples = (int)(v->ampenv.parameters.decay * sr);
+		if (totalSamples < 1) totalSamples = 1;
+		v->ampenv.samplesUntilNextSegment = totalSamples;
+		v->ampenv.slope = TSF_EXPF(-9.226f / (float)totalSamples);
+	}
+	else if (v->ampenv.segment == TSF_SEGMENT_SUSTAIN)
+	{
+		v->ampenv.level = v->ampenv.parameters.sustain;
+	}
+	else if (v->ampenv.segment == TSF_SEGMENT_RELEASE)
+	{
+		totalSamples = (int)(v->ampenv.parameters.release * sr);
+		if (totalSamples < 1) totalSamples = 1;
+		v->ampenv.samplesUntilNextSegment = totalSamples;
+		v->ampenv.slope = TSF_EXPF(-9.226f / (float)totalSamples);
+		v->ampenv.segmentIsExponential = TSF_TRUE;
+	}
+}
+
+TSFDEF void tsf_set_voice_envelope(tsf* f, int channel, int key, float attack, float decay, float sustain, float release)
+{
+	int i;
+	if (!f || !f->voices) return;
+	for (i = 0; i < f->voiceNum; i++)
+	{
+		struct tsf_voice* v = &f->voices[i];
+		if (v->playingPreset != -1 && v->playingChannel == channel && v->playingKey == key)
+		{
+			tsf_apply_envelope_to_voice_internal(f, v, attack, decay, sustain, release);
+		}
+	}
+}
+
+TSFDEF void tsf_update_all_voice_envelopes(tsf* f, int channel, float attack, float decay, float sustain, float release)
+{
+	int i;
+	if (!f || !f->voices) return;
+	for (i = 0; i < f->voiceNum; i++)
+	{
+		struct tsf_voice* v = &f->voices[i];
+		if (v->playingPreset != -1 && v->playingChannel == channel)
+		{
+			tsf_apply_envelope_to_voice_internal(f, v, attack, decay, sustain, release);
+		}
+	}
+}
+
+TSFDEF float tsf_get_max_envelope_level(tsf* f, int channel)
+{
+	int i;
+	float maxLevel = 0.0f;
+	if (!f || !f->voices) return 0.0f;
+	for (i = 0; i < f->voiceNum; i++)
+	{
+		struct tsf_voice* v = &f->voices[i];
+		if (v->playingPreset != -1 && v->playingChannel == channel)
+		{
+			if (v->ampenv.level > maxLevel) maxLevel = (float)v->ampenv.level;
+		}
+	}
+	return maxLevel;
 }
 
 #ifdef __cplusplus
