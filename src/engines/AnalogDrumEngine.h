@@ -92,48 +92,56 @@ private:
 
       switch (type) {
       case DrumType::Kick: {
-        float kickDecayTime = 0.15f + (d * 0.70f); // tau: 0.15s to 0.85s (audible 1.3s to 7.2s)
+        // Range: 0.15s (tight punch) -> 1.16s (classic 808) -> 3.50s (massive booming sub, audible up to ~8s)
+        float kickDecayTime = 0.15f + d * 0.70f + d * d * 2.65f;
         decayCoeff = expf(-1.0f / (sr * kickDecayTime));
         float pTime = 0.020f + (paramA * 0.040f);  // 20ms to 60ms pitch sweep
         pitchDecayCoeff = expf(-1.0f / (sr * pTime));
         break;
       }
       case DrumType::Snare: {
-        float shellTime = 0.05f + (d * 0.15f);     // 50ms to 200ms shell ring (audible 0.4s to 1.7s)
-        float wiresTime = 0.08f + (d * 0.32f);     // 80ms to 400ms snare wires (audible 0.7s to 3.4s)
+        // Shell: 0.05s -> 0.25s -> 0.70s; Wires: 0.10s -> 0.55s -> 1.60s (audible up to ~3.7s)
+        float shellTime = 0.05f + d * 0.15f + d * d * 0.50f;
+        float wiresTime = 0.10f + d * 0.30f + d * d * 1.20f;
         decayCoeff = expf(-1.0f / (sr * shellTime));
         decayCoeff2 = expf(-1.0f / (sr * wiresTime));
         break;
       }
       case DrumType::Clap: {
-        float tailTime = 0.08f + (d * 0.27f);      // 80ms to 350ms tail (audible 0.7s to 3.0s)
+        // Tail: 0.10s -> 0.61s -> 1.80s (spacious 80s reverb tail, audible up to ~4.1s)
+        float tailTime = 0.10f + d * 0.35f + d * d * 1.35f;
         decayCoeff = expf(-1.0f / (sr * tailTime));
         decayCoeff2 = expf(-1.0f / (sr * 0.012f)); // 12ms burst decay
         break;
       }
       case DrumType::HiHatClosed: {
-        float hatTime = 0.030f + (d * 0.070f);     // 30ms to 100ms (audible 250ms to 850ms)
+        // Hat: 0.030s -> 0.097s -> 0.250s (laser crisp to relaxed closed hat)
+        float hatTime = 0.030f + d * 0.050f + d * d * 0.170f;
         decayCoeff = expf(-1.0f / (sr * hatTime));
         break;
       }
       case DrumType::HiHatOpen: {
-        float hatTime = 0.150f + (d * 0.350f);     // 150ms to 500ms (audible 1.3s to 4.2s)
+        // Hat Open: 0.200s -> 0.875s -> 2.400s (open sizzle that can ring for multiple bars)
+        float hatTime = 0.200f + d * 0.500f + d * d * 1.700f;
         decayCoeff = expf(-1.0f / (sr * hatTime));
         break;
       }
       case DrumType::Cymbal: {
-        float cymTime = 0.25f + (d * 0.45f);       // 250ms to 700ms (audible 2.1s to 6.0s)
+        // Cymbal: 0.400s -> 1.650s -> 4.500s (shimmering crash/ride wash, audible up to ~10s)
+        float cymTime = 0.40f + d * 0.90f + d * d * 3.20f;
         decayCoeff = expf(-1.0f / (sr * cymTime));
         attackTime = 0.003f + (paramA * 0.080f);
         break;
       }
       case DrumType::Perc: {
-        float percTime = 0.060f + (d * 0.240f);    // 60ms to 300ms (audible 0.5s to 2.5s)
+        // Perc/Tom: 0.080s -> 0.705s -> 2.200s (tight rimshot to deep booming 808 disco tom)
+        float percTime = 0.080f + d * 0.370f + d * d * 1.750f;
         decayCoeff = expf(-1.0f / (sr * percTime));
         break;
       }
       case DrumType::Noise: {
-        float noiseTime = 0.050f + (d * 0.350f);   // 50ms to 400ms (audible 0.4s to 3.4s)
+        // Noise: 0.060s -> 0.630s -> 2.000s (short burst to dramatic noise sweep)
+        float noiseTime = 0.060f + d * 0.340f + d * d * 1.600f;
         decayCoeff = expf(-1.0f / (sr * noiseTime));
         break;
       }

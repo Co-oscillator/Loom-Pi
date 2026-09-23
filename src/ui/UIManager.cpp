@@ -17265,6 +17265,11 @@ void UIManager::populateParamFmDrumTab2(lv_obj_t* tab) {
     // Deprecated: merged into populateParamFmDrumTab1
 }
 
+struct DrumVoiceAuditionData {
+    UIManager* ui;
+    int drumIdx;
+};
+
 void UIManager::addDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumIdx) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
     lv_obj_t* card = lv_obj_create(parent);
@@ -17280,11 +17285,32 @@ void UIManager::addDrumVoiceStrip(lv_obj_t* parent, const char* name, int drumId
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Title
-    lv_obj_t* title = lv_label_create(card);
+    // Title Button (Audition on tap)
+    lv_obj_t* titleBtn = lv_btn_create(card);
+    lv_obj_set_size(titleBtn, 110, 32);
+    lv_obj_set_style_bg_color(titleBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(titleBtn, trackColor, 0);
+    lv_obj_set_style_border_width(titleBtn, 1, 0);
+    lv_obj_set_style_radius(titleBtn, 8, 0);
+    lv_obj_set_style_pad_all(titleBtn, 0, 0);
+
+    lv_obj_t* title = lv_label_create(titleBtn);
     lv_label_set_text(title, name);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(title, trackColor, 0);
+    lv_obj_center(title);
+
+    DrumVoiceAuditionData* fmData = new DrumVoiceAuditionData{this, drumIdx};
+    lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
+        DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
+        if (!d) return;
+        d->ui->mEngine.triggerNote(d->ui->mActiveTrack, 60 + d->drumIdx, 115);
+        d->ui->mEngine.releaseNote(d->ui->mActiveTrack, 60 + d->drumIdx);
+    }, LV_EVENT_CLICKED, fmData);
+    lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
+        DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
+        delete d;
+    }, LV_EVENT_DELETE, fmData);
 
     // 4 Knobs (Pitch, Snap, Decay, Level)
     int baseParam = 200 + drumIdx * 10;
@@ -17334,11 +17360,32 @@ void UIManager::addAnalogDrumVoiceStrip(lv_obj_t* parent, const char* name, int 
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    // Title
-    lv_obj_t* title = lv_label_create(card);
+    // Title Button (Audition on tap)
+    lv_obj_t* titleBtn = lv_btn_create(card);
+    lv_obj_set_size(titleBtn, 110, 32);
+    lv_obj_set_style_bg_color(titleBtn, lv_color_hex(0x222222), 0);
+    lv_obj_set_style_border_color(titleBtn, trackColor, 0);
+    lv_obj_set_style_border_width(titleBtn, 1, 0);
+    lv_obj_set_style_radius(titleBtn, 8, 0);
+    lv_obj_set_style_pad_all(titleBtn, 0, 0);
+
+    lv_obj_t* title = lv_label_create(titleBtn);
     lv_label_set_text(title, name);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(title, trackColor, 0);
+    lv_obj_center(title);
+
+    DrumVoiceAuditionData* aData = new DrumVoiceAuditionData{this, drumIdx};
+    lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
+        DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
+        if (!d) return;
+        d->ui->mEngine.triggerNote(d->ui->mActiveTrack, 60 + d->drumIdx, 115);
+        d->ui->mEngine.releaseNote(d->ui->mActiveTrack, 60 + d->drumIdx);
+    }, LV_EVENT_CLICKED, aData);
+    lv_obj_add_event_cb(titleBtn, [](lv_event_t* e) {
+        DrumVoiceAuditionData* d = (DrumVoiceAuditionData*)lv_event_get_user_data(e);
+        delete d;
+    }, LV_EVENT_DELETE, aData);
 
     // 4 Knobs (or 3 for Hats)
     int baseParam = 600 + drumIdx * 10;
