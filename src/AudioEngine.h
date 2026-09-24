@@ -42,7 +42,7 @@
 
 class AudioEngine {
 public:
-  enum RecordingSource { MIC = 0, LINE_IN = 1, RESAMPLE = 2 };
+  enum RecordingSource { MIC = 0, LINE_IN = 1, RESAMPLE = 2, MIX = 3 };
 
   AudioEngine();
   virtual ~AudioEngine();
@@ -149,6 +149,7 @@ public:
   bool getIsRecording() const { return mIsRecording; }
   bool getIsRecordingSample() const { return mIsRecordingSample; }
   void setCaptureStateCallback(std::function<void(bool)> cb) { mOnCaptureStateChanged = cb; }
+  void requestCapture(bool active);
   void getStepActiveStates(int trackIndex, bool *out, int maxSize);
   std::vector<Step> getSequencerSteps(int trackIndex);
   std::vector<Step> getDrumSequencerSteps(int trackIndex, int drumIndex);
@@ -577,6 +578,7 @@ public:
   };
   DrumRowActiveKey mDrumRowActiveKeys[8];
   std::function<void(bool)> mOnCaptureStateChanged = nullptr;
+  std::atomic<int> mCaptureUserCount{0};
 };
 
 #endif // AUDIO_ENGINE_H

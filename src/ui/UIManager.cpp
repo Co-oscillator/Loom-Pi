@@ -6873,13 +6873,14 @@ void UIManager::openMelodyTranscriberModal() {
     // 1. Input Source Button
     lv_obj_t* srcBtn = lv_button_create(toolbar);
     mMelodyInputSourceBtn = srcBtn;
-    lv_obj_set_size(srcBtn, 110, 36);
+    lv_obj_set_size(srcBtn, 124, 36);
     lv_obj_set_style_bg_color(srcBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_radius(srcBtn, 6, 0);
     lv_obj_t* srcLbl = lv_label_create(srcBtn);
     mMelodyInputSourceLbl = srcLbl;
-    lv_label_set_text(srcLbl, (mMelodyInputSource == 0) ? "Src: MIC" : "Src: LINE");
-    lv_obj_set_style_text_font(srcLbl, &lv_font_montserrat_12, 0);
+    const char* srcNames[] = { "Src: MIC (Ch1)", "Src: LINE (Ch2)", "Src: MIX (L+R)" };
+    lv_label_set_text(srcLbl, srcNames[std::max(0, std::min(2, mMelodyInputSource))]);
+    lv_obj_set_style_text_font(srcLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(srcLbl);
     lv_obj_add_event_cb(srcBtn, melodyInputSourceBtnEventCb, LV_EVENT_CLICKED, this);
 
@@ -7073,6 +7074,12 @@ void UIManager::openMelodyTranscriberModal() {
     tracker.setScaleFilter(rootKey, mSelectedScaleIdx);
     tracker.setScaleFilterEnabled(mMelodyScaleSnap);
 
+    // Configure Recording Source & Activate Audio Capture on demand
+    int src = (mMelodyInputSource == 1) ? AudioEngine::LINE_IN : 
+              (mMelodyInputSource == 2) ? AudioEngine::MIX : AudioEngine::MIC;
+    mEngine.setRecordingSource(src);
+    mEngine.requestCapture(true);
+
     // Start 30Hz polling timer
     mMelodyTimer = lv_timer_create(melodyTimerCb, 33, this);
 }
@@ -7080,6 +7087,7 @@ void UIManager::openMelodyTranscriberModal() {
 void UIManager::closeMelodyTranscriberModal() {
     auto& tracker = mEngine.getMelodyTracker();
     tracker.stopRecording();
+    mEngine.requestCapture(false);
 
     if (mMelodyTimer) {
         lv_timer_delete(mMelodyTimer);
@@ -7283,10 +7291,13 @@ void UIManager::openMelodyBtnEventCb(lv_event_t* e) {
 void UIManager::melodyInputSourceBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui) return;
-    ui->mMelodyInputSource = (ui->mMelodyInputSource == 0) ? 1 : 0;
-    ui->mEngine.mRecordingSource = (ui->mMelodyInputSource == 0) ? AudioEngine::MIC : AudioEngine::LINE_IN;
+    ui->mMelodyInputSource = (ui->mMelodyInputSource + 1) % 3;
+    int src = (ui->mMelodyInputSource == 1) ? AudioEngine::LINE_IN : 
+              (ui->mMelodyInputSource == 2) ? AudioEngine::MIX : AudioEngine::MIC;
+    ui->mEngine.setRecordingSource(src);
     if (ui->mMelodyInputSourceLbl) {
-        lv_label_set_text(ui->mMelodyInputSourceLbl, (ui->mMelodyInputSource == 0) ? "Src: MIC" : "Src: LINE");
+        const char* names[] = { "Src: MIC (Ch1)", "Src: LINE (Ch2)", "Src: MIX (L+R)" };
+        lv_label_set_text(ui->mMelodyInputSourceLbl, names[ui->mMelodyInputSource]);
     }
 }
 

@@ -306,11 +306,11 @@ private:
     lv_obj_t* mMelodyPianoRoll = nullptr;
     lv_timer_t* mMelodyTimer = nullptr;
 
-    int mMelodyInputSource = 0; // 0=MIC, 1=LINE_IN
+    int mMelodyInputSource = 0; // 0=MIC (Ch1), 1=LINE_IN (Ch2), 2=MIX (L+R)
     bool mMelodyScaleSnap = true;
     int mMelodyCountInBars = 1;
     int mMelodyRecordBars = 1;
-    float mMelodyGateDb = -36.0f;
+    float mMelodyGateDb = -45.0f;
     std::vector<TranscribedNote> mTranscribedNotesBuffer;
 
     void openMelodyTranscriberModal();

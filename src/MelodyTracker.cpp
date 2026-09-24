@@ -117,8 +117,8 @@ void MelodyTracker::setupBandpassFilters() {
 
     computeHighpass(65.0f, mHpFilter1);
     computeHighpass(65.0f, mHpFilter2);
-    computeLowpass(2200.0f, mLpFilter1);
-    computeLowpass(2200.0f, mLpFilter2);
+    computeLowpass(3800.0f, mLpFilter1);
+    computeLowpass(3800.0f, mLpFilter2);
 }
 
 float MelodyTracker::processFiltering(float in) {
@@ -312,8 +312,8 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     }
 
     // Step 3: Absolute Thresholding
-    // YIN threshold: ~0.15 to 0.20 is standard for monophonic whistle/singing
-    constexpr float YIN_THRESHOLD = 0.18f;
+    // YIN threshold: ~0.15 to 0.22 is standard for monophonic whistle/singing
+    constexpr float YIN_THRESHOLD = 0.20f;
     int tauEstimate = -1;
     for (int tau = 2; tau < halfWindow; ++tau) {
         if (mYinDiff[tau] < YIN_THRESHOLD) {
@@ -334,7 +334,7 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
                 tauEstimate = tau;
             }
         }
-        if (minVal > 0.35f) {
+        if (minVal > 0.45f) {
             return 0.0f; // Not voiced / unpitched noise
         }
     }
@@ -354,8 +354,8 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     if (betterTau <= 0.0f) return 0.0f;
     float detectedFreq = mSampleRate / betterTau;
 
-    // Vocal/Melody sanity filter: 65Hz to 2200Hz
-    if (detectedFreq < 65.0f || detectedFreq > 2200.0f) {
+    // Vocal/Melody sanity filter: 65Hz to 3800Hz (C2 to B7)
+    if (detectedFreq < 65.0f || detectedFreq > 3800.0f) {
         return 0.0f;
     }
 
@@ -501,6 +501,35 @@ std::vector<TranscribedNote> MelodyTracker::getTranscribedNotes() {
         tn.velocity = vel;
         tn.subStepOffset = subStep;
         results.push_back(tn);
+    }
+
+    // Include the currently ringing note during live recording
+    if (mNoteIsActive && (mSamplesRecorded - mCurrentCandidate.startSample) >= mMinNoteDurationSamples) {
+        double durationSamples = mSamplesRecorded - mCurrentCandidate.startSample;
+        double stepExact = mCurrentCandidate.startSample / samplesPerStep;
+        int stepIdx = (int)floor(stepExact);
+        if (stepIdx >= 0 && stepIdx < mTotalSteps) {
+            float subStep = (float)(stepExact - (double)stepIdx);
+            float gate = (float)(durationSamples / samplesPerStep);
+            if (gate < 0.2f) gate = 0.2f;
+
+            float vel = std::max(0.4f, std::min(1.0f, mCurrentCandidate.peakRms * 3.5f + 0.3f));
+            int finalNote = mCurrentCandidate.stableNote;
+            if (mCurrentCandidate.pitchCount > 0) {
+                finalNote = (int)roundf(mCurrentCandidate.pitchAccum / (float)mCurrentCandidate.pitchCount);
+            }
+            if (mScaleFilterEnabled) {
+                finalNote = quantizeToScale(finalNote, mRootNote, mScaleIdx);
+            }
+
+            TranscribedNote tn;
+            tn.startStep = stepIdx;
+            tn.durationSteps = gate;
+            tn.midiNote = finalNote;
+            tn.velocity = vel;
+            tn.subStepOffset = subStep;
+            results.push_back(tn);
+        }
     }
 
     return results;
