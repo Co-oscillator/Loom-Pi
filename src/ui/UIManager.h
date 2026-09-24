@@ -250,6 +250,7 @@ private:
     bool       mFileBrowserIsSfImport     = false;
     bool       mFileBrowserIsPresetLoad   = false;
     bool       mFileBrowserIsPresetSave   = false;
+    bool       mFileBrowserIsMelodySampleLoad = false;
     std::string mFileBrowserCurrentPath;
     int        mSelectedOpIdx             = 0;
     std::vector<Step> mSeqClipboard;
@@ -306,19 +307,23 @@ private:
     lv_obj_t* mMelodyPianoRoll = nullptr;
     lv_timer_t* mMelodyTimer = nullptr;
 
-    int mMelodyInputSource = 0; // 0=MIC (Ch1), 1=LINE_IN (Ch2), 2=MIX (L+R)
+    int mMelodyInputSource = 0; // 0=MIC, 1=LINE_IN, 2=SAMPLE
     bool mMelodyScaleSnap = true;
     int mMelodyCountInBars = 1;
     int mMelodyRecordBars = 1;
     float mMelodyGateDb = -45.0f;
     std::vector<TranscribedNote> mTranscribedNotesBuffer;
+    lv_obj_t* mMelodySampleFileBtn = nullptr;
+    lv_obj_t* mMelodySampleFileLbl = nullptr;
 
     void openMelodyTranscriberModal();
     void closeMelodyTranscriberModal();
     void updateMelodyPianoRoll();
+    void loadMelodySample(const std::string& path);
     static void melodyTimerCb(lv_timer_t* timer);
     static void openMelodyBtnEventCb(lv_event_t* e);
     static void melodyInputSourceBtnEventCb(lv_event_t* e);
+    static void melodySampleFileBtnEventCb(lv_event_t* e);
     static void melodyScaleBtnEventCb(lv_event_t* e);
     static void melodyGateSliderEventCb(lv_event_t* e);
     static void melodyCountInDdEventCb(lv_event_t* e);

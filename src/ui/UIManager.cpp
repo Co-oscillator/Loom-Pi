@@ -6355,6 +6355,7 @@ void UIManager::resetFileBrowserFlags() {
     mFileBrowserIsSfImport = false;
     mFileBrowserIsPresetLoad = false;
     mFileBrowserIsPresetSave = false;
+    mFileBrowserIsMelodySampleLoad = false;
     mFileBrowserIsProject = false;
 }
 
@@ -6404,7 +6405,7 @@ void UIManager::openFileBrowser(bool isSave) {
     else if (mFileBrowserIsWtImport) titleText = "Import WAV File";
     else if (mFileBrowserIsSfSelect) titleText = "Select SoundFont";
     else if (mFileBrowserIsSfImport) titleText = "Import SoundFont";
-    else if (mFileBrowserIsSampleLoad) titleText = "Load Sample";
+    else if (mFileBrowserIsSampleLoad || mFileBrowserIsMelodySampleLoad) titleText = "Load Sample";
     else if (mFileBrowserIsSampleSave) titleText = "Save Sample";
     else if (mFileBrowserIsPresetLoad) titleText = "Load Preset";
     else if (mFileBrowserIsPresetSave) titleText = "Save Preset";
@@ -6439,7 +6440,7 @@ void UIManager::openFileBrowser(bool isSave) {
             mFileBrowserCurrentPath = homeStr + "/wavetables";
         } else if (mFileBrowserIsSfSelect || mFileBrowserIsSfImport) {
             mFileBrowserCurrentPath = homeStr + "/soundfonts";
-        } else if (mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave) {
+        } else if (mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave || mFileBrowserIsMelodySampleLoad) {
             mFileBrowserCurrentPath = homeStr + "/samples";
         } else {
             mFileBrowserCurrentPath = homeStr + "/sequences";
@@ -6459,7 +6460,7 @@ void UIManager::openFileBrowser(bool isSave) {
     lv_color_t trackColor = getTrackColor(mActiveTrack);
 
     // Dynamic Shortcut Buttons for Audio Loaders and Presets
-    bool showShortcuts = !isSave && (mFileBrowserIsSampleLoad || mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSfSelect || mFileBrowserIsSfImport || mFileBrowserIsFmImport || mFileBrowserIsPresetLoad);
+    bool showShortcuts = !isSave && (mFileBrowserIsSampleLoad || mFileBrowserIsMelodySampleLoad || mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSfSelect || mFileBrowserIsSfImport || mFileBrowserIsFmImport || mFileBrowserIsPresetLoad);
     if (showShortcuts) {
         lv_obj_t* folderRow = lv_obj_create(card);
         lv_obj_set_size(folderRow, 528, 40);
@@ -6612,7 +6613,7 @@ void UIManager::openFileBrowser(bool isSave) {
                 if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf2") matched = true;
                 else if (lowerName.length() >= 4 && lowerName.substr(lowerName.length() - 4) == ".sf3") matched = true;
                 if (matched) matchingFiles.push_back(name);
-            } else if (mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave) {
+            } else if (mFileBrowserIsWtSelect || mFileBrowserIsWtImport || mFileBrowserIsSampleLoad || mFileBrowserIsSampleSave || mFileBrowserIsMelodySampleLoad) {
                 bool matched = false;
                 std::string lowerName = name;
                 for (char &c : lowerName) c = std::tolower((unsigned char)c);
@@ -6873,16 +6874,41 @@ void UIManager::openMelodyTranscriberModal() {
     // 1. Input Source Button
     lv_obj_t* srcBtn = lv_button_create(toolbar);
     mMelodyInputSourceBtn = srcBtn;
-    lv_obj_set_size(srcBtn, 124, 36);
+    lv_obj_set_size(srcBtn, 110, 36);
     lv_obj_set_style_bg_color(srcBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_radius(srcBtn, 6, 0);
     lv_obj_t* srcLbl = lv_label_create(srcBtn);
     mMelodyInputSourceLbl = srcLbl;
-    const char* srcNames[] = { "Src: MIC (Ch1)", "Src: LINE (Ch2)", "Src: MIX (L+R)" };
+    const char* srcNames[] = { "Src: MIC", "Src: LINE", "Src: SAMPLE" };
     lv_label_set_text(srcLbl, srcNames[std::max(0, std::min(2, mMelodyInputSource))]);
     lv_obj_set_style_text_font(srcLbl, &lv_font_montserrat_10, 0);
     lv_obj_center(srcLbl);
     lv_obj_add_event_cb(srcBtn, melodyInputSourceBtnEventCb, LV_EVENT_CLICKED, this);
+
+    // 1b. Sample File Picker Button (Visible when Src: SAMPLE is selected)
+    lv_obj_t* fBtn = lv_button_create(toolbar);
+    mMelodySampleFileBtn = fBtn;
+    lv_obj_set_size(fBtn, 120, 36);
+    lv_obj_set_style_bg_color(fBtn, lv_color_hex(0x282828), 0);
+    lv_obj_set_style_border_color(fBtn, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_border_width(fBtn, 1, 0);
+    lv_obj_set_style_radius(fBtn, 6, 0);
+    lv_obj_t* fLbl = lv_label_create(fBtn);
+    mMelodySampleFileLbl = fLbl;
+    auto& tracker = mEngine.getMelodyTracker();
+    if (tracker.hasSample()) {
+        std::string disp = tracker.getSampleFilename();
+        if (disp.length() > 14) disp = disp.substr(0, 12) + "..";
+        lv_label_set_text_fmt(fLbl, LV_SYMBOL_FILE " %s", disp.c_str());
+    } else {
+        lv_label_set_text(fLbl, LV_SYMBOL_FILE " Choose WAV");
+    }
+    lv_obj_set_style_text_font(fLbl, &lv_font_montserrat_10, 0);
+    lv_obj_center(fLbl);
+    lv_obj_add_event_cb(fBtn, melodySampleFileBtnEventCb, LV_EVENT_CLICKED, this);
+    if (mMelodyInputSource != 2) {
+        lv_obj_add_flag(fBtn, LV_OBJ_FLAG_HIDDEN);
+    }
 
     // 2. Noise Gate Slider Group
     lv_obj_t* gateGrp = lv_obj_create(toolbar);
@@ -7067,7 +7093,6 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_add_event_cb(commitBtn, melodyCommitBtnEventCb, LV_EVENT_CLICKED, this);
 
     // Configure MelodyTracker
-    auto& tracker = mEngine.getMelodyTracker();
     tracker.setTempoAndSteps(mEngine.getBpm(), mMelodyRecordBars * 16);
     tracker.setNoiseGateDb(mMelodyGateDb);
     int rootKey = mEngine.getScaleRoot();
@@ -7075,10 +7100,15 @@ void UIManager::openMelodyTranscriberModal() {
     tracker.setScaleFilterEnabled(mMelodyScaleSnap);
 
     // Configure Recording Source & Activate Audio Capture on demand
-    int src = (mMelodyInputSource == 1) ? AudioEngine::LINE_IN : 
-              (mMelodyInputSource == 2) ? AudioEngine::MIX : AudioEngine::MIC;
-    mEngine.setRecordingSource(src);
-    mEngine.requestCapture(true);
+    if (mMelodyInputSource == 2) {
+        tracker.setSampleMode(true);
+        mEngine.requestCapture(false);
+    } else {
+        tracker.setSampleMode(false);
+        int src = (mMelodyInputSource == 1) ? AudioEngine::LINE_IN : AudioEngine::MIC;
+        mEngine.setRecordingSource(src);
+        mEngine.requestCapture(true);
+    }
 
     // Start 30Hz polling timer
     mMelodyTimer = lv_timer_create(melodyTimerCb, 33, this);
@@ -7087,6 +7117,7 @@ void UIManager::openMelodyTranscriberModal() {
 void UIManager::closeMelodyTranscriberModal() {
     auto& tracker = mEngine.getMelodyTracker();
     tracker.stopRecording();
+    tracker.setSampleMode(false);
     mEngine.requestCapture(false);
 
     if (mMelodyTimer) {
@@ -7108,6 +7139,8 @@ void UIManager::closeMelodyTranscriberModal() {
     mMelodyRecBtnLbl = nullptr;
     mMelodyAuditionBtn = nullptr;
     mMelodyCommitBtn = nullptr;
+    mMelodySampleFileBtn = nullptr;
+    mMelodySampleFileLbl = nullptr;
 }
 
 void UIManager::updateMelodyPianoRoll() {
@@ -7292,14 +7325,52 @@ void UIManager::melodyInputSourceBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui) return;
     ui->mMelodyInputSource = (ui->mMelodyInputSource + 1) % 3;
-    int src = (ui->mMelodyInputSource == 1) ? AudioEngine::LINE_IN : 
-              (ui->mMelodyInputSource == 2) ? AudioEngine::MIX : AudioEngine::MIC;
-    ui->mEngine.setRecordingSource(src);
+    auto& tracker = ui->mEngine.getMelodyTracker();
+
+    if (ui->mMelodyInputSource == 2) {
+        // SAMPLE mode
+        tracker.setSampleMode(true);
+        ui->mEngine.requestCapture(false);
+        if (ui->mMelodySampleFileBtn) {
+            lv_obj_remove_flag(ui->mMelodySampleFileBtn, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (!tracker.hasSample()) {
+            ui->openFileBrowser(false);
+        }
+    } else {
+        // Live Audio Mode (MIC or LINE)
+        tracker.setSampleMode(false);
+        int src = (ui->mMelodyInputSource == 1) ? AudioEngine::LINE_IN : AudioEngine::MIC;
+        ui->mEngine.setRecordingSource(src);
+        ui->mEngine.requestCapture(true);
+        if (ui->mMelodySampleFileBtn) {
+            lv_obj_add_flag(ui->mMelodySampleFileBtn, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
     if (ui->mMelodyInputSourceLbl) {
-        const char* names[] = { "Src: MIC (Ch1)", "Src: LINE (Ch2)", "Src: MIX (L+R)" };
+        const char* names[] = { "Src: MIC", "Src: LINE", "Src: SAMPLE" };
         lv_label_set_text(ui->mMelodyInputSourceLbl, names[ui->mMelodyInputSource]);
     }
 }
+
+void UIManager::melodySampleFileBtnEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    if (!ui) return;
+    ui->openFileBrowser(false);
+}
+
+void UIManager::loadMelodySample(const std::string& path) {
+    auto& tracker = mEngine.getMelodyTracker();
+    if (tracker.loadSample(path)) {
+        if (mMelodySampleFileLbl) {
+            std::string disp = tracker.getSampleFilename();
+            if (disp.length() > 14) disp = disp.substr(0, 12) + "..";
+            lv_label_set_text_fmt(mMelodySampleFileLbl, LV_SYMBOL_FILE " %s", disp.c_str());
+        }
+    }
+}
+
 
 void UIManager::melodyScaleBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
@@ -7994,6 +8065,9 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
             }
             
             ui->mFileBrowserIsWtSelect = false;
+        } else if (ui->mFileBrowserIsMelodySampleLoad) {
+            ui->loadMelodySample(fullPath);
+            ui->mFileBrowserIsMelodySampleLoad = false;
         } else if (ui->mFileBrowserIsSampleLoad) {
             ui->mEngine.loadSample(ui->mActiveTrack, fullPath);
             std::cout << "Loaded sample: " << fullPath << std::endl;
@@ -8029,7 +8103,7 @@ void UIManager::fileBrowserItemEventCb(lv_event_t* e) {
         }
     }
     ui->closeFileBrowser();
-    if (ui->mActiveNav == 0) {
+    if (ui->mActiveNav == 0 && !ui->mMelodyModal) {
         ui->createCenterContentArea();
     }
 }

@@ -1,4 +1,5 @@
 #include "MelodyTracker.h"
+#include "WavFileUtils.h"
 #include <cstring>
 #include <iostream>
 
@@ -147,6 +148,10 @@ void MelodyTracker::reset() {
     {
         std::lock_guard<std::mutex> lock(mNotesMutex);
         mCompletedNotes.clear();
+    }
+    {
+        std::lock_guard<std::mutex> lock(mSampleMutex);
+        mSamplePlaybackPos = 0;
     }
 }
 
@@ -533,4 +538,118 @@ std::vector<TranscribedNote> MelodyTracker::getTranscribedNotes() {
     }
 
     return results;
+}
+
+bool MelodyTracker::loadSample(const std::string& path) {
+    std::vector<float> data;
+    int sampleRate = 0;
+    int channels = 0;
+    std::vector<float> slicePoints;
+
+    if (!WavFileUtils::loadWav(path, data, sampleRate, channels, slicePoints)) {
+        std::cerr << "[MelodyTracker] Failed to load WAV sample: " << path << std::endl;
+        return false;
+    }
+
+    if (data.empty()) return false;
+
+    // Convert to mono
+    std::vector<float> mono;
+    if (channels == 2) {
+        int numFrames = (int)data.size() / 2;
+        mono.resize(numFrames);
+        for (int i = 0; i < numFrames; ++i) {
+            mono[i] = (data[i * 2] + data[i * 2 + 1]) * 0.5f;
+        }
+    } else {
+        mono = std::move(data);
+    }
+
+    // Resample to mSampleRate if different
+    if (sampleRate > 0 && std::abs((float)sampleRate - mSampleRate) > 10.0f) {
+        float ratio = (float)sampleRate / mSampleRate;
+        size_t newLength = (size_t)((float)mono.size() / ratio);
+        std::vector<float> resampled(newLength);
+        for (size_t i = 0; i < newLength; ++i) {
+            float srcPos = (float)i * ratio;
+            size_t idx0 = (size_t)srcPos;
+            size_t idx1 = std::min(idx0 + 1, mono.size() - 1);
+            float frac = srcPos - (float)idx0;
+            resampled[i] = mono[idx0] * (1.0f - frac) + mono[idx1] * frac;
+        }
+        mono = std::move(resampled);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(mSampleMutex);
+        mSampleBuffer = std::move(mono);
+        mSamplePlaybackPos = 0;
+        mSampleFullPath = path;
+
+        size_t slash = path.find_last_of("/\\");
+        mSampleFilename = (slash != std::string::npos) ? path.substr(slash + 1) : path;
+    }
+
+    std::cout << "[MelodyTracker] Loaded sample: " << mSampleFilename 
+              << " (" << mSampleBuffer.size() << " frames, " 
+              << (float)mSampleBuffer.size() / mSampleRate << "s)" << std::endl;
+    return true;
+}
+
+void MelodyTracker::clearSample() {
+    std::lock_guard<std::mutex> lock(mSampleMutex);
+    mSampleBuffer.clear();
+    mSamplePlaybackPos = 0;
+    mSampleFilename.clear();
+    mSampleFullPath.clear();
+}
+
+bool MelodyTracker::hasSample() const {
+    std::lock_guard<std::mutex> lock(mSampleMutex);
+    return !mSampleBuffer.empty();
+}
+
+std::string MelodyTracker::getSampleFilename() const {
+    std::lock_guard<std::mutex> lock(mSampleMutex);
+    return mSampleFilename;
+}
+
+void MelodyTracker::processSamplePlayback(float* interleavedOut, int numFrames) {
+    if (!mIsSampleMode || !mIsRecording.load() || mIsCountIn.load() || numFrames <= 0) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(mSampleMutex);
+    if (mSampleBuffer.empty()) return;
+
+    constexpr int MAX_CHUNK = 1024;
+    float chunk[MAX_CHUNK];
+    int framesDone = 0;
+
+    while (framesDone < numFrames) {
+        int framesToDo = std::min(MAX_CHUNK, numFrames - framesDone);
+        for (int i = 0; i < framesToDo; ++i) {
+            float s = 0.0f;
+            if (mSamplePlaybackPos < mSampleBuffer.size()) {
+                s = mSampleBuffer[mSamplePlaybackPos++];
+            }
+            chunk[i] = s;
+
+            // Audition / play sample through audio output
+            if (interleavedOut) {
+                int outIdx = (framesDone + i) * 2;
+                interleavedOut[outIdx] += s * 0.85f;
+                interleavedOut[outIdx + 1] += s * 0.85f;
+            }
+        }
+
+        // Feed to pitch detection & note transcription
+        pushAudio(chunk, framesToDo);
+        framesDone += framesToDo;
+
+        if (mSamplePlaybackPos >= mSampleBuffer.size()) {
+            stopRecording();
+            break;
+        }
+    }
 }

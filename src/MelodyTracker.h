@@ -49,6 +49,15 @@ public:
     int   getCurrentRecordingStep() const; // 0 to totalSteps - 1
     int   getCountInBeatsLeft() const { return mCountInBeatsLeft.load(); }
 
+    // Sample Mode & Playback
+    void setSampleMode(bool enabled) { mIsSampleMode = enabled; }
+    bool isSampleMode() const { return mIsSampleMode; }
+    bool loadSample(const std::string& path);
+    void clearSample();
+    bool hasSample() const;
+    std::string getSampleFilename() const;
+    void processSamplePlayback(float* interleavedOut, int numFrames);
+
     // Results
     std::vector<TranscribedNote> getTranscribedNotes();
 
@@ -142,6 +151,14 @@ private:
 
     // Minimum note duration to avoid transient noise clicks (~40ms)
     double mMinNoteDurationSamples = 1920.0; 
+
+    // Sample Mode Playback buffer
+    bool mIsSampleMode = false;
+    std::vector<float> mSampleBuffer;
+    size_t mSamplePlaybackPos = 0;
+    std::string mSampleFilename = "";
+    std::string mSampleFullPath = "";
+    mutable std::mutex mSampleMutex;
 };
 
 #endif // MELODY_TRACKER_H

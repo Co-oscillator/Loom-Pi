@@ -5189,6 +5189,11 @@ void AudioEngine::renderStereo(float *outBuffer, int numFrames) {
     outBuffer[outIdx * 2 + 1] = softLimit(outR);
   }
   }
+
+  // Sample playback & transcription for Melody Transcriber
+  if (mMelodyTracker.isSampleMode() && mMelodyTracker.isRecording()) {
+    mMelodyTracker.processSamplePlayback(outBuffer, numFrames);
+  }
 }
 
 // Reset Punch Active flags for all tracks after processing the block
