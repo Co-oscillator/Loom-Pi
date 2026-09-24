@@ -63,7 +63,7 @@ MelodyTracker::~MelodyTracker() {}
 void MelodyTracker::setSampleRate(float sr) {
     if (sr > 8000.0f && sr < 192000.0f) {
         mSampleRate = sr;
-        mMinNoteDurationSamples = mSampleRate * 0.040; // 40ms minimum note length
+        mMinNoteDurationSamples = mSampleRate * 0.015; // 15ms minimum note duration (allows fast trills, strums, and short staccato notes)
         setupBandpassFilters();
     }
 }
@@ -78,14 +78,19 @@ void MelodyTracker::setNoiseGateDb(float dbThreshold) {
     mGateThresholdDb = std::max(-80.0f, std::min(-6.0f, dbThreshold));
 }
 
+void MelodyTracker::setInputGainDb(float gainDb) {
+    mInputGainDb = std::max(0.0f, std::min(36.0f, gainDb));
+    mInputGainLin = powf(10.0f, mInputGainDb / 20.0f);
+}
+
 void MelodyTracker::setScaleFilter(int rootNote, int scaleIdx) {
     mRootNote = std::max(0, std::min(11, rootNote));
     mScaleIdx = std::max(0, std::min(39, scaleIdx));
 }
 
 void MelodyTracker::setupBandpassFilters() {
-    // 2nd-order Butterworth High-Pass at 65Hz
-    // and 2nd-order Butterworth Low-Pass at 2200Hz
+    // 2nd-order Butterworth High-Pass at 55Hz (A1/B1)
+    // and 2nd-order Butterworth Low-Pass at 4000Hz (B7)
     auto computeHighpass = [this](float fc, Biquad& bq) {
         float omega = 2.0f * (float)M_PI * fc / mSampleRate;
         float cosOmega = cosf(omega);
@@ -116,10 +121,10 @@ void MelodyTracker::setupBandpassFilters() {
         bq.reset();
     };
 
-    computeHighpass(65.0f, mHpFilter1);
-    computeHighpass(65.0f, mHpFilter2);
-    computeLowpass(3800.0f, mLpFilter1);
-    computeLowpass(3800.0f, mLpFilter2);
+    computeHighpass(55.0f, mHpFilter1);
+    computeHighpass(55.0f, mHpFilter2);
+    computeLowpass(4000.0f, mLpFilter1);
+    computeLowpass(4000.0f, mLpFilter2);
 }
 
 float MelodyTracker::processFiltering(float in) {
@@ -214,8 +219,14 @@ int MelodyTracker::getCurrentRecordingStep() const {
 void MelodyTracker::pushAudio(const float* buffer, int numFrames) {
     if (!buffer || numFrames <= 0) return;
 
+    float gain = mInputGainLin;
+
     for (int i = 0; i < numFrames; ++i) {
-        float raw = buffer[i];
+        float raw = buffer[i] * gain;
+        // Soft-clip to prevent runaway feedback if gain is cranked high
+        if (raw > 2.0f) raw = 2.0f;
+        else if (raw < -2.0f) raw = -2.0f;
+
         float filtered = processFiltering(raw);
 
         // Store filtered audio in ring buffer
@@ -317,8 +328,8 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     }
 
     // Step 3: Absolute Thresholding
-    // YIN threshold: ~0.15 to 0.22 is standard for monophonic whistle/singing
-    constexpr float YIN_THRESHOLD = 0.20f;
+    // YIN threshold: ~0.15 to 0.28 (0.28 provides higher sensitivity for quiet singing and softer instruments)
+    constexpr float YIN_THRESHOLD = 0.28f;
     int tauEstimate = -1;
     for (int tau = 2; tau < halfWindow; ++tau) {
         if (mYinDiff[tau] < YIN_THRESHOLD) {
@@ -339,7 +350,7 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
                 tauEstimate = tau;
             }
         }
-        if (minVal > 0.45f) {
+        if (minVal > 0.55f) {
             return 0.0f; // Not voiced / unpitched noise
         }
     }
@@ -359,8 +370,8 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     if (betterTau <= 0.0f) return 0.0f;
     float detectedFreq = mSampleRate / betterTau;
 
-    // Vocal/Melody sanity filter: 65Hz to 3800Hz (C2 to B7)
-    if (detectedFreq < 65.0f || detectedFreq > 3800.0f) {
+    // Vocal/Melody sanity filter: 55Hz to 4000Hz (A1 to B7)
+    if (detectedFreq < 55.0f || detectedFreq > 4000.0f) {
         return 0.0f;
     }
 
@@ -423,8 +434,13 @@ void MelodyTracker::processAudioBlock() {
                     mCurrentCandidate.stableNote = midiNote;
                 } else {
                     // Check if pitch shifted to a new distinct note (legato transition)
+                    // or if an energy attack occurred (re-triggering the same note)
                     int currentAvgNote = (int)roundf(mCurrentCandidate.pitchAccum / (float)mCurrentCandidate.pitchCount);
-                    if (std::abs(midiNote - currentAvgNote) >= 1) {
+                    bool pitchChanged = (std::abs(midiNote - currentAvgNote) >= 1);
+                    bool reAttack = (!pitchChanged && rms > mCurrentCandidate.peakRms * 1.8f && 
+                                     (currentSample - mCurrentCandidate.startSample) >= mMinNoteDurationSamples);
+
+                    if (pitchChanged || reAttack) {
                         // Conclude previous note and start new note
                         mCurrentCandidate.endSample = currentSample;
                         if ((mCurrentCandidate.endSample - mCurrentCandidate.startSample) >= mMinNoteDurationSamples) {

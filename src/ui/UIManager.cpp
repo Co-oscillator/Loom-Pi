@@ -6910,9 +6910,33 @@ void UIManager::openMelodyTranscriberModal() {
         lv_obj_add_flag(fBtn, LV_OBJ_FLAG_HIDDEN);
     }
 
-    // 2. Noise Gate Slider Group
+    // 2. Input Gain Slider Group (0 to +36dB)
+    lv_obj_t* gainGrp = lv_obj_create(toolbar);
+    lv_obj_set_size(gainGrp, 130, 40);
+    lv_obj_set_style_bg_opa(gainGrp, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(gainGrp, 0, 0);
+    lv_obj_set_style_pad_all(gainGrp, 0, 0);
+    lv_obj_set_layout(gainGrp, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(gainGrp, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(gainGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(gainGrp, LV_OBJ_FLAG_SCROLLABLE);
+
+    mMelodyGainValLbl = lv_label_create(gainGrp);
+    lv_label_set_text_fmt(mMelodyGainValLbl, "Gain: +%.0fdB", mMelodyGainDb);
+    lv_obj_set_style_text_font(mMelodyGainValLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(mMelodyGainValLbl, lv_color_hex(0x888888), 0);
+
+    mMelodyGainSlider = lv_slider_create(gainGrp);
+    lv_obj_set_size(mMelodyGainSlider, 120, 8);
+    lv_slider_set_range(mMelodyGainSlider, 0, 36);
+    lv_slider_set_value(mMelodyGainSlider, (int)mMelodyGainDb, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(mMelodyGainSlider, trackColor, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(mMelodyGainSlider, trackColor, LV_PART_KNOB);
+    lv_obj_add_event_cb(mMelodyGainSlider, melodyGainSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
+
+    // 3. Noise Gate Slider Group (-70dB to -12dB)
     lv_obj_t* gateGrp = lv_obj_create(toolbar);
-    lv_obj_set_size(gateGrp, 210, 40);
+    lv_obj_set_size(gateGrp, 150, 40);
     lv_obj_set_style_bg_opa(gateGrp, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(gateGrp, 0, 0);
     lv_obj_set_style_pad_all(gateGrp, 0, 0);
@@ -6922,13 +6946,13 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_remove_flag(gateGrp, LV_OBJ_FLAG_SCROLLABLE);
 
     mMelodyGateValLbl = lv_label_create(gateGrp);
-    lv_label_set_text_fmt(mMelodyGateValLbl, "Noise Gate: %.0fdB", mMelodyGateDb);
+    lv_label_set_text_fmt(mMelodyGateValLbl, "Gate: %.0fdB", mMelodyGateDb);
     lv_obj_set_style_text_font(mMelodyGateValLbl, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(mMelodyGateValLbl, lv_color_hex(0x888888), 0);
 
     mMelodyGateSlider = lv_slider_create(gateGrp);
-    lv_obj_set_size(mMelodyGateSlider, 190, 8);
-    lv_slider_set_range(mMelodyGateSlider, -60, -12);
+    lv_obj_set_size(mMelodyGateSlider, 140, 8);
+    lv_slider_set_range(mMelodyGateSlider, -70, -12);
     lv_slider_set_value(mMelodyGateSlider, (int)mMelodyGateDb, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_KNOB);
@@ -7095,6 +7119,7 @@ void UIManager::openMelodyTranscriberModal() {
     // Configure MelodyTracker
     tracker.setTempoAndSteps(mEngine.getBpm(), mMelodyRecordBars * 16);
     tracker.setNoiseGateDb(mMelodyGateDb);
+    tracker.setInputGainDb(mMelodyGainDb);
     int rootKey = mEngine.getScaleRoot();
     tracker.setScaleFilter(rootKey, mSelectedScaleIdx);
     tracker.setScaleFilterEnabled(mMelodyScaleSnap);
@@ -7132,6 +7157,8 @@ void UIManager::closeMelodyTranscriberModal() {
     mMelodyVuBar = nullptr;
     mMelodyVuLbl = nullptr;
     mMelodyPitchLbl = nullptr;
+    mMelodyGainSlider = nullptr;
+    mMelodyGainValLbl = nullptr;
     mMelodyGateSlider = nullptr;
     mMelodyGateValLbl = nullptr;
     mMelodyStatusLbl = nullptr;
@@ -7335,6 +7362,8 @@ void UIManager::melodyInputSourceBtnEventCb(lv_event_t* e) {
             lv_obj_remove_flag(ui->mMelodySampleFileBtn, LV_OBJ_FLAG_HIDDEN);
         }
         if (!tracker.hasSample()) {
+            ui->resetFileBrowserFlags();
+            ui->mFileBrowserIsMelodySampleLoad = true;
             ui->openFileBrowser(false);
         }
     } else {
@@ -7357,6 +7386,8 @@ void UIManager::melodyInputSourceBtnEventCb(lv_event_t* e) {
 void UIManager::melodySampleFileBtnEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     if (!ui) return;
+    ui->resetFileBrowserFlags();
+    ui->mFileBrowserIsMelodySampleLoad = true;
     ui->openFileBrowser(false);
 }
 
@@ -7386,6 +7417,17 @@ void UIManager::melodyScaleBtnEventCb(lv_event_t* e) {
     }
 }
 
+void UIManager::melodyGainSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyGainDb = (float)lv_slider_get_value(slider);
+    ui->mEngine.getMelodyTracker().setInputGainDb(ui->mMelodyGainDb);
+    if (ui->mMelodyGainValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyGainValLbl, "Gain: +%.0fdB", ui->mMelodyGainDb);
+    }
+}
+
 void UIManager::melodyGateSliderEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
@@ -7393,7 +7435,7 @@ void UIManager::melodyGateSliderEventCb(lv_event_t* e) {
     ui->mMelodyGateDb = (float)lv_slider_get_value(slider);
     ui->mEngine.getMelodyTracker().setNoiseGateDb(ui->mMelodyGateDb);
     if (ui->mMelodyGateValLbl) {
-        lv_label_set_text_fmt(ui->mMelodyGateValLbl, "Noise Gate: %.0fdB", ui->mMelodyGateDb);
+        lv_label_set_text_fmt(ui->mMelodyGateValLbl, "Gate: %.0fdB", ui->mMelodyGateDb);
     }
 }
 
@@ -7429,6 +7471,7 @@ void UIManager::melodyRecBtnEventCb(lv_event_t* e) {
         ui->mTranscribedNotesBuffer.clear();
         tracker.setTempoAndSteps(ui->mEngine.getBpm(), ui->mMelodyRecordBars * 16);
         tracker.setNoiseGateDb(ui->mMelodyGateDb);
+        tracker.setInputGainDb(ui->mMelodyGainDb);
         tracker.setScaleFilter(ui->mEngine.getScaleRoot(), ui->mSelectedScaleIdx);
         tracker.setScaleFilterEnabled(ui->mMelodyScaleSnap);
         tracker.startRecording(ui->mMelodyCountInBars, ui->mMelodyRecordBars);

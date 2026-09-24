@@ -26,7 +26,9 @@ public:
     // Configuration
     void setSampleRate(float sr);
     void setTempoAndSteps(float bpm, int totalSteps, float clockMultiplier = 1.0f);
-    void setNoiseGateDb(float dbThreshold); // e.g. -36.0 dB
+    void setNoiseGateDb(float dbThreshold); // e.g. -45.0 dB
+    void setInputGainDb(float gainDb);      // e.g. 0.0 to +30.0 dB
+    float getInputGainDb() const { return mInputGainDb; }
     void setScaleFilter(int rootNote, int scaleIdx); // root: 0=C..11=B; scale: 0=Chromatic, 1=Major, 2=Minor, etc.
     void setScaleFilterEnabled(bool enabled) { mScaleFilterEnabled = enabled; }
 
@@ -96,7 +98,9 @@ private:
     float mBpm = 120.0f;
     int mTotalSteps = 16;
     float mClockMultiplier = 1.0f;
-    float mGateThresholdDb = -36.0f;
+    float mGateThresholdDb = -45.0f;
+    float mInputGainDb = 0.0f;
+    float mInputGainLin = 1.0f;
     bool mScaleFilterEnabled = true;
     int mRootNote = 0;
     int mScaleIdx = 0;

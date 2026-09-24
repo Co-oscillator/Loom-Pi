@@ -312,9 +312,12 @@ private:
     int mMelodyCountInBars = 1;
     int mMelodyRecordBars = 1;
     float mMelodyGateDb = -45.0f;
+    float mMelodyGainDb = 12.0f; // Default +12dB boost for microphone / quiet input
     std::vector<TranscribedNote> mTranscribedNotesBuffer;
     lv_obj_t* mMelodySampleFileBtn = nullptr;
     lv_obj_t* mMelodySampleFileLbl = nullptr;
+    lv_obj_t* mMelodyGainSlider = nullptr;
+    lv_obj_t* mMelodyGainValLbl = nullptr;
 
     void openMelodyTranscriberModal();
     void closeMelodyTranscriberModal();
@@ -326,6 +329,7 @@ private:
     static void melodySampleFileBtnEventCb(lv_event_t* e);
     static void melodyScaleBtnEventCb(lv_event_t* e);
     static void melodyGateSliderEventCb(lv_event_t* e);
+    static void melodyGainSliderEventCb(lv_event_t* e);
     static void melodyCountInDdEventCb(lv_event_t* e);
     static void melodyBarsDdEventCb(lv_event_t* e);
     static void melodyRecBtnEventCb(lv_event_t* e);
