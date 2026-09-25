@@ -6818,15 +6818,15 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_add_flag(overlay, LV_OBJ_FLAG_FLOATING);
     mMelodyModal = overlay;
 
-    // Modal Card
+    // Modal Card (Enlarged to comfortably accommodate the dedicated detection side-panel)
     lv_obj_t* card = lv_obj_create(overlay);
-    lv_obj_set_size(card, (SCREEN_WIDTH >= 1280) ? 960 : 760, (SCREEN_HEIGHT >= 800) ? 580 : 450);
+    lv_obj_set_size(card, (SCREEN_WIDTH >= 1280) ? 1180 : 760, (SCREEN_HEIGHT >= 800) ? 680 : 460);
     lv_obj_center(card);
     lv_obj_set_style_bg_color(card, lv_color_hex(0x181818), 0);
     lv_obj_set_style_border_color(card, trackColor, 0);
     lv_obj_set_style_border_width(card, 2, 0);
     lv_obj_set_style_radius(card, 12, 0);
-    lv_obj_set_style_pad_all(card, 16, 0);
+    lv_obj_set_style_pad_all(card, 14, 0);
     lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(card, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
@@ -6834,7 +6834,7 @@ void UIManager::openMelodyTranscriberModal() {
 
     // Row 1: Header (Title + Track Info + BPM)
     lv_obj_t* headerRow = lv_obj_create(card);
-    lv_obj_set_size(headerRow, lv_pct(100), 38);
+    lv_obj_set_size(headerRow, lv_pct(100), 34);
     lv_obj_set_style_bg_opa(headerRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(headerRow, 0, 0);
     lv_obj_set_style_pad_all(headerRow, 0, 0);
@@ -6857,19 +6857,20 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_set_style_text_font(infoLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(infoLbl, lv_color_hex(0xAAAAAA), 0);
 
-    // Row 2: Controls Toolbar
-    // [Source: MIC/LINE] [Noise Gate: Slider] [Scale Snap: Toggle] [Count-in: 1 Bar] [Length: 1/2/4 Bars]
+    // Row 2: Streamlined Controls Toolbar
+    // [Source: MIC/LINE/SAMPLE] [📁 Choose WAV] [Scale Snap: Toggle] [Count-in: 1 Bar] [Length: 1/2/4 Bars]
     lv_obj_t* toolbar = lv_obj_create(card);
-    lv_obj_set_size(toolbar, lv_pct(100), 52);
+    lv_obj_set_size(toolbar, lv_pct(100), 46);
     lv_obj_set_style_bg_color(toolbar, lv_color_hex(0x222222), 0);
     lv_obj_set_style_border_color(toolbar, lv_color_hex(0x333333), 0);
     lv_obj_set_style_border_width(toolbar, 1, 0);
     lv_obj_set_style_radius(toolbar, 8, 0);
-    lv_obj_set_style_pad_all(toolbar, 6, 0);
+    lv_obj_set_style_pad_all(toolbar, 5, 0);
     lv_obj_remove_flag(toolbar, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_layout(toolbar, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(toolbar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(toolbar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(toolbar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(toolbar, 10, 0);
 
     // 1. Input Source Button
     lv_obj_t* srcBtn = lv_button_create(toolbar);
@@ -6888,7 +6889,7 @@ void UIManager::openMelodyTranscriberModal() {
     // 1b. Sample File Picker Button (Visible when Src: SAMPLE is selected)
     lv_obj_t* fBtn = lv_button_create(toolbar);
     mMelodySampleFileBtn = fBtn;
-    lv_obj_set_size(fBtn, 120, 36);
+    lv_obj_set_size(fBtn, 130, 36);
     lv_obj_set_style_bg_color(fBtn, lv_color_hex(0x282828), 0);
     lv_obj_set_style_border_color(fBtn, lv_color_hex(0x444444), 0);
     lv_obj_set_style_border_width(fBtn, 1, 0);
@@ -6910,55 +6911,7 @@ void UIManager::openMelodyTranscriberModal() {
         lv_obj_add_flag(fBtn, LV_OBJ_FLAG_HIDDEN);
     }
 
-    // 2. Input Gain Slider Group (0 to +36dB)
-    lv_obj_t* gainGrp = lv_obj_create(toolbar);
-    lv_obj_set_size(gainGrp, 130, 40);
-    lv_obj_set_style_bg_opa(gainGrp, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(gainGrp, 0, 0);
-    lv_obj_set_style_pad_all(gainGrp, 0, 0);
-    lv_obj_set_layout(gainGrp, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(gainGrp, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(gainGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(gainGrp, LV_OBJ_FLAG_SCROLLABLE);
-
-    mMelodyGainValLbl = lv_label_create(gainGrp);
-    lv_label_set_text_fmt(mMelodyGainValLbl, "Gain: +%.0fdB", mMelodyGainDb);
-    lv_obj_set_style_text_font(mMelodyGainValLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mMelodyGainValLbl, lv_color_hex(0x888888), 0);
-
-    mMelodyGainSlider = lv_slider_create(gainGrp);
-    lv_obj_set_size(mMelodyGainSlider, 120, 8);
-    lv_slider_set_range(mMelodyGainSlider, 0, 36);
-    lv_slider_set_value(mMelodyGainSlider, (int)mMelodyGainDb, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mMelodyGainSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mMelodyGainSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mMelodyGainSlider, melodyGainSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
-
-    // 3. Noise Gate Slider Group (-70dB to -12dB)
-    lv_obj_t* gateGrp = lv_obj_create(toolbar);
-    lv_obj_set_size(gateGrp, 150, 40);
-    lv_obj_set_style_bg_opa(gateGrp, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(gateGrp, 0, 0);
-    lv_obj_set_style_pad_all(gateGrp, 0, 0);
-    lv_obj_set_layout(gateGrp, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(gateGrp, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(gateGrp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(gateGrp, LV_OBJ_FLAG_SCROLLABLE);
-
-    mMelodyGateValLbl = lv_label_create(gateGrp);
-    lv_label_set_text_fmt(mMelodyGateValLbl, "Gate: %.0fdB", mMelodyGateDb);
-    lv_obj_set_style_text_font(mMelodyGateValLbl, &lv_font_montserrat_10, 0);
-    lv_obj_set_style_text_color(mMelodyGateValLbl, lv_color_hex(0x888888), 0);
-
-    mMelodyGateSlider = lv_slider_create(gateGrp);
-    lv_obj_set_size(mMelodyGateSlider, 140, 8);
-    lv_slider_set_range(mMelodyGateSlider, -70, -12);
-    lv_slider_set_value(mMelodyGateSlider, (int)mMelodyGateDb, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(mMelodyGateSlider, trackColor, LV_PART_KNOB);
-    lv_obj_add_event_cb(mMelodyGateSlider, melodyGateSliderEventCb, LV_EVENT_VALUE_CHANGED, this);
-
-    // 3. Scale Snap Button
+    // 2. Scale Snap Button
     lv_obj_t* scBtn = lv_button_create(toolbar);
     mMelodyScaleBtn = scBtn;
     lv_obj_set_size(scBtn, 140, 36);
@@ -6971,7 +6924,7 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_center(scLbl);
     lv_obj_add_event_cb(scBtn, melodyScaleBtnEventCb, LV_EVENT_CLICKED, this);
 
-    // 4. Count-In Dropdown
+    // 3. Count-In Dropdown
     mMelodyCountInDd = lv_dropdown_create(toolbar);
     lv_obj_set_size(mMelodyCountInDd, 115, 36);
     lv_dropdown_set_options(mMelodyCountInDd, "No Count\n1 Bar In\n2 Bars In");
@@ -6980,9 +6933,9 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_set_style_text_font(mMelodyCountInDd, &lv_font_montserrat_12, 0);
     lv_obj_add_event_cb(mMelodyCountInDd, melodyCountInDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // 5. Length Dropdown
+    // 4. Length Dropdown
     mMelodyBarsDd = lv_dropdown_create(toolbar);
-    lv_obj_set_size(mMelodyBarsDd, 125, 36);
+    lv_obj_set_size(mMelodyBarsDd, 130, 36);
     lv_dropdown_set_options(mMelodyBarsDd, "1 Bar (16 Stp)\n2 Bars (32 Stp)\n4 Bars (64 Stp)");
     int barSel = (mMelodyRecordBars == 4) ? 2 : (mMelodyRecordBars == 2 ? 1 : 0);
     lv_dropdown_set_selected(mMelodyBarsDd, barSel);
@@ -6990,8 +6943,30 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_set_style_text_font(mMelodyBarsDd, &lv_font_montserrat_12, 0);
     lv_obj_add_event_cb(mMelodyBarsDd, melodyBarsDdEventCb, LV_EVENT_VALUE_CHANGED, this);
 
-    // Row 3: Live Input Status & VU Meter
-    lv_obj_t* meterRow = lv_obj_create(card);
+    // Row 3: Main Body Container (Split into Left visualizer and Right detection side-panel)
+    lv_obj_t* mainBody = lv_obj_create(card);
+    lv_obj_set_size(mainBody, lv_pct(100), (SCREEN_HEIGHT >= 800) ? 510 : 330);
+    lv_obj_set_style_bg_opa(mainBody, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mainBody, 0, 0);
+    lv_obj_set_style_pad_all(mainBody, 0, 0);
+    lv_obj_remove_flag(mainBody, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(mainBody, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(mainBody, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(mainBody, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Left Area: VU Meter, Piano Roll visualizer, and Action transport row
+    lv_obj_t* leftArea = lv_obj_create(mainBody);
+    lv_obj_set_size(leftArea, (SCREEN_WIDTH >= 1280) ? 880 : 540, lv_pct(100));
+    lv_obj_set_style_bg_opa(leftArea, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(leftArea, 0, 0);
+    lv_obj_set_style_pad_all(leftArea, 0, 0);
+    lv_obj_remove_flag(leftArea, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(leftArea, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(leftArea, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(leftArea, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Live Input Status & VU Meter (Top of left area)
+    lv_obj_t* meterRow = lv_obj_create(leftArea);
     lv_obj_set_size(meterRow, lv_pct(100), 32);
     lv_obj_set_style_bg_opa(meterRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(meterRow, 0, 0);
@@ -7003,7 +6978,7 @@ void UIManager::openMelodyTranscriberModal() {
 
     // VU meter bar
     lv_obj_t* vuCont = lv_obj_create(meterRow);
-    lv_obj_set_size(vuCont, 340, 26);
+    lv_obj_set_size(vuCont, 300, 26);
     lv_obj_set_style_bg_opa(vuCont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(vuCont, 0, 0);
     lv_obj_set_style_pad_all(vuCont, 0, 0);
@@ -7018,7 +6993,7 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_set_style_text_color(vuTitle, lv_color_hex(0x888888), 0);
 
     mMelodyVuBar = lv_bar_create(vuCont);
-    lv_obj_set_size(mMelodyVuBar, 200, 12);
+    lv_obj_set_size(mMelodyVuBar, 170, 12);
     lv_bar_set_range(mMelodyVuBar, -60, 0);
     lv_bar_set_value(mMelodyVuBar, -60, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(mMelodyVuBar, lv_color_hex(0x00FF88), LV_PART_INDICATOR);
@@ -7040,10 +7015,10 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_set_style_text_font(mMelodyStatusLbl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(mMelodyStatusLbl, lv_color_hex(0xCCCCCC), 0);
 
-    // Row 4: Piano Roll Canvas (Central recording visualizer)
-    lv_obj_t* rollCard = lv_obj_create(card);
+    // Piano Roll Canvas (Central recording visualizer)
+    lv_obj_t* rollCard = lv_obj_create(leftArea);
     mMelodyPianoRoll = rollCard;
-    lv_obj_set_size(rollCard, lv_pct(100), (SCREEN_HEIGHT >= 800) ? 310 : 210);
+    lv_obj_set_size(rollCard, lv_pct(100), (SCREEN_HEIGHT >= 800) ? 410 : 240);
     lv_obj_set_style_bg_color(rollCard, lv_color_hex(0x121212), 0);
     lv_obj_set_style_border_color(rollCard, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_width(rollCard, 1, 0);
@@ -7054,10 +7029,10 @@ void UIManager::openMelodyTranscriberModal() {
     // Initial draw of piano roll grid
     updateMelodyPianoRoll();
 
-    // Row 5: Action Buttons
+    // Action Buttons Row (Bottom of left area)
     // [ Cancel ]           [ Audition (Play) ] [ Record / Stop ]           [ Commit & Close ]
-    lv_obj_t* actionRow = lv_obj_create(card);
-    lv_obj_set_size(actionRow, lv_pct(100), 48);
+    lv_obj_t* actionRow = lv_obj_create(leftArea);
+    lv_obj_set_size(actionRow, lv_pct(100), 44);
     lv_obj_set_style_bg_opa(actionRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(actionRow, 0, 0);
     lv_obj_set_style_pad_all(actionRow, 0, 0);
@@ -7068,7 +7043,7 @@ void UIManager::openMelodyTranscriberModal() {
 
     // Cancel
     lv_obj_t* cancelBtn = lv_button_create(actionRow);
-    lv_obj_set_size(cancelBtn, 120, 40);
+    lv_obj_set_size(cancelBtn, 110, 38);
     lv_obj_set_style_bg_color(cancelBtn, lv_color_hex(0x333333), 0);
     lv_obj_set_style_radius(cancelBtn, 6, 0);
     lv_obj_t* cancelLbl = lv_label_create(cancelBtn);
@@ -7080,7 +7055,7 @@ void UIManager::openMelodyTranscriberModal() {
     // Audition
     lv_obj_t* audBtn = lv_button_create(actionRow);
     mMelodyAuditionBtn = audBtn;
-    lv_obj_set_size(audBtn, 160, 40);
+    lv_obj_set_size(audBtn, 150, 38);
     lv_obj_set_style_bg_color(audBtn, lv_color_hex(0x2D2D2D), 0);
     lv_obj_set_style_border_color(audBtn, trackColor, 0);
     lv_obj_set_style_border_width(audBtn, 1, 0);
@@ -7094,7 +7069,7 @@ void UIManager::openMelodyTranscriberModal() {
     // Record / Stop Main Button
     lv_obj_t* recBtn = lv_button_create(actionRow);
     mMelodyRecBtn = recBtn;
-    lv_obj_set_size(recBtn, 170, 40);
+    lv_obj_set_size(recBtn, 160, 38);
     lv_obj_set_style_bg_color(recBtn, lv_color_hex(0xAA1111), 0);
     lv_obj_set_style_radius(recBtn, 6, 0);
     lv_obj_t* recLbl = lv_label_create(recBtn);
@@ -7107,7 +7082,7 @@ void UIManager::openMelodyTranscriberModal() {
     // Commit
     lv_obj_t* commitBtn = lv_button_create(actionRow);
     mMelodyCommitBtn = commitBtn;
-    lv_obj_set_size(commitBtn, 180, 40);
+    lv_obj_set_size(commitBtn, 170, 38);
     lv_obj_set_style_bg_color(commitBtn, trackColor, 0);
     lv_obj_set_style_radius(commitBtn, 6, 0);
     lv_obj_t* commitLbl = lv_label_create(commitBtn);
@@ -7116,10 +7091,89 @@ void UIManager::openMelodyTranscriberModal() {
     lv_obj_center(commitLbl);
     lv_obj_add_event_cb(commitBtn, melodyCommitBtnEventCb, LV_EVENT_CLICKED, this);
 
+    // Right Side Panel: Advanced Detection & Filter Slider Rack
+    lv_obj_t* sidePanel = lv_obj_create(mainBody);
+    lv_obj_set_size(sidePanel, (SCREEN_WIDTH >= 1280) ? 250 : 200, lv_pct(100));
+    lv_obj_set_style_bg_color(sidePanel, lv_color_hex(0x1F1F1F), 0);
+    lv_obj_set_style_border_color(sidePanel, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_border_width(sidePanel, 1, 0);
+    lv_obj_set_style_radius(sidePanel, 8, 0);
+    lv_obj_set_style_pad_all(sidePanel, 8, 0);
+    lv_obj_remove_flag(sidePanel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_layout(sidePanel, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(sidePanel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(sidePanel, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Side Panel Header
+    lv_obj_t* panelTitle = lv_label_create(sidePanel);
+    lv_label_set_text(panelTitle, "DETECTION CONTROLS");
+    lv_obj_set_style_text_font(panelTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(panelTitle, trackColor, 0);
+
+    // Helper lambda for creating standardized side-panel slider blocks
+    auto makeSideSlider = [&](const char* title, lv_obj_t*& outValLbl, lv_obj_t*& outSlider, 
+                              int minVal, int maxVal, int curVal, lv_event_cb_t cb) {
+        lv_obj_t* grp = lv_obj_create(sidePanel);
+        lv_obj_set_size(grp, lv_pct(100), 54);
+        lv_obj_set_style_bg_opa(grp, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(grp, 0, 0);
+        lv_obj_set_style_pad_all(grp, 0, 0);
+        lv_obj_remove_flag(grp, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_layout(grp, LV_LAYOUT_FLEX);
+        lv_obj_set_flex_flow(grp, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(grp, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+
+        outValLbl = lv_label_create(grp);
+        lv_label_set_text(outValLbl, title);
+        lv_obj_set_style_text_font(outValLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(outValLbl, lv_color_hex(0xBBBBBB), 0);
+
+        outSlider = lv_slider_create(grp);
+        lv_obj_set_size(outSlider, lv_pct(96), 8);
+        lv_slider_set_range(outSlider, minVal, maxVal);
+        lv_slider_set_value(outSlider, curVal, LV_ANIM_OFF);
+        lv_obj_set_style_bg_color(outSlider, trackColor, LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(outSlider, trackColor, LV_PART_KNOB);
+        lv_obj_add_event_cb(outSlider, cb, LV_EVENT_VALUE_CHANGED, this);
+    };
+
+    // 1. High-Pass Filter (30Hz to 400Hz) - Eliminates hum/rumble
+    makeSideSlider("HP Filter: 65Hz", mMelodyHpValLbl, mMelodyHpSlider, 30, 400, (int)mMelodyHpHz, melodyHpSliderEventCb);
+    lv_label_set_text_fmt(mMelodyHpValLbl, "HP Filter: %.0fHz", mMelodyHpHz);
+
+    // 2. Low-Pass Filter (1000Hz to 8000Hz) - Eliminates hiss & high harmonics
+    makeSideSlider("LP Filter: 3800Hz", mMelodyLpValLbl, mMelodyLpSlider, 1000, 8000, (int)mMelodyLpHz, melodyLpSliderEventCb);
+    lv_label_set_text_fmt(mMelodyLpValLbl, "LP Filter: %.0fHz", mMelodyLpHz);
+
+    // 3. Confidence Threshold (10% to 70%) - Periodicity requirement
+    makeSideSlider("Confidence: 35%", mMelodyConfValLbl, mMelodyConfSlider, 10, 70, (int)(mMelodyConfidence * 100.0f), melodyConfSliderEventCb);
+    lv_label_set_text_fmt(mMelodyConfValLbl, "Confidence: %.0f%%", mMelodyConfidence * 100.0f);
+
+    // 4. Time Sensitivity / Speed (10ms to 100ms) - Short note / fast trill capture
+    makeSideSlider("Time Sens: 25ms", mMelodyTimeValLbl, mMelodyTimeSlider, 10, 100, (int)mMelodyTimeSensMs, melodyTimeSliderEventCb);
+    lv_label_set_text_fmt(mMelodyTimeValLbl, "Time Sens: %.0fms", mMelodyTimeSensMs);
+
+    // 5. Pitch Tolerance (20 to 150 = 0.20st to 1.50st) - Legato & vibrato smoothing
+    makeSideSlider("Pitch Tol: ±0.70st", mMelodyPitchTolValLbl, mMelodyPitchTolSlider, 20, 150, (int)(mMelodyPitchTol * 100.0f), melodyPitchTolSliderEventCb);
+    lv_label_set_text_fmt(mMelodyPitchTolValLbl, "Pitch Tol: ±%.2fst", mMelodyPitchTol);
+
+    // 6. Preamp Gain (0dB to +36dB)
+    makeSideSlider("Pre Gain: +12dB", mMelodyGainValLbl, mMelodyGainSlider, 0, 36, (int)mMelodyGainDb, melodyGainSliderEventCb);
+    lv_label_set_text_fmt(mMelodyGainValLbl, "Pre Gain: +%.0fdB", mMelodyGainDb);
+
+    // 7. Noise Gate (-70dB to -12dB)
+    makeSideSlider("Noise Gate: -45dB", mMelodyGateValLbl, mMelodyGateSlider, -70, -12, (int)mMelodyGateDb, melodyGateSliderEventCb);
+    lv_label_set_text_fmt(mMelodyGateValLbl, "Noise Gate: %.0fdB", mMelodyGateDb);
+
     // Configure MelodyTracker
     tracker.setTempoAndSteps(mEngine.getBpm(), mMelodyRecordBars * 16);
     tracker.setNoiseGateDb(mMelodyGateDb);
     tracker.setInputGainDb(mMelodyGainDb);
+    tracker.setHighPassCutoff(mMelodyHpHz);
+    tracker.setLowPassCutoff(mMelodyLpHz);
+    tracker.setConfidenceThreshold(mMelodyConfidence);
+    tracker.setTimeSensitivityMs(mMelodyTimeSensMs);
+    tracker.setPitchTolerance(mMelodyPitchTol);
     int rootKey = mEngine.getScaleRoot();
     tracker.setScaleFilter(rootKey, mSelectedScaleIdx);
     tracker.setScaleFilterEnabled(mMelodyScaleSnap);
@@ -7161,6 +7215,16 @@ void UIManager::closeMelodyTranscriberModal() {
     mMelodyGainValLbl = nullptr;
     mMelodyGateSlider = nullptr;
     mMelodyGateValLbl = nullptr;
+    mMelodyHpSlider = nullptr;
+    mMelodyHpValLbl = nullptr;
+    mMelodyLpSlider = nullptr;
+    mMelodyLpValLbl = nullptr;
+    mMelodyConfSlider = nullptr;
+    mMelodyConfValLbl = nullptr;
+    mMelodyTimeSlider = nullptr;
+    mMelodyTimeValLbl = nullptr;
+    mMelodyPitchTolSlider = nullptr;
+    mMelodyPitchTolValLbl = nullptr;
     mMelodyStatusLbl = nullptr;
     mMelodyRecBtn = nullptr;
     mMelodyRecBtnLbl = nullptr;
@@ -7439,6 +7503,61 @@ void UIManager::melodyGateSliderEventCb(lv_event_t* e) {
     }
 }
 
+void UIManager::melodyHpSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyHpHz = (float)lv_slider_get_value(slider);
+    ui->mEngine.getMelodyTracker().setHighPassCutoff(ui->mMelodyHpHz);
+    if (ui->mMelodyHpValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyHpValLbl, "HP Filter: %.0fHz", ui->mMelodyHpHz);
+    }
+}
+
+void UIManager::melodyLpSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyLpHz = (float)lv_slider_get_value(slider);
+    ui->mEngine.getMelodyTracker().setLowPassCutoff(ui->mMelodyLpHz);
+    if (ui->mMelodyLpValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyLpValLbl, "LP Filter: %.0fHz", ui->mMelodyLpHz);
+    }
+}
+
+void UIManager::melodyConfSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyConfidence = (float)lv_slider_get_value(slider) / 100.0f;
+    ui->mEngine.getMelodyTracker().setConfidenceThreshold(ui->mMelodyConfidence);
+    if (ui->mMelodyConfValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyConfValLbl, "Confidence: %.0f%%", ui->mMelodyConfidence * 100.0f);
+    }
+}
+
+void UIManager::melodyTimeSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyTimeSensMs = (float)lv_slider_get_value(slider);
+    ui->mEngine.getMelodyTracker().setTimeSensitivityMs(ui->mMelodyTimeSensMs);
+    if (ui->mMelodyTimeValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyTimeValLbl, "Time Sens: %.0fms", ui->mMelodyTimeSensMs);
+    }
+}
+
+void UIManager::melodyPitchTolSliderEventCb(lv_event_t* e) {
+    UIManager* ui = (UIManager*)lv_event_get_user_data(e);
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    if (!ui || !slider) return;
+    ui->mMelodyPitchTol = (float)lv_slider_get_value(slider) / 100.0f;
+    ui->mEngine.getMelodyTracker().setPitchTolerance(ui->mMelodyPitchTol);
+    if (ui->mMelodyPitchTolValLbl) {
+        lv_label_set_text_fmt(ui->mMelodyPitchTolValLbl, "Pitch Tol: ±%.2fst", ui->mMelodyPitchTol);
+    }
+}
+
 void UIManager::melodyCountInDdEventCb(lv_event_t* e) {
     UIManager* ui = (UIManager*)lv_event_get_user_data(e);
     lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
@@ -7472,6 +7591,11 @@ void UIManager::melodyRecBtnEventCb(lv_event_t* e) {
         tracker.setTempoAndSteps(ui->mEngine.getBpm(), ui->mMelodyRecordBars * 16);
         tracker.setNoiseGateDb(ui->mMelodyGateDb);
         tracker.setInputGainDb(ui->mMelodyGainDb);
+        tracker.setHighPassCutoff(ui->mMelodyHpHz);
+        tracker.setLowPassCutoff(ui->mMelodyLpHz);
+        tracker.setConfidenceThreshold(ui->mMelodyConfidence);
+        tracker.setTimeSensitivityMs(ui->mMelodyTimeSensMs);
+        tracker.setPitchTolerance(ui->mMelodyPitchTol);
         tracker.setScaleFilter(ui->mEngine.getScaleRoot(), ui->mSelectedScaleIdx);
         tracker.setScaleFilterEnabled(ui->mMelodyScaleSnap);
         tracker.startRecording(ui->mMelodyCountInBars, ui->mMelodyRecordBars);

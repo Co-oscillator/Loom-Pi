@@ -63,7 +63,7 @@ MelodyTracker::~MelodyTracker() {}
 void MelodyTracker::setSampleRate(float sr) {
     if (sr > 8000.0f && sr < 192000.0f) {
         mSampleRate = sr;
-        mMinNoteDurationSamples = mSampleRate * 0.015; // 15ms minimum note duration (allows fast trills, strums, and short staccato notes)
+        mMinNoteDurationSamples = mSampleRate * (mTimeSensitivityMs * 0.001);
         setupBandpassFilters();
     }
 }
@@ -83,14 +83,37 @@ void MelodyTracker::setInputGainDb(float gainDb) {
     mInputGainLin = powf(10.0f, mInputGainDb / 20.0f);
 }
 
+void MelodyTracker::setHighPassCutoff(float hz) {
+    mHpCutoffHz = std::max(20.0f, std::min(500.0f, hz));
+    setupBandpassFilters();
+}
+
+void MelodyTracker::setLowPassCutoff(float hz) {
+    mLpCutoffHz = std::max(500.0f, std::min(12000.0f, hz));
+    setupBandpassFilters();
+}
+
+void MelodyTracker::setConfidenceThreshold(float thresh) {
+    mConfidenceThreshold = std::max(0.10f, std::min(0.70f, thresh));
+}
+
+void MelodyTracker::setTimeSensitivityMs(float ms) {
+    mTimeSensitivityMs = std::max(5.0f, std::min(150.0f, ms));
+    mMinNoteDurationSamples = mSampleRate * (mTimeSensitivityMs * 0.001);
+}
+
+void MelodyTracker::setPitchTolerance(float semitones) {
+    mPitchToleranceSemitones = std::max(0.15f, std::min(2.0f, semitones));
+}
+
 void MelodyTracker::setScaleFilter(int rootNote, int scaleIdx) {
     mRootNote = std::max(0, std::min(11, rootNote));
     mScaleIdx = std::max(0, std::min(39, scaleIdx));
 }
 
 void MelodyTracker::setupBandpassFilters() {
-    // 2nd-order Butterworth High-Pass at 55Hz (A1/B1)
-    // and 2nd-order Butterworth Low-Pass at 4000Hz (B7)
+    // 2nd-order Butterworth High-Pass at mHpCutoffHz (filters out mains hum, rumble, low noise)
+    // and 2nd-order Butterworth Low-Pass at mLpCutoffHz (filters out sibilance, hiss, harmonics)
     auto computeHighpass = [this](float fc, Biquad& bq) {
         float omega = 2.0f * (float)M_PI * fc / mSampleRate;
         float cosOmega = cosf(omega);
@@ -121,10 +144,13 @@ void MelodyTracker::setupBandpassFilters() {
         bq.reset();
     };
 
-    computeHighpass(55.0f, mHpFilter1);
-    computeHighpass(55.0f, mHpFilter2);
-    computeLowpass(4000.0f, mLpFilter1);
-    computeLowpass(4000.0f, mLpFilter2);
+    float hp = std::max(20.0f, std::min(mSampleRate * 0.45f, mHpCutoffHz));
+    float lp = std::max(hp + 50.0f, std::min(mSampleRate * 0.45f, mLpCutoffHz));
+
+    computeHighpass(hp, mHpFilter1);
+    computeHighpass(hp, mHpFilter2);
+    computeLowpass(lp, mLpFilter1);
+    computeLowpass(lp, mLpFilter2);
 }
 
 float MelodyTracker::processFiltering(float in) {
@@ -328,11 +354,11 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     }
 
     // Step 3: Absolute Thresholding
-    // YIN threshold: ~0.15 to 0.28 (0.28 provides higher sensitivity for quiet singing and softer instruments)
-    constexpr float YIN_THRESHOLD = 0.28f;
+    // YIN threshold is dynamically governed by mConfidenceThreshold (default ~0.35f)
+    float yinThreshold = mConfidenceThreshold;
     int tauEstimate = -1;
     for (int tau = 2; tau < halfWindow; ++tau) {
-        if (mYinDiff[tau] < YIN_THRESHOLD) {
+        if (mYinDiff[tau] < yinThreshold) {
             while (tau + 1 < halfWindow && mYinDiff[tau + 1] < mYinDiff[tau]) {
                 tau++;
             }
@@ -350,7 +376,9 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
                 tauEstimate = tau;
             }
         }
-        if (minVal > 0.55f) {
+        // Fallback tolerance scales with confidence threshold
+        float maxAllowedMin = std::min(0.65f, yinThreshold * 1.6f);
+        if (minVal > maxAllowedMin) {
             return 0.0f; // Not voiced / unpitched noise
         }
     }
@@ -370,8 +398,10 @@ float MelodyTracker::detectPitchYin(const float* buffer, int windowSize) {
     if (betterTau <= 0.0f) return 0.0f;
     float detectedFreq = mSampleRate / betterTau;
 
-    // Vocal/Melody sanity filter: 55Hz to 4000Hz (A1 to B7)
-    if (detectedFreq < 55.0f || detectedFreq > 4000.0f) {
+    // Vocal/Melody sanity filter: clamp to [mHpCutoffHz * 0.85, mLpCutoffHz * 1.15]
+    float minHz = std::max(20.0f, mHpCutoffHz * 0.85f);
+    float maxHz = std::min(mSampleRate * 0.45f, mLpCutoffHz * 1.15f);
+    if (detectedFreq < minHz || detectedFreq > maxHz) {
         return 0.0f;
     }
 
@@ -402,12 +432,13 @@ void MelodyTracker::processAudioBlock() {
         bool hasSignal = mNoteIsActive ? (rmsDb > gateOff) : (rmsDb > gateOn);
         float pitchHz = 0.0f;
         int midiNote = 0;
+        float rawMidiPitch = 0.0f;
 
         if (hasSignal) {
             pitchHz = detectPitchYin(mYinBuffer.data(), YIN_WINDOW_SIZE);
             if (pitchHz > 0.0f) {
-                float rawMidi = frequencyToMidi(pitchHz);
-                int roundedMidi = (int)roundf(rawMidi);
+                rawMidiPitch = frequencyToMidi(pitchHz);
+                int roundedMidi = (int)roundf(rawMidiPitch);
                 if (mScaleFilterEnabled) {
                     roundedMidi = quantizeToScale(roundedMidi, mRootNote, mScaleIdx);
                 }
@@ -433,10 +464,10 @@ void MelodyTracker::processAudioBlock() {
                     mCurrentCandidate.peakRms = rms;
                     mCurrentCandidate.stableNote = midiNote;
                 } else {
-                    // Check if pitch shifted to a new distinct note (legato transition)
+                    // Check if pitch shifted beyond pitch tolerance (default ~0.70 semitones)
                     // or if an energy attack occurred (re-triggering the same note)
-                    int currentAvgNote = (int)roundf(mCurrentCandidate.pitchAccum / (float)mCurrentCandidate.pitchCount);
-                    bool pitchChanged = (std::abs(midiNote - currentAvgNote) >= 1);
+                    float currentAvgNote = mCurrentCandidate.pitchAccum / (float)mCurrentCandidate.pitchCount;
+                    bool pitchChanged = (std::abs(rawMidiPitch - currentAvgNote) >= mPitchToleranceSemitones);
                     bool reAttack = (!pitchChanged && rms > mCurrentCandidate.peakRms * 1.8f && 
                                      (currentSample - mCurrentCandidate.startSample) >= mMinNoteDurationSamples);
 

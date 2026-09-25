@@ -26,11 +26,23 @@ public:
     // Configuration
     void setSampleRate(float sr);
     void setTempoAndSteps(float bpm, int totalSteps, float clockMultiplier = 1.0f);
-    void setNoiseGateDb(float dbThreshold); // e.g. -45.0 dB
-    void setInputGainDb(float gainDb);      // e.g. 0.0 to +30.0 dB
+    void setNoiseGateDb(float dbThreshold); // e.g. -70.0 to -12.0 dB
+    void setInputGainDb(float gainDb);      // e.g. 0.0 to +36.0 dB
     float getInputGainDb() const { return mInputGainDb; }
     void setScaleFilter(int rootNote, int scaleIdx); // root: 0=C..11=B; scale: 0=Chromatic, 1=Major, 2=Minor, etc.
     void setScaleFilterEnabled(bool enabled) { mScaleFilterEnabled = enabled; }
+
+    // Advanced Detection & Filtering Configuration
+    void setHighPassCutoff(float hz);
+    float getHighPassCutoff() const { return mHpCutoffHz; }
+    void setLowPassCutoff(float hz);
+    float getLowPassCutoff() const { return mLpCutoffHz; }
+    void setConfidenceThreshold(float thresh); // 0.10 to 0.70 (default 0.35)
+    float getConfidenceThreshold() const { return mConfidenceThreshold; }
+    void setTimeSensitivityMs(float ms);       // 10ms to 100ms (default 25ms)
+    float getTimeSensitivityMs() const { return mTimeSensitivityMs; }
+    void setPitchTolerance(float semitones);   // 0.2st to 1.5st (default 0.7st)
+    float getPitchTolerance() const { return mPitchToleranceSemitones; }
 
     // Live State & Audio Ingestion (called continuously from audio thread or buffer feeder)
     void pushAudio(const float* buffer, int numFrames);
@@ -105,9 +117,16 @@ private:
     int mRootNote = 0;
     int mScaleIdx = 0;
 
+    // Advanced Detection Parameters
+    float mHpCutoffHz = 65.0f;   // High-pass cutoff (filters hum & room rumble)
+    float mLpCutoffHz = 3800.0f; // Low-pass cutoff (filters hiss/sibilance)
+    float mConfidenceThreshold = 0.35f; // YIN threshold: lower = stricter periodicity needed
+    float mTimeSensitivityMs = 25.0f;   // Min duration (ms) to qualify as a note
+    float mPitchToleranceSemitones = 0.70f; // Semitone variation tolerance before splitting note
+
     // Filters
-    Biquad mHpFilter1, mHpFilter2; // 65Hz High-Pass
-    Biquad mLpFilter1, mLpFilter2; // 2200Hz Low-Pass
+    Biquad mHpFilter1, mHpFilter2; // Adjustable High-Pass
+    Biquad mLpFilter1, mLpFilter2; // Adjustable Low-Pass
 
     // Ring Buffer for input frames
     static constexpr int RING_BUFFER_SIZE = 131072; // ~2.7s buffer at 48k
