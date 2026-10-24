@@ -7,6 +7,8 @@
 #include "ui/UIManager.h"
 #include "MidiInput.h"
 #include <unordered_map>
+#include <algorithm>
+#include <cctype>
 
 // Global audio engine
 AudioEngine gEngine;
@@ -27,11 +29,19 @@ MidiCallbackData gMidiCallbackData = {nullptr, nullptr};
 #endif
 
 
-// Audio Callback
+// Audio Callback (16-bit PCM matching hardware)
 void audioCallback(void* userdata, Uint8* stream, int len) {
-    float* out = reinterpret_cast<float*>(stream);
-    int numFrames = len / (sizeof(float) * 2); // Assuming Stereo float
-    gEngine.renderOutput(out, numFrames, 2);
+    int16_t* out = reinterpret_cast<int16_t*>(stream);
+    int numFrames = len / (sizeof(int16_t) * 2); // Stereo 16-bit
+    static thread_local float floatBuffer[4096 * 2];
+    int framesToDo = std::min(numFrames, 4096);
+    gEngine.renderOutput(floatBuffer, framesToDo, 2);
+    for (int i = 0; i < framesToDo * 2; ++i) {
+        float s = floatBuffer[i];
+        if (s > 1.0f) s = 1.0f;
+        else if (s < -1.0f) s = -1.0f;
+        out[i] = static_cast<int16_t>(s * 32767.0f);
+    }
 }
 
 void audioCaptureCallback(void* userdata, Uint8* stream, int len) {
@@ -51,31 +61,78 @@ SDL_AudioDeviceID gAudioDeviceID = 0;
 std::string gCurrentAudioDevice = "Default";
 
 bool switchAudioDevice(const std::string& deviceName) {
+    int numDevs = SDL_GetNumAudioDevices(0);
+    std::cout << "[Audio] Detected " << numDevs << " playback device(s):" << std::endl;
+    for (int i = 0; i < numDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 0);
+        std::cout << "  [" << i << "] " << (name ? name : "(null)") << std::endl;
+    }
+
+    std::string targetDev = deviceName;
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
+        std::string chosen = "";
+        for (int i = 0; i < numDevs; ++i) {
+            const char* name = SDL_GetAudioDeviceName(i, 0);
+            if (!name) continue;
+            std::string s(name);
+            std::string sLower = s;
+            std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+            if (sLower.find("ab13x") != std::string::npos) {
+                chosen = s;
+                break;
+            }
+        }
+        if (chosen.empty()) {
+            for (int i = 0; i < numDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 0);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        if (!chosen.empty()) {
+            targetDev = chosen;
+            std::cout << "[Audio] Auto-selected USB playback device: " << targetDev << std::endl;
+        } else {
+            targetDev = "Default";
+        }
+    }
+
     if (gAudioDeviceID != 0) {
         SDL_CloseAudioDevice(gAudioDeviceID);
         gAudioDeviceID = 0;
+        SDL_Delay(50); // Settle delay for USB hubs / transaction translators
     }
     
     SDL_AudioSpec want, have;
     SDL_zero(want);
     want.freq = 48000;
-    want.format = AUDIO_F32SYS;
+    want.format = AUDIO_S16SYS; // Native S16_LE hardware format
     want.channels = 2;
     want.samples = 256;
     want.callback = audioCallback;
     
-    const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
-    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, 0);
+    const char* devName = (targetDev == "Default" || targetDev == "SDL Default" || targetDev.empty()) ? nullptr : targetDev.c_str();
+    gAudioDeviceID = SDL_OpenAudioDevice(devName, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
     if (gAudioDeviceID == 0) {
-        std::cerr << "switchAudioDevice failed: " << SDL_GetError() << std::endl;
-        // Fallback to default
-        gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-        gCurrentAudioDevice = "Default";
-    } else {
-        gCurrentAudioDevice = deviceName;
+        std::cerr << "switchAudioDevice failed for '" << (devName ? devName : "default") 
+                  << "': " << SDL_GetError() << std::endl;
+        if (devName != nullptr) {
+            std::cout << "[Audio] Falling back to default audio device..." << std::endl;
+            gAudioDeviceID = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
+            if (gAudioDeviceID != 0) {
+                targetDev = "Default";
+            }
+        }
     }
     
     if (gAudioDeviceID != 0) {
+        gCurrentAudioDevice = targetDev;
         SDL_PauseAudioDevice(gAudioDeviceID, 0);
         std::cout << "SDL Audio Device switched to: " << gCurrentAudioDevice << std::endl;
         return true;
@@ -86,36 +143,84 @@ bool switchAudioDevice(const std::string& deviceName) {
 SDL_AudioDeviceID gCaptureDeviceID = 0;
 std::string gCurrentCaptureDevice = "Default";
 
-bool switchCaptureDevice(const std::string& deviceName) {
-    if (gCaptureDeviceID != 0) {
-        SDL_CloseAudioDevice(gCaptureDeviceID);
-        gCaptureDeviceID = 0;
-    }
-    
-    SDL_AudioSpec wantCapture, haveCapture;
-    SDL_zero(wantCapture);
-    wantCapture.freq = 48000;
-    wantCapture.format = AUDIO_S16SYS;
-    wantCapture.channels = 2;
-    wantCapture.samples = 256;
-    wantCapture.callback = audioCaptureCallback;
-    
-    const char* devName = (deviceName.empty() || deviceName == "Default" || deviceName == "SDL Default") ? nullptr : deviceName.c_str();
-    gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, 0);
-    if (gCaptureDeviceID == 0) {
-        std::cerr << "switchCaptureDevice failed: " << SDL_GetError() << std::endl;
-        gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, 0);
-        gCurrentCaptureDevice = "Default";
+void setCaptureActive(bool active) {
+    if (active) {
+        if (gCaptureDeviceID == 0) {
+            SDL_AudioSpec wantCapture, haveCapture;
+            SDL_zero(wantCapture);
+            wantCapture.freq = 48000;
+            wantCapture.format = AUDIO_S16SYS;
+            wantCapture.channels = 2;
+            wantCapture.samples = 256;
+            wantCapture.callback = audioCaptureCallback;
+
+            const char* devName = (gCurrentCaptureDevice.empty() || gCurrentCaptureDevice == "Default" || gCurrentCaptureDevice == "SDL Default") ? nullptr : gCurrentCaptureDevice.c_str();
+            gCaptureDeviceID = SDL_OpenAudioDevice(devName, 1, &wantCapture, &haveCapture, 0);
+            if (gCaptureDeviceID == 0 && devName != nullptr) {
+                std::cout << "[Audio] Opening '" << devName << "' failed (" << SDL_GetError() << "), falling back to default capture device..." << std::endl;
+                gCaptureDeviceID = SDL_OpenAudioDevice(nullptr, 1, &wantCapture, &haveCapture, 0);
+            }
+            if (gCaptureDeviceID != 0) {
+                SDL_PauseAudioDevice(gCaptureDeviceID, 0);
+                std::cout << "[Audio] On-demand Audio Capture STARTED on: " << (devName ? devName : "Default") << std::endl;
+            } else {
+                std::cerr << "[Audio] Failed to open capture device: " << SDL_GetError() << std::endl;
+            }
+        } else {
+            SDL_PauseAudioDevice(gCaptureDeviceID, 0);
+        }
     } else {
-        gCurrentCaptureDevice = deviceName;
+        if (gCaptureDeviceID != 0) {
+            SDL_CloseAudioDevice(gCaptureDeviceID);
+            gCaptureDeviceID = 0;
+            std::cout << "[Audio] Audio Capture STOPPED and device closed." << std::endl;
+        }
     }
-    
+}
+
+bool switchCaptureDevice(const std::string& deviceName) {
+    std::string targetDev = deviceName;
+    if (targetDev.empty() || targetDev == "Default" || targetDev == "SDL Default") {
+        int numDevs = SDL_GetNumAudioDevices(1);
+        std::string chosen = "";
+        for (int i = 0; i < numDevs; ++i) {
+            const char* name = SDL_GetAudioDeviceName(i, 1);
+            if (!name) continue;
+            std::string s(name);
+            std::string sLower = s;
+            std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+            if (sLower.find("ab13x") != std::string::npos) {
+                chosen = s;
+                break;
+            }
+        }
+        if (chosen.empty()) {
+            for (int i = 0; i < numDevs; ++i) {
+                const char* name = SDL_GetAudioDeviceName(i, 1);
+                if (!name) continue;
+                std::string s(name);
+                std::string sLower = s;
+                std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+                if (sLower.find("usb") != std::string::npos) {
+                    chosen = s;
+                    break;
+                }
+            }
+        }
+        if (!chosen.empty()) {
+            targetDev = chosen;
+            std::cout << "[Audio] Auto-selected USB capture device: " << targetDev << std::endl;
+        } else {
+            targetDev = "Default";
+        }
+    }
+    gCurrentCaptureDevice = targetDev;
+    std::cout << "[Audio] Capture device configured to: " << gCurrentCaptureDevice << std::endl;
     if (gCaptureDeviceID != 0) {
-        SDL_PauseAudioDevice(gCaptureDeviceID, 0);
-        std::cout << "SDL Capture Device switched to: " << gCurrentCaptureDevice << std::endl;
-        return true;
+        setCaptureActive(false);
+        setCaptureActive(true);
     }
-    return false;
+    return true;
 }
 
 int main() {
@@ -123,6 +228,7 @@ int main() {
     
     // 1. Init Audio Engine
     gEngine.init(48000.0f);
+    gEngine.setCaptureStateCallback(setCaptureActive);
     
     // 2. Init SDL Audio Subsystem
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
@@ -130,14 +236,15 @@ int main() {
         return 1;
     }
     
-    if (!switchAudioDevice(gCurrentAudioDevice)) {
-        std::cerr << "Failed to open default SDL Audio Device." << std::endl;
-        return 1;
+    int numPlay = SDL_GetNumAudioDevices(0);
+    std::cout << "[Audio] Detected Playback Devices (" << numPlay << "):" << std::endl;
+    for (int i = 0; i < numPlay; ++i) {
+        std::cout << "  [" << i << "] " << (SDL_GetAudioDeviceName(i, 0) ? SDL_GetAudioDeviceName(i, 0) : "Unknown") << std::endl;
     }
-    
-    // Open SDL Audio Capture (recording) device
-    if (!switchCaptureDevice(gCurrentCaptureDevice)) {
-        std::cerr << "Failed to open default SDL Capture Device." << std::endl;
+    int numCap = SDL_GetNumAudioDevices(1);
+    std::cout << "[Audio] Detected Capture Devices (" << numCap << "):" << std::endl;
+    for (int i = 0; i < numCap; ++i) {
+        std::cout << "  [" << i << "] " << (SDL_GetAudioDeviceName(i, 1) ? SDL_GetAudioDeviceName(i, 1) : "Unknown") << std::endl;
     }
     
     // 3. Init LVGL
@@ -148,14 +255,30 @@ int main() {
     lv_indev_t * indev = lv_sdl_mouse_create();
     lv_sdl_keyboard_create();
     
-    // 4. Init UI Manager
+    // 4. Init UI Manager (loads settings.txt)
     UIManager ui(gEngine);
     ui.init();
 
-    // 5. Init MIDI Input (CoreMIDI / Fallback)
+    // 5. Init MIDI FIRST — establishes USB interrupt endpoints on the hub
+    //    before we add isochronous audio endpoints through the same TT.
+    //    On the main branch, MIDI was always connected before the user
+    //    selected the USB audio device from Settings, so this ordering is
+    //    critical for TT periodic-schedule stability.
     static MidiCallbackData midiData = {&gEngine, &ui};
     setupMidiInput(&midiData);
-    
+
+    // 6. Let MIDI auto-connect do its first scan and USB hub TT schedule stabilize.
+    //    The auto-connect thread subscribes to MIDI controller ports immediately,
+    //    activating USB interrupt endpoints. We must wait for the kernel to fully
+    //    establish these periodic transfers before adding isochronous audio.
+    std::cout << "[Audio] Waiting for USB hub to stabilize after MIDI connect..." << std::endl;
+    SDL_Delay(3000);
+
+    // 7. NOW open the audio device (TT schedule is stable)
+    if (gAudioDeviceID == 0) {
+        switchAudioDevice(ui.mSettingsAudioDevice);
+    }
+
     std::cout << "Engine initialized successfully. Entering main loop." << std::endl;
     
     // QWERTY-to-MIDI note mapping (covers ~3 octaves)
@@ -205,9 +328,22 @@ int main() {
 
     // Main loop
     while (true) {
+        uint32_t frameStart = SDL_GetTicks();
         // Selectively grab ONLY keyboard events using SDL_PeepEvents.
         // This leaves mouse/touch events in the queue for LVGL's SDL driver.
         SDL_PumpEvents(); // Refresh the event queue
+
+        // Auto-recover from USB audio device disconnection/crash
+        SDL_Event devEvent;
+        if (SDL_PeepEvents(&devEvent, 1, SDL_GETEVENT,
+                           SDL_AUDIODEVICEREMOVED, SDL_AUDIODEVICEREMOVED) > 0) {
+            if (!devEvent.adevice.iscapture && devEvent.adevice.which == gAudioDeviceID) {
+                std::cout << "[Audio] Device lost (TT crash?). Recovering in 2s..." << std::endl;
+                gAudioDeviceID = 0;
+                SDL_Delay(2000);
+                switchAudioDevice("Default");
+            }
+        }
 
         // Handle scroll wheel on active slider/knob when left mouse button is held
         Uint32 mouseState = SDL_GetMouseState(nullptr, nullptr);
@@ -348,11 +484,16 @@ int main() {
         }
 
         // Let LVGL handle its timers and internal SDL event processing
-        uint32_t time_till_next = lv_timer_handler();
+        lv_timer_handler();
         ui.update();
-        
-        if (time_till_next > 10) time_till_next = 10;
-        SDL_Delay(time_till_next);
+
+        // Target 60 FPS (16.6ms frame period) to eliminate idle CPU spin
+        uint32_t elapsed = SDL_GetTicks() - frameStart;
+        if (elapsed < 16) {
+            SDL_Delay(16 - elapsed);
+        } else {
+            SDL_Delay(1);
+        }
     }
 
     if (gCaptureDeviceID != 0) {

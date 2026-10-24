@@ -190,9 +190,9 @@ UIManager::UIManager(AudioEngine& engine) : mEngine(engine) {
     mSettingsOctaveOffset = 0;
     mSettingsFxPadMomentary = false;
     mSettingsKeyboardMode = false;
-    mSettingsAudioDevice = "Default";
-    mSettingsAudioMicDevice = "Default";
-    mSettingsAudioLineInDevice = "Default";
+    mSettingsAudioDevice = gCurrentAudioDevice;
+    mSettingsAudioMicDevice = gCurrentCaptureDevice;
+    mSettingsAudioLineInDevice = gCurrentCaptureDevice;
     
     mSettingsKnobCount = 12;
     mSettingsSliderCount = 4;
@@ -1842,6 +1842,60 @@ void UIManager::populateSettingsGeneralTab(lv_obj_t* tab) {
     lv_label_set_text(deviceLabel, "Device: SDL Default");
     lv_obj_set_style_text_font(deviceLabel, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(deviceLabel, lv_color_hex(0xBBBBBB), 0);
+
+    // Active Input Device (capture) dropdown
+    lv_obj_t* inDevLbl = lv_label_create(audioCard);
+    lv_label_set_text(inDevLbl, "Active Input Device:");
+    lv_obj_set_style_text_font(inDevLbl, &lv_font_montserrat_10, 0);
+
+    lv_obj_t* inDevDd = lv_dropdown_create(audioCard);
+    lv_obj_set_size(inDevDd, 180, 36);
+    lv_obj_set_style_bg_color(inDevDd, lv_color_hex(0x2D2D2D), 0);
+    lv_obj_set_style_border_width(inDevDd, 1, 0);
+    lv_obj_set_style_text_font(inDevDd, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_radius(inDevDd, 6, 0);
+
+    std::string inDevOptions = "Default\n";
+    int numInDevs = SDL_GetNumAudioDevices(1);
+    std::vector<std::string> inDevNames;
+    inDevNames.push_back("Default");
+    int activeInDevIdx = 0;
+    for (int i = 0; i < numInDevs; ++i) {
+        const char* name = SDL_GetAudioDeviceName(i, 1);
+        if (name) {
+            inDevOptions += std::string(name) + "\n";
+            inDevNames.push_back(name);
+            if (gCurrentCaptureDevice == name || mSettingsAudioMicDevice == name) {
+                activeInDevIdx = inDevNames.size() - 1;
+            }
+        }
+    }
+    if (!inDevOptions.empty() && inDevOptions.back() == '\n') inDevOptions.pop_back();
+
+    lv_dropdown_set_options(inDevDd, inDevOptions.c_str());
+    lv_dropdown_set_selected(inDevDd, activeInDevIdx);
+
+    struct InputDeviceChangeData {
+        UIManager* ui;
+        std::vector<std::string> names;
+    };
+    InputDeviceChangeData* inDevData = new InputDeviceChangeData{this, inDevNames};
+    auto inDevCb = [](lv_event_t* e) {
+        InputDeviceChangeData* d = (InputDeviceChangeData*)lv_event_get_user_data(e);
+        lv_obj_t* dd = (lv_obj_t*)lv_event_get_target(e);
+        int selected = lv_dropdown_get_selected(dd);
+        if (selected >= 0 && selected < (int)d->names.size()) {
+            std::string selectedName = d->names[selected];
+            if (switchCaptureDevice(selectedName)) {
+                d->ui->mSettingsAudioMicDevice = selectedName;
+                d->ui->mSettingsAudioLineInDevice = selectedName;
+                d->ui->saveSettings(d->ui->mSettingsFilePath);
+            }
+        }
+    };
+    lv_obj_add_event_cb(inDevDd, inDevCb, LV_EVENT_VALUE_CHANGED, inDevData);
+    auto inDevFreeCb = [](lv_event_t* e) { delete (InputDeviceChangeData*)lv_event_get_user_data(e); };
+    lv_obj_add_event_cb(inDevDd, inDevFreeCb, LV_EVENT_DELETE, inDevData);
 
     lv_obj_t* srLbl = lv_label_create(audioCard);
     lv_label_set_text(srLbl, "Sample Rate:");

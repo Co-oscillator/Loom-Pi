@@ -12,23 +12,29 @@ Decision (2026-10-24): `main` stays the published default. Generic features from
 
 | Class | Commits | Action |
 |---|---|---|
-| **10-inch only** | `ebbde6e`, `058feeb`, `f311069`, `44fbe19`, `180d86c`, `7be4a7e`, `c476b5d`, `6a478d8` | Skip |
+| **10-inch only** | `ebbde6e`, `058feeb`, `f311069`, `44fbe19`, `180d86c`, `6a478d8` | Skip |
 | **Already on main** | `37671d7` (= `4a57049`) | Skip |
-| **Generic** | `d2bcc29`, `e786cb8`, `3ea0622`, `4f4e00a`, `af5ec32`, `c3938eb`, `24b6156`, `897a7dc`, `cd034e2`, `06d81a2`, `16211a4`, `afd98d6`, `72e3b4a`, `005ab67`, `16743dc`, `9fce542`, `631e6cc`, `30809eb`, `88239c5` | Cherry-pick / port |
+| **Generic** | `d2bcc29`, `e786cb8`, `7be4a7e`, `3ea0622`, `c476b5d`, `4f4e00a`, `af5ec32`, `c3938eb`, `24b6156`, `897a7dc`, `cd034e2`, `06d81a2`, `16211a4`, `afd98d6`, `72e3b4a`, `005ab67`, `16743dc`, `9fce542`, `631e6cc`, `30809eb`, `88239c5` | Cherry-pick / port |
 | **Mixed** | `8bf731b`, `7055067`, `47f06d5`, `7fd774d`, `42ef31a`, `6aeb038`, `9356659`, `5e82705`, `cad2a44` | Partial port (see below) |
 
 ## Recommended order
 
-### Phase A — audio plumbing (foundation)
+### Phase A — audio plumbing (foundation) — **LANDED 2026-10-24**
 
-1. `e786cb8` — pause capture, remove renderInput lock contention (skip the 1024-buffer hunk).
-2. `3ea0622` — USB audio auto-detect, settle delay.
-3. `4f4e00a` — remove audio logging, direct device selection (partial).
-4. `af5ec32` — capture strictly on demand.
-5. `c3938eb` — MIDI before audio, device-removal recovery.
-6. `24b6156` — S16_LE hardware output.
-7. `897a7dc` — active input device auto-select (main keeps its mic/line-in dropdowns as fallback).
-8. `cd034e2` — log detected audio devices at startup.
+Landed on `feature/port-from-10inch` as commits `9f89ebf`..`82c34b1`, then merged into `main`. Adapted for `main` where noted.
+
+1. `e786cb8` — pause capture, remove renderInput lock contention (kept 256-sample buffer; frame pacing ported while preserving `SDL_PeepEvents` input handling).
+2. `7be4a7e` — restore 256-sample buffer / strict negotiation (needed as part of the sequence).
+3. `3ea0622` — USB audio auto-detect, settle delay.
+4. `c476b5d` — AB13X priority over dummy USB MIDI audio (needed as part of the sequence).
+5. `4f4e00a` — remove audio logging, direct device selection; boot audio init replaced with post-`ui.init()` fallback.
+6. `af5ec32` — capture strictly on demand.
+7. `c3938eb` — MIDI before audio, device-removal recovery (adapted to `SDL_PeepEvents`).
+8. `24b6156` — S16_LE hardware output.
+9. `897a7dc` — active input device dropdown + USB capture auto-select (added in `main`'s raw-dropdown style; no `makeLabeledDropdown` on `main`).
+10. `cd034e2` — log detected audio devices at startup.
+
+Verified: `cmake --build` succeeds and the app starts, logs devices, initialises MIDI and enters the main loop on macOS. **Still needs a listen test on the 7-inch Pi hardware.**
 
 ### Phase B — UI/engine fixes
 
