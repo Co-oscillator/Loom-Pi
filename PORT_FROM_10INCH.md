@@ -34,7 +34,7 @@ Landed on `feature/port-from-10inch` as commits `9f89ebf`..`82c34b1`, then merge
 9. `897a7dc` — active input device dropdown + USB capture auto-select (added in `main`'s raw-dropdown style; no `makeLabeledDropdown` on `main`).
 10. `cd034e2` — log detected audio devices at startup.
 
-Verified: `cmake --build` succeeds and the app starts, logs devices, initialises MIDI and enters the main loop on macOS. **Still needs a listen test on the 7-inch Pi hardware.**
+Verified: `cmake --build` succeeds and the app starts, logs devices, initialises MIDI and enters the main loop on macOS. **Hardware status (2026-10-25): the 7-inch unit was disassembled; the same Pi now runs the 10-inch firmware without a wipe, so it is exercised via the `10inch-1280x800` branch rather than a dedicated 7-inch listen test.**
 
 ### Phase B — UI/engine fixes
 
